@@ -5,8 +5,14 @@ from dotenv import load_dotenv
 # Load environment variables from a .env file (for local development)
 load_dotenv()
 
-# Get the MongoDB URI. If not found, fallback to a local instance or empty string
+# Get the MongoDB URI. If not found, fallback to an empty string
 MONGO_URI = os.getenv("MONGODB_URI", "")
+
+# Define variables globally so index.py can always import them
+client = None
+db = None
+users_collection = None
+projects_collection = None
 
 # Initialize the MongoDB client. 
 # We use tls=True and tlsAllowInvalidCertificates=True to prevent SSL errors on Vercel
@@ -16,16 +22,12 @@ try:
         # Select the database (it creates it automatically if it doesn't exist)
         db = client["algoblocks_db"]
         
-        # Example collection references (ready for when you want to use them)
+        # Example collection references
         users_collection = db["users"]
         projects_collection = db["projects"]
         
         print("MongoDB connection integrated successfully.")
     else:
         print("No MONGODB_URI found. Database integration skipped.")
-        client = None
-        db = None
 except Exception as e:
     print(f"Failed to connect to MongoDB: {e}")
-    client = None
-    db = None
