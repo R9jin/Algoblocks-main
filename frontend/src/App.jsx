@@ -160,16 +160,20 @@ export default function App() {
             >
               <option value="" disabled>📁 PRE-MADE TEMPLATES</option>
               
-              <optgroup label="Search Algo">
+              <optgroup label="Search Algorithms">
                 <option value="search/linear_search">Linear Search - O(n)</option>
                 <option value="search/binary_search">Binary Search - O(log n)</option>
               </optgroup>
               
-              <optgroup label="Sort Algo">
+              <optgroup label="Sorting Algorithms">
                 <option value="sort/bubble_sort">Bubble Sort - O(n²)</option>
                 <option value="sort/insertion_sort">Insertion Sort - O(n²)</option>
                 <option value="sort/selection_sort">Selection Sort - O(n²)</option>
                 <option value="sort/merge_sort">Merge Sort - O(n log n)</option>
+              </optgroup>
+
+              <optgroup label="Recursive Algorithms">
+                <option value="recursive/recursive_fibonacci">Fibonacci (recursive) - O(2ⁿ)</option>
               </optgroup>
             </select>
 

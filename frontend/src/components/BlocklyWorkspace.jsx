@@ -46,6 +46,21 @@ const customBlocks = [
     "nextStatement": null,
     "colour": 230,
     "tooltip": "Modify a variable (Add, Subtract, Multiply, Divide).",
+  },
+  {
+    "type": "procedure_return_value",
+    "message0": "return %1",
+    "args0": [
+      {
+        "type": "input_value",
+        "name": "VALUE"
+      }
+    ],
+    "previousStatement": null,
+    "nextStatement": null,
+    "colour": 210, // Same color as Functions category
+    "tooltip": "Returns the value from this function.",
+    "helpUrl": ""
   }
 ];
 
@@ -72,6 +87,7 @@ const toolbox = {
         { kind: "block", type: "logic_boolean" },
         { kind: "block", type: "logic_null" },
         { kind: "block", type: "logic_ternary" },
+        { kind: "block", type: "procedure_return_value" } // your custom block
       ],
     },
     {
@@ -292,6 +308,12 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
           }
         }
         return ''; 
+      };
+
+      pythonGenerator.forBlock['procedure_return_value'] = function(block) {
+        // Get the code from the block attached to the 'VALUE' input
+        const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
+        return `return ${value}\n`;
       };
 
       workspace.current.addChangeListener((event) => {
