@@ -30,7 +30,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.has_sort = False
         self.custom_functions = {} 
         self.current_function_name = None  # 🔥 FIX: Prevents AttributeError
-        self.recursive_class_count = 0
+        self.recursive_calls_count = 0
 
     def get_code_snippet(self, node):
         if hasattr(node, 'lineno'):
@@ -143,8 +143,15 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.record_line(node)
 
     def get_final_badge(self):
+        # 1. Check if any line was recorded as exponential
+        if any("2^n" in str(d.get('complexity')) for d in self.details):
+            return "O(2^n)"
+        
+        # 2. Check for N Log N (Merge Sort)
         if any("O(n log n)" in str(d.get('complexity')) for d in self.details):
             return "O(n log n)"
+        
+        # 3. Fallback to loop-based complexity
         if self.max_complexity == 0: return "O(1)"
         if self.max_complexity == 1: return "O(n)"
         return f"O(n^{self.max_complexity})"
