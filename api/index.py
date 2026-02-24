@@ -30,6 +30,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.has_sort = False
         self.custom_functions = {} 
         self.current_function_name = None  # 🔥 FIX: Prevents AttributeError
+        self.recursive_class_count = 0
 
     def get_code_snippet(self, node):
         if hasattr(node, 'lineno'):
@@ -38,10 +39,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return "Code Block"
 
     def get_color(self, complexity_str):
-        if "n^2" in complexity_str or "n^3" in complexity_str: return "#e74c3c"
-        if "log" in complexity_str: return "#2980b9"
-        if "O(n)" in complexity_str: return "#e67e22"
-        return "#27ae60"
+        if "2^n" in complexity_str: return "#9b59b6" # Purple for Exponential
+        if "n^2" in complexity_str or "n^3" in complexity_str: return "#e74c3c" # Red
+        if "log" in complexity_str: return "#2980b9" # Blue
+        if "O(n)" in complexity_str: return "#e67e22" # Orange
+        return "#27ae60" # Green
 
     def record_line(self, node, complexity_override=None):
         power = self.current_depth
@@ -65,6 +67,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name 
+        self.recursive_calls_count = 0 # Reset count for the new function
         self.record_line(node, complexity_override="O(1)")
         
         previous_max = self.max_complexity
@@ -72,34 +75,42 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
         
         func_max_power = self.max_complexity 
-
-        body_str = ast.dump(node)
-        is_recursive = f"id='{node.name}'" in body_str
         
-        if is_recursive and "merge" in node.name:
-            self.custom_functions[node.name] = "O(n log n)"
+        # --- IMPROVED RECURSION LOGIC ---
+        if self.recursive_calls_count > 1:
+            # Multiple recursive calls (like Fibonacci) = Exponential
+            self.custom_functions[node.name] = "O(2^n)"
+        elif self.recursive_calls_count == 1:
+            # Single recursive call = Linear (or check for merge sort)
+            if "merge" in node.name:
+                self.custom_functions[node.name] = "O(n log n)"
+            else:
+                self.custom_functions[node.name] = "O(n)"
         else:
+            # Standard iterative complexity
             if func_max_power == 0: 
                 comp_str = "O(1)"
             elif func_max_power == 1: 
                 comp_str = "O(n)"
             else: 
                 comp_str = f"O(n^{func_max_power})"
-            
             self.custom_functions[node.name] = comp_str
         
         self.max_complexity = max(previous_max, func_max_power)
-        self.current_function_name = None # 🔥 FIX: Reset after method ends
+        self.current_function_name = None
 
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name):
             func_name = node.func.id
             
+            # Check if this is a recursive call
             if func_name == self.current_function_name:
-                if "merge_sort" in func_name:
-                    self.record_line(node, complexity_override="O(n log n)")
-                    return
+                self.recursive_calls_count += 1
+                # We label the specific line as exponential if it's the recursive call
+                self.record_line(node, complexity_override="O(2^n)" if self.recursive_calls_count > 1 else "O(n)")
+                return
             
+            # Check if calling a previously defined custom function
             if func_name in self.custom_functions:
                 self.record_line(node, complexity_override=self.custom_functions[func_name])
                 return
