@@ -178,6 +178,10 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     return
         self.record_line(node)
 
+    def visit_Return(self, node):
+        self.record_line(node)
+        self.generic_visit(node)
+
     def get_final_badge(self):
         # 1. Check if any line was recorded as exponential
         if any("2^n" in str(d.get('complexity')) for d in self.details):
