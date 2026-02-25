@@ -57,8 +57,8 @@ const customBlocks = [
       }
     ],
     "previousStatement": null,
-    "nextStatement": null,
-    "colour": 210, // Same color as Functions category
+    "nextStatement": null, // Note: Setting this to null successfully prevents blocks from snapping below it!
+    "colour": 210, 
     "tooltip": "Returns the value from this function.",
     "helpUrl": ""
   }
@@ -314,6 +314,31 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         // Get the code from the block attached to the 'VALUE' input
         const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
         return `return ${value}\n`;
+      };
+
+      // --- NEW: INTERCEPT VOID FUNCTION CALLS ---
+      // 1. Store the original generator for function calls
+      const origCallNoReturn = pythonGenerator.forBlock['procedures_callnoreturn'];
+      
+      // 2. Override it with our context-aware logic
+      pythonGenerator.forBlock['procedures_callnoreturn'] = function(block) {
+        // Get the default generated code (e.g., "calculate_data()\n")
+        const code = origCallNoReturn.call(pythonGenerator, block);
+        
+        // Find the block that surrounds this one
+        const surroundParent = block.getSurroundParent();
+        
+        // Check if it is inside a function definition
+        if (surroundParent && (surroundParent.type === 'procedures_defnoreturn' || surroundParent.type === 'procedures_defreturn')) {
+          
+          // Check if it is the absolute LAST block in the sequence
+          if (!block.getNextBlock()) {
+            // Automatically make it a return statement!
+            return 'return ' + code;
+          }
+        }
+        
+        return code;
       };
 
       workspace.current.addChangeListener((event) => {
