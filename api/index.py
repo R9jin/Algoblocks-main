@@ -7,6 +7,7 @@ import ast
 from database import projects_collection
 from models import ProjectModel
 from bson import ObjectId
+from collections import deque
 
 app = FastAPI()
 
@@ -27,10 +28,31 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.details = []       
         self.current_depth = 0  
         self.max_complexity = 0 
-        self.has_sort = False
         self.custom_functions = {} 
-        self.current_function_name = None  # 🔥 FIX: Prevents AttributeError
+        self.current_function_name = None  
         self.recursive_calls_count = 0
+        
+        # --- NEW: Symbol Table for BFS Pass ---
+        self.symbol_table = {} 
+
+    # --- NEW: The BFS Algorithm Pass ---
+    def bfs_first_pass(self, tree):
+        """
+        Pass 1: Breadth-First Search to map all functions before deep DFS analysis.
+        This solves the 'Forward Reference' problem.
+        """
+        queue = deque([tree])
+        
+        while queue:
+            current_node = queue.popleft()
+            
+            # If the BFS finds a function, register it in the global map
+            if isinstance(current_node, ast.FunctionDef):
+                self.symbol_table[current_node.name] = current_node
+                
+            # Queue all immediate children for the next level of BFS
+            for child in ast.iter_child_nodes(current_node):
+                queue.append(child)
 
     def get_code_snippet(self, node):
         if hasattr(node, 'lineno'):
@@ -157,19 +179,27 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return f"O(n^{self.max_complexity})"
 
 # In api/index.py
-@app.post("/api/analyze") # Required for Vercel routing
-@app.post("/analyze")     # Support for local testing
+@app.post("/api/analyze") 
+@app.post("/analyze")     
 def analyze_complexity(payload: CodePayload):
     try:
         tree = ast.parse(payload.code)
         analyzer = ComplexityAnalyzer(payload.code)
+        
+        # --- THE MULTI-PASS ARCHITECTURE ---
+        # Pass 1: BFS constructs the global context map
+        analyzer.bfs_first_pass(tree)
+        
+        # Pass 2: DFS dives deep to calculate rules and multiplier propagation
         analyzer.visit(tree)
+        
         return {
             "status": "success",
             "total": analyzer.get_final_badge(),
             "lines": analyzer.details
         }
-    except Exception:
+    except Exception as e:
+        print(f"Analyzer Error: {e}") # Helpful for debugging!
         return {"status": "error", "total": "Error", "lines": []}
     
 @app.post("/api/run")
