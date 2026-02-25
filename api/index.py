@@ -76,13 +76,22 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         else: comp_str = f"O(n^{power})"
 
         color = self.get_color(comp_str)
+        line_text = self.get_code_snippet(node)
 
-        self.details.append({
-            "lineOfCode": self.get_code_snippet(node),
-            "complexity": comp_str,
-            "indent": self.current_depth,
-            "color": color
-        })
+        # --- THE FIX: Prevent Duplicate Lines ---
+        # Check if we already recorded this exact line of code
+        if self.details and self.details[-1]["lineOfCode"] == line_text:
+            # Instead of adding a new line, UPDATE the previous one's complexity
+            self.details[-1]["complexity"] = comp_str
+            self.details[-1]["color"] = color
+        else:
+            # Add it as a normal new line
+            self.details.append({
+                "lineOfCode": line_text,
+                "complexity": comp_str,
+                "indent": self.current_depth,
+                "color": color
+            })
 
         if not complexity_override and power > self.max_complexity:
             self.max_complexity = power
@@ -128,13 +137,18 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             # Check if this is a recursive call
             if func_name == self.current_function_name:
                 self.recursive_calls_count += 1
-                # We label the specific line as exponential if it's the recursive call
                 self.record_line(node, complexity_override="O(2^n)" if self.recursive_calls_count > 1 else "O(n)")
                 return
             
-            # Check if calling a previously defined custom function
+            # Check if it's a function we've already deeply evaluated
             if func_name in self.custom_functions:
                 self.record_line(node, complexity_override=self.custom_functions[func_name])
+                return
+                
+            # --- NEW: Check the BFS Symbol Table for Forward References ---
+            # If the function exists in the file (found by BFS) but hasn't been deeply analyzed yet
+            if func_name in self.symbol_table:
+                self.record_line(node, complexity_override=f"Call to {func_name}()")
                 return
 
         self.generic_visit(node)
