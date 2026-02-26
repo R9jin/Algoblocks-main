@@ -26,14 +26,13 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     def __init__(self, source_code):
         self.source_lines = source_code.splitlines()
         self.details = []       
-        self.current_depth = 0  
+        self.current_depth = 0  # Controls visual UI indentation
+        self.loop_depth = 0     # NEW: Controls mathematical power
         self.max_complexity = 0 
         self.custom_functions = {} 
         self.current_function_name = None  
         self.recursive_calls_count = 0
-        
-        # --- NEW: Symbol Table for BFS Pass ---
-        self.symbol_table = {} 
+        self.symbol_table = {}
 
     # --- NEW: The BFS Algorithm Pass ---
     def bfs_first_pass(self, tree):
@@ -68,106 +67,101 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return "#27ae60" # Green
     #hello
     def record_line(self, node, complexity_override=None):
-        power = self.current_depth
+        power = self.loop_depth # <-- FIX: Math now ignores visual indentation
+        
         if complexity_override:
             comp_str = complexity_override
-        elif power == 0: comp_str = "O(1)"
-        elif power == 1: comp_str = "O(n)"
-        else: comp_str = f"O(n^{power})"
+            if "2^n" in comp_str: power = max(power, 99)
+            elif "log" in comp_str: power = max(power, 1) 
+            elif "O(n)" in comp_str: power = max(power, 1)
+            elif "O(1)" in comp_str: power = max(power, 0)
+            elif "^" in comp_str:
+                try: power = max(power, int(comp_str.split('^')[1].strip(')')))
+                except: pass
+        elif power == 0: 
+            comp_str = "O(1)"
+        elif power == 1: 
+            comp_str = "O(n)"
+        else: 
+            comp_str = f"O(n^{power})"
 
         color = self.get_color(comp_str)
         line_text = self.get_code_snippet(node)
 
-        # --- THE FIX: Prevent Duplicate Lines ---
-        # Check if we already recorded this exact line of code
+        # Prevent Duplicate Lines
         if self.details and self.details[-1]["lineOfCode"] == line_text:
-            # Instead of adding a new line, UPDATE the previous one's complexity
             self.details[-1]["complexity"] = comp_str
             self.details[-1]["color"] = color
         else:
-            # Add it as a normal new line
             self.details.append({
                 "lineOfCode": line_text,
                 "complexity": comp_str,
-                "indent": self.current_depth,
+                "indent": self.current_depth, # <-- Visual UI still uses current_depth
                 "color": color
             })
 
-        if not complexity_override and power > self.max_complexity:
+        if power > self.max_complexity:
             self.max_complexity = power
-
+            
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name 
-        self.recursive_calls_count = 0 # Reset count for the new function
-        self.record_line(node, complexity_override="O(1)")
+        self.recursive_calls_count = 0 
+        
+        # 1. Record the 'def' line at O(1)
+        self.record_line(node, complexity_override="O(1)") 
         
         previous_max = self.max_complexity
         self.max_complexity = 0
+        
+        # 2. Visually indent the body, but DO NOT increase math power
+        self.current_depth += 1 
         self.generic_visit(node)
+        self.current_depth -= 1
         
         func_max_power = self.max_complexity 
         
-        # --- IMPROVED RECURSION LOGIC ---
         if self.recursive_calls_count > 1:
-            # Multiple recursive calls (like Fibonacci) = Exponential
             self.custom_functions[node.name] = "O(2^n)"
         elif self.recursive_calls_count == 1:
-            # Single recursive call = Linear (or check for merge sort)
             if "merge" in node.name:
                 self.custom_functions[node.name] = "O(n log n)"
             else:
                 self.custom_functions[node.name] = "O(n)"
         else:
-            # Standard iterative complexity
-            if func_max_power == 0: 
-                comp_str = "O(1)"
-            elif func_max_power == 1: 
-                comp_str = "O(n)"
-            else: 
-                comp_str = f"O(n^{func_max_power})"
+            if func_max_power == 0: comp_str = "O(1)"
+            elif func_max_power == 1: comp_str = "O(n)"
+            else: comp_str = f"O(n^{func_max_power})"
             self.custom_functions[node.name] = comp_str
         
         self.max_complexity = max(previous_max, func_max_power)
         self.current_function_name = None
 
-    def visit_Call(self, node):
-        if isinstance(node.func, ast.Name):
-            func_name = node.func.id
-            
-            # Check if this is a recursive call
-            if func_name == self.current_function_name:
-                self.recursive_calls_count += 1
-                self.record_line(node, complexity_override="O(2^n)" if self.recursive_calls_count > 1 else "O(n)")
-                return
-            
-            # Check if it's a function we've already deeply evaluated
-            if func_name in self.custom_functions:
-                self.record_line(node, complexity_override=self.custom_functions[func_name])
-                return
-                
-            # --- NEW: Check the BFS Symbol Table for Forward References ---
-            # If the function exists in the file (found by BFS) but hasn't been deeply analyzed yet
-            if func_name in self.symbol_table:
-                self.record_line(node, complexity_override=f"Call to {func_name}()")
-                return
-
-        self.generic_visit(node)
-
     def visit_For(self, node):
-        self.current_depth += 1
-        self.record_line(node) 
-        self.generic_visit(node) 
-        self.current_depth -= 1
+        self.loop_depth += 1      # Math +1
+        self.record_line(node)    # Record 'for' line
+        
+        self.current_depth += 1   # Visual +1
+        self.generic_visit(node)  
+        self.current_depth -= 1   
+        
+        self.loop_depth -= 1      
 
     def visit_While(self, node):
-        self.current_depth += 1
+        self.loop_depth += 1      
         self.record_line(node)
+        
+        self.current_depth += 1   
         self.generic_visit(node)
         self.current_depth -= 1
+        
+        self.loop_depth -= 1
 
     def visit_If(self, node):
         self.record_line(node)
+        
+        self.current_depth += 1   # Safely indent 'if' bodies!
         self.generic_visit(node)
+        self.current_depth -= 1
 
     def visit_Expr(self, node):
         if isinstance(node.value, ast.Call):
@@ -209,11 +203,20 @@ def analyze_complexity(payload: CodePayload):
         tree = ast.parse(payload.code)
         analyzer = ComplexityAnalyzer(payload.code)
         
-        # --- THE MULTI-PASS ARCHITECTURE ---
-        # Pass 1: BFS constructs the global context map
+        # 1. Map all functions (The Table of Contents)
         analyzer.bfs_first_pass(tree)
         
-        # Pass 2: DFS dives deep to calculate rules and multiplier propagation
+        # 2. PRE-COMPUTE PASS: Force the analyzer to calculate the Big-O for every function
+        for func_name, func_node in analyzer.symbol_table.items():
+            analyzer.visit_FunctionDef(func_node)
+            
+        # 3. CLEANUP: Clear the messy history from the pre-compute phase
+        analyzer.details = []
+        analyzer.max_complexity = 0
+        analyzer.current_depth = 0
+        analyzer.loop_depth = 0
+        
+        # 4. FINAL PASS: The real line-by-line analysis
         analyzer.visit(tree)
         
         return {
@@ -222,7 +225,7 @@ def analyze_complexity(payload: CodePayload):
             "lines": analyzer.details
         }
     except Exception as e:
-        print(f"Analyzer Error: {e}") # Helpful for debugging!
+        print(f"Analyzer Error: {e}") 
         return {"status": "error", "total": "Error", "lines": []}
     
 @app.post("/api/run")
