@@ -176,6 +176,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 if func_name in self.custom_functions:
                     self.record_line(node, complexity_override=self.custom_functions[func_name])
                     return
+                # --- ADD THIS MISSING BFS CHECK ---
+                if func_name in self.symbol_table:
+                    self.record_line(node, complexity_override=f"Call to {func_name}()")
+                    return
+                    
         self.record_line(node)
 
     def visit_Return(self, node):
