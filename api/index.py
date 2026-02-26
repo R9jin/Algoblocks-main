@@ -177,6 +177,22 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     
         self.record_line(node)
 
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name):
+            func_name = node.func.id
+            
+            # 1. Handle Recursion
+            if func_name == self.current_function_name:
+                self.recursive_calls_count += 1
+                # Trigger an upgrade to O(n) or O(2^n) based on count
+                self.record_line(node, complexity_override="O(n)" if self.recursive_calls_count == 1 else "O(2^n)")
+            
+            # 2. Handle calls to other pre-analyzed functions (e.g., calc())
+            elif func_name in self.custom_functions:
+                self.record_line(node, complexity_override=self.custom_functions[func_name])
+                
+        self.generic_visit(node)
+
     def visit_Return(self, node):
         self.record_line(node)
         self.generic_visit(node)
@@ -195,28 +211,31 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if self.max_complexity == 1: return "O(n)"
         return f"O(n^{self.max_complexity})"
 
+    
+
 # In api/index.py
 @app.post("/api/analyze") 
-@app.post("/analyze")     
+@app.post("/analyze")
 def analyze_complexity(payload: CodePayload):
     try:
         tree = ast.parse(payload.code)
         analyzer = ComplexityAnalyzer(payload.code)
         
-        # 1. Map all functions (The Table of Contents)
+        # 1. Map all functions
         analyzer.bfs_first_pass(tree)
         
-        # 2. PRE-COMPUTE PASS: Force the analyzer to calculate the Big-O for every function
+        # 2. PRE-COMPUTE: Calculate math for all functions
+        # We store the results in analyzer.custom_functions
         for func_name, func_node in analyzer.symbol_table.items():
-            analyzer.visit_FunctionDef(func_node)
+            analyzer.visit(func_node)
             
-        # 3. CLEANUP: Clear the messy history from the pre-compute phase
+        # 3. RESET ONLY VISUALS: Keep custom_functions!
         analyzer.details = []
         analyzer.max_complexity = 0
         analyzer.current_depth = 0
         analyzer.loop_depth = 0
         
-        # 4. FINAL PASS: The real line-by-line analysis
+        # 4. FINAL PASS: Now use the stored math to build the table
         analyzer.visit(tree)
         
         return {
