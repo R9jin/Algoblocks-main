@@ -341,54 +341,6 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return `return ${value}\n`;
       };
 
-      // --- FIX FOR FUNCTION BLOCK ORDERING ---
-      const origNoReturn = pythonGenerator.forBlock['procedures_defnoreturn'];
-      const origReturn = pythonGenerator.forBlock['procedures_defreturn'];
-
-      const wrapProcedureGenerator = (origGenerator) => {
-        return function(block) {
-          // 1. Temporarily disconnect the bottom block to prevent reverse-order generation
-          Blockly.Events.disable(); 
-          const nextBlock = block.nextConnection && block.nextConnection.targetBlock();
-          if (nextBlock) block.nextConnection.disconnect();
-
-          // 2. See what is in the dictionary BEFORE generating this function
-          const keysBefore = Object.keys(pythonGenerator.definitions_);
-
-          // 3. Let Blockly generate the function normally
-          origGenerator.call(pythonGenerator, block, pythonGenerator);
-
-          // 4. Reconnect the bottom block
-          if (nextBlock) block.nextConnection.connect(nextBlock.previousConnection);
-          Blockly.Events.enable();
-
-          // 5. Find the new function that was just added to the dictionary
-          const keysAfter = Object.keys(pythonGenerator.definitions_);
-          const newKey = keysAfter.find(k => !keysBefore.includes(k));
-          
-          let code = '';
-          if (newKey) {
-            code = pythonGenerator.definitions_[newKey];
-            // Remove it from the dictionary so it doesn't get printed twice!
-            delete pythonGenerator.definitions_[newKey]; 
-          }
-
-          // 6. If there is a connected block below, generate it and append it strictly IN ORDER
-          if (nextBlock) {
-            const nextCode = pythonGenerator.blockToCode(nextBlock);
-            if (nextCode) {
-               code += '\n\n' + nextCode;
-            }
-          }
-
-          return code; // Return the code directly instead of hoisting it
-        };
-      };
-
-      // Apply the fix to both types of function blocks
-      if (origNoReturn) pythonGenerator.forBlock['procedures_defnoreturn'] = wrapProcedureGenerator(origNoReturn);
-      if (origReturn) pythonGenerator.forBlock['procedures_defreturn'] = wrapProcedureGenerator(origReturn);
-
       workspace.current.addChangeListener((event) => {
         if (event.type === Blockly.Events.BLOCK_CREATE || 
             event.type === Blockly.Events.BLOCK_DELETE || 
