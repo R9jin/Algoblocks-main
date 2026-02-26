@@ -17,32 +17,6 @@ import { PositionedMinimap } from "@blockly/workspace-minimap";
 import { ZoomToFitControl } from "@blockly/zoom-to-fit";
 
 Blockly.setLocale(En);
-
-// --- NEW: PATCH FUNCTION BLOCKS TO BE CONNECTABLE ---
-const patchFunctionBlocks = () => {
-  // 1. Patch the "Void" Function Block
-  if (Blockly.Blocks['procedures_defnoreturn']) {
-    const originalNoReturnInit = Blockly.Blocks['procedures_defnoreturn'].init;
-    Blockly.Blocks['procedures_defnoreturn'].init = function() {
-      originalNoReturnInit.call(this);
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-    };
-  }
-
-  // 2. Patch the "Return" Function Block
-  if (Blockly.Blocks['procedures_defreturn']) {
-    const originalReturnInit = Blockly.Blocks['procedures_defreturn'].init;
-    Blockly.Blocks['procedures_defreturn'].init = function() {
-      originalReturnInit.call(this);
-      this.setPreviousStatement(true, null);
-      this.setNextStatement(true, null);
-    };
-  }
-};
-
-patchFunctionBlocks();
-
 // --- 1. DEFINE CUSTOM BLOCKS ---
 const customBlocks = [
   {
@@ -266,7 +240,8 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
 
       pythonGenerator.forBlock['comment_block'] = function(block) {
         const text = block.getFieldValue('TEXT');
-        return `# ${text}\n`;
+        // Add pass\n so the AST parser doesn't crash on empty functions
+        return `# ${text}\npass\n`;
       };
 
       // --- CRASH-PROOF MATH ASSIGNMENT ---
