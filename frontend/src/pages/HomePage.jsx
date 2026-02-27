@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import "./LandingPage.css";
-
+import "./HomePage.css"; 
+ 
 export default function LandingPage() {
   return (
     <div className="landing-container">
