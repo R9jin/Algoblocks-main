@@ -3,7 +3,7 @@ import LandingPage from "./pages/HomePage";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import ForgotPassword from "./pages/ForgotPassword";
-import MainApp from "./pages/Mainapp";
+import MainApp from "./pages/MainApp";
 
 function App() {
   return (
