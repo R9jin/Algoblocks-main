@@ -182,7 +182,7 @@ export default function App() {
 
               <optgroup label="Recursive Algorithms">
                 <option value="recursive/recursive_fibonacci">Fibonacci (recursive) - O(2ⁿ)</option>
-                <option value="recursive/recursive_factorial">Factorial (recursive) - O(n!)</option>
+                <option value="recursive/recursive_factorial">Factorial (recursive) - O(n)</option>
               </optgroup>
             </select>
 

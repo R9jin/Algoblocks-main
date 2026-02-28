@@ -37,6 +37,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         # --- NEW: Structural Trackers ---
         self.has_recursion_in_loop = False
         self.has_slicing = False
+        self.has_loop = False # <--- ADD THIS
 
     # --- NEW: The BFS Algorithm Pass ---
     def bfs_first_pass(self, tree):
@@ -112,8 +113,9 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name 
         self.recursive_calls_count = 0 
-        self.has_recursion_in_loop = False # Reset for each function
-        self.has_slicing = False           # Reset for each function
+        self.has_recursion_in_loop = False 
+        self.has_slicing = False           
+        self.has_loop = False # <--- RESET for each function
         
         self.record_line(node, complexity_override="O(1)") 
         
@@ -126,22 +128,17 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         
         func_max_power = self.max_complexity 
         
-        # --- NEW: Pure Structural Evaluation (No Names Used) ---
         if self.has_recursion_in_loop:
-            # Recursion inside a loop generates O(n!) combinations
             self.custom_functions[node.name] = "O(n!)"
             
         elif self.recursive_calls_count >= 2:
-            # Multiple branching recursive calls
+            # Check the mathematical max power (which now safely excludes recursive inflation)
             if func_max_power >= 1 or self.has_slicing:
-                # Merged with an O(n) loop or slicing (e.g., Merge Sort)
                 self.custom_functions[node.name] = "O(n log n)"
             else:
-                # Pure branching with constant time operations (e.g., Fibonacci)
                 self.custom_functions[node.name] = "O(2^n)"
                 
         elif self.recursive_calls_count == 1:
-            # Single recursive tail/branch (e.g., Math Factorial, simple traversal)
             self.custom_functions[node.name] = "O(n)"
             
         else:
@@ -149,22 +146,23 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             elif func_max_power == 1: comp_str = "O(n)"
             else: comp_str = f"O(n^{func_max_power})"
             self.custom_functions[node.name] = comp_str
-        # -------------------------------------------------------
         
         self.max_complexity = max(previous_max, func_max_power)
         self.current_function_name = None
 
     def visit_For(self, node):
-        self.loop_depth += 1      # Math +1
-        self.record_line(node)    # Record 'for' line
+        self.has_loop = True      # <--- ADD THIS
+        self.loop_depth += 1      
+        self.record_line(node)    
         
-        self.current_depth += 1   # Visual +1
+        self.current_depth += 1   
         self.generic_visit(node)  
         self.current_depth -= 1   
         
         self.loop_depth -= 1      
 
     def visit_While(self, node):
+        self.has_loop = True      # <--- ADD THIS
         self.loop_depth += 1      
         self.record_line(node)
         
@@ -182,32 +180,25 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.current_depth -= 1
 
     def visit_Expr(self, node):
-        if isinstance(node.value, ast.Call):
-            if isinstance(node.value.func, ast.Name):
-                func_name = node.value.func.id
-                if func_name in self.custom_functions:
-                    self.record_line(node, complexity_override=self.custom_functions[func_name])
-                    return
-                if func_name in self.symbol_table:
-                    self.record_line(node, complexity_override=f"Call to {func_name}()")
-                    return
-                    
         self.record_line(node)
-        self.generic_visit(node) # <--- ADD THIS LINE HERE
+        self.generic_visit(node)
 
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name):
             func_name = node.func.id
             
-            # Handle Recursion
             if func_name == self.current_function_name:
                 self.recursive_calls_count += 1
-                
-                # --- NEW: Check if recursion is trapped in a loop ---
                 if self.loop_depth > 0:
                     self.has_recursion_in_loop = True
                     
-                self.record_line(node, complexity_override="O(n)" if self.recursive_calls_count == 1 else "O(2^n)")
+                # --- NEW: Protect max_complexity from recursive inflation ---
+                temp_max = self.max_complexity 
+                if func_name in self.custom_functions:
+                    self.record_line(node, complexity_override=self.custom_functions[func_name])
+                else:
+                    self.record_line(node, complexity_override="O(n)" if self.recursive_calls_count == 1 else "O(2^n)")
+                self.max_complexity = temp_max # Restore it!
             
             elif func_name in self.custom_functions:
                 self.record_line(node, complexity_override=self.custom_functions[func_name])
