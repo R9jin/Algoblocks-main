@@ -4,6 +4,7 @@ from io import StringIO
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import ast
+import re
 from database import projects_collection
 from models import ProjectModel
 from bson import ObjectId
@@ -25,38 +26,64 @@ class CodePayload(BaseModel):
 class ComplexityAnalyzer(ast.NodeVisitor):
     def __init__(self, source_code):
         self.source_lines = source_code.splitlines()
-        self.details = []       
+        self.details = []           
+        self.space_details = []     
         self.current_depth = 0  
         self.loop_depth = 0     
+        self.log_loop_depth = 0
         self.max_complexity = 0 
+        self.max_poly = 0
+        self.max_log = 0
+        self.max_space_weight = 0   
         self.custom_functions = {} 
+        self.custom_space = {}      
         self.current_function_name = None  
         self.recursive_calls_count = 0
         self.symbol_table = {}
         
-        # --- NEW: Structural Trackers ---
         self.has_recursion_in_loop = False
         self.has_slicing = False
-        self.has_loop = False # <--- ADD THIS
+        self.has_division = False
 
-    # --- NEW: The BFS Algorithm Pass ---
+        self.builtin_complexities = {
+            'sort': {'time': 'O(n log n)', 'space': 'O(n)'},
+            'join': {'time': 'O(n)', 'space': 'O(n)'},
+            'list': {'time': 'O(n)', 'space': 'O(n)'},
+            'index': {'time': 'O(n)', 'space': 'O(1)'},
+            'append': {'time': 'O(1)', 'space': 'O(1)'},
+            'copy': {'time': 'O(n)', 'space': 'O(n)'}
+        }
+
     def bfs_first_pass(self, tree):
-        """
-        Pass 1: Breadth-First Search to map all functions before deep DFS analysis.
-        This solves the 'Forward Reference' problem.
-        """
-        queue = deque([tree])
-        
+        queue = deque([(tree, None)]) 
+        self.call_graph = {}
         while queue:
-            current_node = queue.popleft()
-            
-            # If the BFS finds a function, register it in the global map
+            current_node, current_func = queue.popleft()
             if isinstance(current_node, ast.FunctionDef):
                 self.symbol_table[current_node.name] = current_node
-                
-            # Queue all immediate children for the next level of BFS
+                current_func = current_node.name
+                if current_func not in self.call_graph:
+                    self.call_graph[current_func] = set()
+            elif isinstance(current_node, ast.Call) and isinstance(current_node.func, ast.Name):
+                called_func = current_node.func.id
+                if current_func:
+                    self.call_graph[current_func].add(called_func)
             for child in ast.iter_child_nodes(current_node):
-                queue.append(child)
+                queue.append((child, current_func))
+        self.detect_indirect_recursion()
+
+    def detect_indirect_recursion(self):
+        for func in self.call_graph:
+            visited = set()
+            if self._has_cycle(func, visited):
+                self.custom_functions[func] = "O(2^n)" 
+
+    def _has_cycle(self, current_func, visited):
+        if current_func in visited: return True
+        visited.add(current_func)
+        for neighbor in self.call_graph.get(current_func, []):
+            if self._has_cycle(neighbor, visited.copy()): return True
+        return False
 
     def get_code_snippet(self, node):
         if hasattr(node, 'lineno'):
@@ -65,220 +92,315 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return "Code Block"
 
     def get_color(self, complexity_str):
-        if "n!" in complexity_str: return "#8e44ad" # Dark Purple for Factorial
-        if "2^n" in complexity_str: return "#9b59b6" # Purple for Exponential
-        if "n^2" in complexity_str or "n^3" in complexity_str: return "#e74c3c" # Red
-        if "log" in complexity_str: return "#2980b9" # Blue
-        if "O(n)" in complexity_str: return "#e67e22" # Orange
-        return "#27ae60" # Green
+        if "T(n) =" in complexity_str or "n!" in complexity_str or "T(n-1) + T" in complexity_str: return "#8e44ad" 
+        if "2^n" in complexity_str or "2T(" in complexity_str: return "#9b59b6" 
+        if "n^2" in complexity_str or "n^3" in complexity_str: return "#e74c3c" 
+        if "log" in complexity_str: return "#2980b9" 
+        if "O(n)" in complexity_str or "T(n" in complexity_str: return "#e67e22" 
+        return "#27ae60" 
 
-    def record_line(self, node, complexity_override=None):
-        power = self.loop_depth # <-- FIX: Math now ignores visual indentation
-        
-        if complexity_override:
-            comp_str = complexity_override
-            if "n!" in comp_str: power = max(power, 100) # ADD THIS
-            elif "2^n" in comp_str: power = max(power, 99)
-            elif "log" in comp_str: power = max(power, 1) 
-            elif "O(n)" in comp_str: power = max(power, 1)
-            elif "O(1)" in comp_str: power = max(power, 0)
-            elif "^" in comp_str:
-                try: power = max(power, int(comp_str.split('^')[1].strip(')')))
-                except: pass
-        elif power == 0: 
-            comp_str = "O(1)"
-        elif power == 1: 
-            comp_str = "O(n)"
-        else: 
-            comp_str = f"O(n^{power})"
+    def _is_log_loop(self, node):
+        if not isinstance(node, ast.While):
+            return False
+        for child in ast.walk(node):
+            if isinstance(child, ast.BinOp) and isinstance(child.op, (ast.Div, ast.FloorDiv)):
+                if isinstance(child.right, ast.Constant) and child.right.value == 2:
+                    return True
+            elif isinstance(child, ast.AugAssign) and isinstance(child.op, (ast.Div, ast.FloorDiv)):
+                if isinstance(child.value, ast.Constant) and child.value.value == 2:
+                    return True
+        return False
 
-        color = self.get_color(comp_str)
+    def _build_time_str(self, poly, log):
+        if poly == 0 and log == 0: return "O(1)"
+        if poly == 0 and log == 1: return "O(log n)"
+        if poly == 0 and log > 1: return f"O(log^{log} n)"
+        if poly == 1 and log == 0: return "O(n)"
+        if poly == 1 and log == 1: return "O(n log n)"
+        if poly == 1 and log > 1: return f"O(n log^{log} n)"
+        if poly > 1 and log == 0: return f"O(n^{poly})"
+        if poly > 1 and log == 1: return f"O(n^{poly} log n)"
+        return f"O(n^{poly} log^{log} n)"
+
+    def record_line(self, node, time_override=None, space_override=None):
         line_text = self.get_code_snippet(node)
 
-        # Prevent Duplicate Lines
-        if self.details and self.details[-1]["lineOfCode"] == line_text:
-            self.details[-1]["complexity"] = comp_str
-            self.details[-1]["color"] = color
-        else:
-            self.details.append({
-                "lineOfCode": line_text,
-                "complexity": comp_str,
-                "indent": self.current_depth, # <-- Visual UI still uses current_depth
-                "color": color
-            })
+        # 1. Base depth of loops
+        current_poly = self.loop_depth
+        current_log = self.log_loop_depth
+        
+        # 2. Add complexity from function calls/overrides
+        override_poly = 0
+        override_log = 0
+        is_recurrence = False
 
-        if power > self.max_complexity:
-            self.max_complexity = power
+        if time_override:
+            if any(x in time_override for x in ["T(n) =", "n!", "2^n", "2T("]):
+                is_recurrence = True
+            else:
+                if "n log n" in time_override:
+                    override_poly = 1
+                    override_log = 1
+                elif "O(log n)" in time_override:
+                    override_log = 1
+                elif "O(n)" in time_override:
+                    override_poly = 1
+                else:
+                    match = re.search(r"O\(n\^(\d+)", time_override)
+                    if match:
+                        override_poly = int(match.group(1))
+                        override_log = 1 if "log n" in time_override else 0
+
+        # Combine loop depth and function overrides
+        total_poly = current_poly + override_poly
+        total_log = current_log + override_log
+
+        if time_override and is_recurrence:
+            time_str = time_override
+            t_weight = 1000
+        else:
+            time_str = self._build_time_str(total_poly, total_log)
+            t_weight = total_poly * 10 + total_log * 5
+
+        space_str = space_override if space_override else "O(1)"
+        s_weight = 10 if "O(n)" in space_str else 0
+        if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
+
+        # GROUPING mechanism: ONLY overwrite if the new operation is heavier
+        if self.details and self.details[-1]["lineOfCode"] == line_text:
+            existing_weight = self.details[-1].get("weight", -1)
+            if t_weight >= existing_weight:
+                self.details[-1]["complexity"] = time_str
+                self.details[-1]["color"] = self.get_color(time_str)
+                self.details[-1]["weight"] = t_weight
+        else:
+            self.details.append({"lineOfCode": line_text, "complexity": time_str, "indent": self.current_depth, "color": self.get_color(time_str), "weight": t_weight})
+
+        if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
+            existing_s_weight = self.space_details[-1].get("weight", -1)
+            if s_weight >= existing_s_weight:
+                self.space_details[-1]["complexity"] = space_str
+                self.space_details[-1]["color"] = self.get_color(space_str)
+                self.space_details[-1]["weight"] = s_weight
+        else:
+            self.space_details.append({"lineOfCode": line_text, "complexity": space_str, "indent": self.current_depth, "color": self.get_color(space_str), "weight": s_weight})
+
+        if t_weight > self.max_complexity: 
+            self.max_complexity = t_weight
+            if t_weight < 998:
+                self.max_poly = t_weight // 10
+                self.max_log = (t_weight % 10) // 5
             
+        if s_weight > self.max_space_weight: self.max_space_weight = s_weight
+
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name 
         self.recursive_calls_count = 0 
         self.has_recursion_in_loop = False 
         self.has_slicing = False           
-        self.has_loop = False # <--- RESET for each function
+        self.has_division = False
         
-        self.record_line(node, complexity_override="O(1)") 
+        self.record_line(node, time_override="O(1)", space_override="O(1)") 
         
-        previous_max = self.max_complexity
-        self.max_complexity = 0
+        prev_t, prev_s = self.max_complexity, self.max_space_weight
+        prev_poly, prev_log = self.max_poly, self.max_log
+        self.max_complexity, self.max_space_weight = 0, 0
+        self.max_poly, self.max_log = 0, 0
         
         self.current_depth += 1 
         self.generic_visit(node)
         self.current_depth -= 1
         
-        func_max_power = self.max_complexity 
-        
         if self.has_recursion_in_loop:
-            self.custom_functions[node.name] = "O(n!)"
-            
+            relation = "T(n) = n * T(n-1) + O(1)"
         elif self.recursive_calls_count >= 2:
-            # Check the mathematical max power (which now safely excludes recursive inflation)
-            if func_max_power >= 1 or self.has_slicing:
-                self.custom_functions[node.name] = "O(n log n)"
-            else:
-                self.custom_functions[node.name] = "O(2^n)"
-                
+            relation = "T(n) = 2T(n/2) + O(n)" if (self.has_slicing or self.has_division) else "T(n) = T(n-1) + T(n-2) + O(1)"
         elif self.recursive_calls_count == 1:
-            self.custom_functions[node.name] = "O(n)"
-            
+            relation = "T(n) = T(n-1) + O(1)"
         else:
-            if func_max_power == 0: comp_str = "O(1)"
-            elif func_max_power == 1: comp_str = "O(n)"
-            else: comp_str = f"O(n^{func_max_power})"
-            self.custom_functions[node.name] = comp_str
+            relation = self._build_time_str(self.max_poly, self.max_log)
+            
+        self.custom_functions[node.name] = relation
+        self.custom_space[node.name] = "O(n)" if (self.recursive_calls_count > 0 or self.max_space_weight > 0) else "O(1)"
         
-        self.max_complexity = max(previous_max, func_max_power)
+        self.max_complexity = max(prev_t, self.max_complexity)
+        self.max_space_weight = max(prev_s, self.max_space_weight)
+        self.max_poly = max(prev_poly, self.max_poly)
+        self.max_log = max(prev_log, self.max_log)
         self.current_function_name = None
 
     def visit_For(self, node):
-        self.has_loop = True      # <--- ADD THIS
         self.loop_depth += 1      
         self.record_line(node)    
-        
         self.current_depth += 1   
         self.generic_visit(node)  
         self.current_depth -= 1   
-        
         self.loop_depth -= 1      
 
     def visit_While(self, node):
-        self.has_loop = True      # <--- ADD THIS
-        self.loop_depth += 1      
+        is_log = self._is_log_loop(node)
+        if is_log:
+            self.log_loop_depth += 1
+        else:
+            self.loop_depth += 1      
+            
         self.record_line(node)
         
         self.current_depth += 1   
         self.generic_visit(node)
         self.current_depth -= 1
         
-        self.loop_depth -= 1
+        if is_log:
+            self.log_loop_depth -= 1
+        else:
+            self.loop_depth -= 1
 
     def visit_If(self, node):
         self.record_line(node)
-        
-        self.current_depth += 1   # Safely indent 'if' bodies!
+        self.current_depth += 1   
         self.generic_visit(node)
         self.current_depth -= 1
 
-    def visit_Expr(self, node):
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name):
+            f_id = node.func.id
+            if f_id == self.current_function_name:
+                self.recursive_calls_count += 1
+                if self.loop_depth > 0 or self.log_loop_depth > 0: self.has_recursion_in_loop = True
+                
+                rel = self.custom_functions.get(f_id, "T(n-1)")
+                self.record_line(node, time_override=rel, space_override="O(n)")
+                
+            elif f_id in self.builtin_complexities:
+                b = self.builtin_complexities[f_id]
+                self.record_line(node, time_override=b['time'], space_override=b['space'])
+            elif f_id in self.custom_functions:
+                self.record_line(node, time_override=self.custom_functions[f_id], space_override=self.custom_space.get(f_id, "O(1)"))
+            else:
+                self.record_line(node)
+        elif isinstance(node.func, ast.Attribute):
+            if node.func.attr in self.builtin_complexities:
+                b = self.builtin_complexities[node.func.attr]
+                self.record_line(node, time_override=b['time'], space_override=b['space'])
+            else:
+                self.record_line(node)
+        self.generic_visit(node)
+
+    def visit_Subscript(self, node):
+        if isinstance(node.slice, ast.Slice): self.has_slicing = True
+        self.generic_visit(node)
+
+    def visit_BinOp(self, node):
+        if isinstance(node.op, (ast.Div, ast.FloorDiv)):
+            self.has_division = True
+        self.generic_visit(node)
+
+    def visit_Assign(self, node): 
+        space_override = None
+        if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
+            if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
+                space_override = "O(n)"
+        elif isinstance(node.value, ast.ListComp):
+            space_override = "O(n)"
+        elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
+            space_override = "O(n)"
+            
+        self.record_line(node, space_override=space_override)
+        self.generic_visit(node)
+
+    def visit_AugAssign(self, node): 
         self.record_line(node)
         self.generic_visit(node)
 
-    def visit_Call(self, node):
-        if isinstance(node.func, ast.Name):
-            func_name = node.func.id
-            
-            if func_name == self.current_function_name:
-                self.recursive_calls_count += 1
-                if self.loop_depth > 0:
-                    self.has_recursion_in_loop = True
-                    
-                # --- NEW: Protect max_complexity from recursive inflation ---
-                temp_max = self.max_complexity 
-                if func_name in self.custom_functions:
-                    self.record_line(node, complexity_override=self.custom_functions[func_name])
-                else:
-                    self.record_line(node, complexity_override="O(n)" if self.recursive_calls_count == 1 else "O(2^n)")
-                self.max_complexity = temp_max # Restore it!
-            
-            elif func_name in self.custom_functions:
-                self.record_line(node, complexity_override=self.custom_functions[func_name])
-                
+    def visit_Return(self, node): 
+        space_override = None
+        if node.value:
+            if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
+                if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
+                    space_override = "O(n)"
+            elif isinstance(node.value, ast.ListComp):
+                space_override = "O(n)"
+            elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
+                space_override = "O(n)"
+        self.record_line(node, space_override=space_override)
         self.generic_visit(node)
 
-    def visit_Return(self, node):
+    def visit_Expr(self, node): 
         self.record_line(node)
         self.generic_visit(node)
 
     def get_final_badge(self):
-        # 1. Check for Factorial Time
-        if any("n!" in str(d.get('complexity')) for d in self.details):
-            return "O(n!)"
-            
-        # 2. Check if any line was recorded as exponential
-        if any("2^n" in str(d.get('complexity')) for d in self.details):
-            return "O(2^n)"
-        
-        # 3. Check for N Log N (Merge Sort)
-        if any("O(n log n)" in str(d.get('complexity')) for d in self.details):
-            return "O(n log n)"
-        
-        # 4. Fallback to loop-based complexity
-        if self.max_complexity == 0: return "O(1)"
-        if self.max_complexity == 1: return "O(n)"
-        return f"O(n^{self.max_complexity})"
+        for line in reversed(self.details):
+            if "T(n) =" in line.get('complexity', ''): return line['complexity']
+        return self._build_time_str(self.max_poly, self.max_log)
 
-    def visit_Subscript(self, node):
-        # Detects structural array slicing like arr[:mid] or arr[mid:]
-        if isinstance(node.slice, ast.Slice):
-            self.has_slicing = True
-        self.generic_visit(node)
+    def get_final_asymptotic_badge(self):
+        for line in reversed(self.details):
+            comp = line.get('complexity', '')
+            if "T(n) = n * T(n-1)" in comp: return "O(n!)"
+            elif "2T(n/2)" in comp: return "O(n log n)"
+            elif "T(n-1) + T(n-2)" in comp: return "O(2^n)"
+            elif "T(n-1)" in comp: return "O(n)"
+        return self._build_time_str(self.max_poly, self.max_log)
 
-# In api/index.py
 @app.post("/api/analyze") 
-@app.post("/analyze")
+@app.post("/analyze") 
 def analyze_complexity(payload: CodePayload):
     try:
         tree = ast.parse(payload.code)
         analyzer = ComplexityAnalyzer(payload.code)
         
-        # 1. Map all functions
         analyzer.bfs_first_pass(tree)
-        
-        # 2. PRE-COMPUTE: Calculate math for all functions
-        # We store the results in analyzer.custom_functions
-        for func_name, func_node in analyzer.symbol_table.items():
-            analyzer.visit(func_node)
+        for name, node in analyzer.symbol_table.items():
+            analyzer.visit(node)
             
-        # 3. RESET ONLY VISUALS: Keep custom_functions!
-        analyzer.details = []
-        analyzer.max_complexity = 0
-        analyzer.current_depth = 0
-        analyzer.loop_depth = 0
-        
-        # 4. FINAL PASS: Now use the stored math to build the table
+        analyzer.details, analyzer.space_details = [], []
+        analyzer.max_complexity, analyzer.max_space_weight = 0, 0
+        analyzer.max_poly, analyzer.max_log = 0, 0
+        analyzer.current_depth, analyzer.loop_depth, analyzer.log_loop_depth = 0, 0, 0
         analyzer.visit(tree)
         
+        is_recursive = any("T(n) =" in line.get('complexity', '') for line in analyzer.details)
+
+        asymptotic_lines = []
+        for line in analyzer.details:
+            comp = line['complexity']
+            asymp = comp
+            if "T(n) = n * T(n-1)" in comp: asymp = "O(n!)"
+            elif "2T(n/2)" in comp: asymp = "O(n log n)"
+            elif "T(n-1) + T(n-2)" in comp: asymp = "O(2^n)"
+            elif "T(n-1)" in comp: asymp = "O(n)"
+            
+            asymptotic_lines.append({
+                "lineOfCode": line["lineOfCode"],
+                "complexity": asymp,
+                "indent": line.get("indent", 0),
+                "color": analyzer.get_color(asymp),
+                "weight": line.get("weight", 0)
+            })
+
         return {
             "status": "success",
-            "total": analyzer.get_final_badge(),
-            "lines": analyzer.details
+            "total": analyzer.get_final_asymptotic_badge(),
+            "total_recurrence": analyzer.get_final_badge(),
+            "lines": asymptotic_lines,
+            "recurrence_lines": analyzer.details,
+            "space_total": "O(n)" if analyzer.max_space_weight > 0 else "O(1)",
+            "space_lines": analyzer.space_details,
+            "is_recursive": is_recursive
         }
-
     except Exception as e:
-        print(f"Analyzer Error: {e}") 
-        return {"status": "error", "total": "Error", "lines": []}
-    
+        return {"status": "error", "total": "Error", "total_recurrence": "Error", "lines": [], "recurrence_lines": [], "is_recursive": False}
+
 @app.post("/api/run")
-@app.post("/run")     # 🔥 ADD THIS: Fallback in case Vercel strips the path
+@app.post("/run")
 def run_code(payload: CodePayload):
     old_stdout = sys.stdout
     redirected_output = sys.stdout = StringIO()
     try:
         exec_globals = {}
         exec(payload.code, exec_globals)
-        output = redirected_output.getvalue()
-        if not output:
-            output = "> Code ran successfully."
+        output = redirected_output.getvalue() or "> Code ran successfully."
     except Exception as e:
         output = f"Runtime Error: {str(e)}"
     finally:
@@ -290,30 +412,16 @@ def run_code(payload: CodePayload):
 def save_project(project: ProjectModel):
     if projects_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
-    
-    # Convert Pydantic model to a dictionary
     project_dict = project.model_dump()
-    
-    # Insert into MongoDB
     result = projects_collection.insert_one(project_dict)
-    
-    return {
-        "status": "success", 
-        "message": "Project saved!", 
-        "id": str(result.inserted_id)
-    }
+    return {"status": "success", "message": "Project saved!", "id": str(result.inserted_id)}
 
 @app.get("/api/projects")
 @app.get("/projects")
 def get_projects():
     if projects_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
-    
-    # Fetch all projects from the collection
     projects = list(projects_collection.find({}))
-    
-    # MongoDB returns _id as an ObjectId, we need to convert it to a string for JSON
     for p in projects:
         p["_id"] = str(p["_id"])
-        
     return {"status": "success", "projects": projects}

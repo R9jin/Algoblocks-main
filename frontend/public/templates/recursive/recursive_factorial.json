@@ -5,8 +5,8 @@
       {
         "type": "procedures_defreturn",
         "id": "4PS@EAvin2ZT1:*,w-y:",
-        "x": 143,
-        "y": 432,
+        "x": 90,
+        "y": 193,
         "extraState": {
           "params": [
             {
@@ -187,8 +187,8 @@
       {
         "type": "variables_set",
         "id": "2%3k3eP[0d$yA9j!^qi(",
-        "x": 151,
-        "y": 668,
+        "x": 86,
+        "y": 432,
         "fields": {
           "VAR": {
             "id": "IAh*GC#oAjMh0Zu3P,/m"
