@@ -14,7 +14,6 @@ import "@blockly/toolbox-search";
 import { Backpack } from "@blockly/workspace-backpack";
 import { ContentHighlight } from "@blockly/workspace-content-highlight";
 import { PositionedMinimap } from "@blockly/workspace-minimap";
-import { ZoomToFitControl } from "@blockly/zoom-to-fit";
 
 Blockly.setLocale(En);
 // --- 1. DEFINE CUSTOM BLOCKS ---
@@ -168,7 +167,7 @@ const toolbox = {
       name: "Lists",
       colour: "260",
       contents: [
-        { kind: "block", type: "string_to_list" }, // <--- ADD THIS LINE HERE
+        { kind: "block", type: "string_to_list" }, 
         { kind: "block", type: "lists_create_with", extraState: { itemCount: 0 } },
         { kind: "block", type: "lists_create_with" },
         { kind: "block", type: "lists_repeat", inputs: { NUM: { shadow: { type: "math_number", fields: { NUM: 5 } } } } },
@@ -236,7 +235,6 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
 
       try {
         new WorkspaceSearch(workspace.current).init();
-        new ZoomToFitControl(workspace.current).init();
         new PositionedMinimap(workspace.current).init();
         new Modal(workspace.current).init();
         new Backpack(workspace.current).init();
@@ -258,16 +256,20 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
 
       pythonGenerator.finish = function(code) {
         const definitions = Object.values(this.definitions_);
-        return definitions.join('\n\n') + '\n\n' + code;
+        let finalCode = definitions.join('\n\n') + '\n\n' + code;
+        
+        // This Regex finds any line that starts with spaces/tabs, followed by 'global ', 
+        // and strips it out completely.
+        finalCode = finalCode.replace(/^[ \t]*global[ \t]+.*\n?/gm, '');
+        
+        return finalCode.trim();
       };
 
       pythonGenerator.forBlock['comment_block'] = function(block) {
         const text = block.getFieldValue('TEXT');
-        // Add pass\n so the AST parser doesn't crash on empty functions
         return `\n# ${text}\n`;
       };
 
-      // --- CRASH-PROOF MATH ASSIGNMENT ---
       pythonGenerator.forBlock['math_assignment'] = function(block) {
         const variable = pythonGenerator.getVariableName(block.getFieldValue('VAR'));
         const operator = block.getFieldValue('OP');
@@ -281,7 +283,6 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return `${variable} ${symbol} ${value}\n`;
       };
 
-      // --- CRASH-PROOF CONTROLS_FOR (NO COMMA 1, CLEAN INDENTS) ---
       pythonGenerator.forBlock['controls_for'] = function(block) {
         const variable = pythonGenerator.getVariableName(block.getFieldValue('VAR'));
         const from = pythonGenerator.valueToCode(block, 'FROM', pythonGenerator.ORDER_NONE) || '0';
@@ -334,46 +335,40 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       };
 
       pythonGenerator.forBlock['procedure_return_value'] = function(block) {
-        // Get the code from the block attached to the 'VALUE' input
         const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
         return `return ${value}\n`;
       };
 
-      // --- CUSTOM JOIN GENERATOR ---
       pythonGenerator.forBlock['custom_string_join'] = function(block) {
-        // Get the code attached to the LIST input, default to '[]' if empty
         const list = pythonGenerator.valueToCode(block, 'LIST', pythonGenerator.ORDER_NONE) || '[]';
-        // Get the code attached to the DELIMITER input, default to "''" (empty string) if empty
         const delimiter = pythonGenerator.valueToCode(block, 'DELIMITER', pythonGenerator.ORDER_MEMBER) || "''";
-        
-        // Create the standard Python syntax: delimiter.join(list)
         const code = `${delimiter}.join(${list})`;
-        
-        // Because this block returns a value, it must return an array [code, precedence]
         return [code, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
-      // --- CUSTOM STRING TO LIST GENERATOR ---
       pythonGenerator.forBlock['string_to_list'] = function(block) {
-        // Get the string or variable attached to the block
         const stringVal = pythonGenerator.valueToCode(block, 'STRING', pythonGenerator.ORDER_NONE) || "''";
-        
-        // Generate the exact Python syntax: list(word)
         const code = `list(${stringVal})`;
-        
         return [code, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
+      // ==========================================
+      // OVERRIDE: Listen to ALL structural workspace events
+      // ==========================================
       workspace.current.addChangeListener((event) => {
-        if (event.type === Blockly.Events.BLOCK_CREATE || 
-            event.type === Blockly.Events.BLOCK_DELETE || 
-            event.type === Blockly.Events.BLOCK_CHANGE || 
-            event.type === Blockly.Events.BLOCK_MOVE) {
+        // Skip UI events like clicking, dragging, and scrolling to prevent lag
+        if (event.isUiEvent) return;
+
+        try {
+          // Whenever ANY non-UI change happens, save state and generate fresh code
           const json = Blockly.serialization.workspaces.save(workspace.current);
           const code = pythonGenerator.workspaceToCode(workspace.current);
           if (onChangeRef.current) onChangeRef.current(json, code);
+        } catch (e) {
+          console.warn("Blockly Workspace Update Error: ", e);
         }
       });
+      // ==========================================
       
       const observer = new ResizeObserver(() => {
         if (workspace.current) Blockly.svgResize(workspace.current);

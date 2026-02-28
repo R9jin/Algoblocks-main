@@ -4,6 +4,7 @@ from io import StringIO
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import ast
+import re
 from database import projects_collection
 from models import ProjectModel
 from bson import ObjectId
@@ -29,7 +30,10 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.space_details = []     
         self.current_depth = 0  
         self.loop_depth = 0     
+        self.log_loop_depth = 0
         self.max_complexity = 0 
+        self.max_poly = 0
+        self.max_log = 0
         self.max_space_weight = 0   
         self.custom_functions = {} 
         self.custom_space = {}      
@@ -95,27 +99,74 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if "O(n)" in complexity_str or "T(n" in complexity_str: return "#e67e22" 
         return "#27ae60" 
 
+    def _is_log_loop(self, node):
+        if not isinstance(node, ast.While):
+            return False
+        for child in ast.walk(node):
+            if isinstance(child, ast.BinOp) and isinstance(child.op, (ast.Div, ast.FloorDiv)):
+                if isinstance(child.right, ast.Constant) and child.right.value == 2:
+                    return True
+            elif isinstance(child, ast.AugAssign) and isinstance(child.op, (ast.Div, ast.FloorDiv)):
+                if isinstance(child.value, ast.Constant) and child.value.value == 2:
+                    return True
+        return False
+
+    def _build_time_str(self, poly, log):
+        if poly == 0 and log == 0: return "O(1)"
+        if poly == 0 and log == 1: return "O(log n)"
+        if poly == 0 and log > 1: return f"O(log^{log} n)"
+        if poly == 1 and log == 0: return "O(n)"
+        if poly == 1 and log == 1: return "O(n log n)"
+        if poly == 1 and log > 1: return f"O(n log^{log} n)"
+        if poly > 1 and log == 0: return f"O(n^{poly})"
+        if poly > 1 and log == 1: return f"O(n^{poly} log n)"
+        return f"O(n^{poly} log^{log} n)"
+
     def record_line(self, node, time_override=None, space_override=None):
-        is_loop_header = isinstance(node, (ast.For, ast.While))
         line_text = self.get_code_snippet(node)
 
-        # 1. Determine Visual Strings
-        time_str = time_override if time_override else (f"O(n^{self.loop_depth})" if is_loop_header and self.loop_depth > 1 else ("O(n)" if is_loop_header else "O(1)"))
+        # 1. Base depth of loops
+        current_poly = self.loop_depth
+        current_log = self.log_loop_depth
+        
+        # 2. Add complexity from function calls/overrides
+        override_poly = 0
+        override_log = 0
+        is_recurrence = False
+
+        if time_override:
+            if any(x in time_override for x in ["T(n) =", "n!", "2^n", "2T("]):
+                is_recurrence = True
+            else:
+                if "n log n" in time_override:
+                    override_poly = 1
+                    override_log = 1
+                elif "O(log n)" in time_override:
+                    override_log = 1
+                elif "O(n)" in time_override:
+                    override_poly = 1
+                else:
+                    match = re.search(r"O\(n\^(\d+)", time_override)
+                    if match:
+                        override_poly = int(match.group(1))
+                        override_log = 1 if "log n" in time_override else 0
+
+        # Combine loop depth and function overrides
+        total_poly = current_poly + override_poly
+        total_log = current_log + override_log
+
+        if time_override and is_recurrence:
+            time_str = time_override
+            t_weight = 1000
+        else:
+            time_str = self._build_time_str(total_poly, total_log)
+            t_weight = total_poly * 10 + total_log * 5
+
         space_str = space_override if space_override else "O(1)"
+        s_weight = 10 if "O(n)" in space_str else 0
+        if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
 
-        # 2. Ranking Weights
-        t_weight = self.loop_depth
-        if any(x in time_str for x in ["n * T", "n!", "2^n", "T(n-1) + T"]): t_weight = 100
-        elif "2T(" in time_str: t_weight = 99
-        elif "T(n) =" in time_str: t_weight = 98 
-        elif "n log n" in time_str: t_weight = max(t_weight, 2)
-        elif "O(n)" in time_str or "T(n" in time_str: t_weight = max(t_weight, 1)
-
-        s_weight = 1 if "O(n)" in space_str else 0
-        if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 100
-
-        # 3. GROUPING mechanism: ONLY overwrite if the new operation is heavier 
-        # Time Pass
+        # GROUPING mechanism: ONLY overwrite if the new operation is heavier
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             existing_weight = self.details[-1].get("weight", -1)
             if t_weight >= existing_weight:
@@ -125,7 +176,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         else:
             self.details.append({"lineOfCode": line_text, "complexity": time_str, "indent": self.current_depth, "color": self.get_color(time_str), "weight": t_weight})
 
-        # Space Pass
         if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
             existing_s_weight = self.space_details[-1].get("weight", -1)
             if s_weight >= existing_s_weight:
@@ -135,7 +185,12 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         else:
             self.space_details.append({"lineOfCode": line_text, "complexity": space_str, "indent": self.current_depth, "color": self.get_color(space_str), "weight": s_weight})
 
-        if t_weight > self.max_complexity: self.max_complexity = t_weight
+        if t_weight > self.max_complexity: 
+            self.max_complexity = t_weight
+            if t_weight < 998:
+                self.max_poly = t_weight // 10
+                self.max_log = (t_weight % 10) // 5
+            
         if s_weight > self.max_space_weight: self.max_space_weight = s_weight
 
     def visit_FunctionDef(self, node):
@@ -148,7 +203,9 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.record_line(node, time_override="O(1)", space_override="O(1)") 
         
         prev_t, prev_s = self.max_complexity, self.max_space_weight
+        prev_poly, prev_log = self.max_poly, self.max_log
         self.max_complexity, self.max_space_weight = 0, 0
+        self.max_poly, self.max_log = 0, 0
         
         self.current_depth += 1 
         self.generic_visit(node)
@@ -161,13 +218,15 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         elif self.recursive_calls_count == 1:
             relation = "T(n) = T(n-1) + O(1)"
         else:
-            relation = f"O(n^{self.max_complexity})" if self.max_complexity > 1 else ("O(n)" if self.max_complexity == 1 else "O(1)")
+            relation = self._build_time_str(self.max_poly, self.max_log)
             
         self.custom_functions[node.name] = relation
         self.custom_space[node.name] = "O(n)" if (self.recursive_calls_count > 0 or self.max_space_weight > 0) else "O(1)"
         
         self.max_complexity = max(prev_t, self.max_complexity)
         self.max_space_weight = max(prev_s, self.max_space_weight)
+        self.max_poly = max(prev_poly, self.max_poly)
+        self.max_log = max(prev_log, self.max_log)
         self.current_function_name = None
 
     def visit_For(self, node):
@@ -179,12 +238,22 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.loop_depth -= 1      
 
     def visit_While(self, node):
-        self.loop_depth += 1      
+        is_log = self._is_log_loop(node)
+        if is_log:
+            self.log_loop_depth += 1
+        else:
+            self.loop_depth += 1      
+            
         self.record_line(node)
+        
         self.current_depth += 1   
         self.generic_visit(node)
         self.current_depth -= 1
-        self.loop_depth -= 1
+        
+        if is_log:
+            self.log_loop_depth -= 1
+        else:
+            self.loop_depth -= 1
 
     def visit_If(self, node):
         self.record_line(node)
@@ -197,7 +266,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             f_id = node.func.id
             if f_id == self.current_function_name:
                 self.recursive_calls_count += 1
-                if self.loop_depth > 0: self.has_recursion_in_loop = True
+                if self.loop_depth > 0 or self.log_loop_depth > 0: self.has_recursion_in_loop = True
                 
                 rel = self.custom_functions.get(f_id, "T(n-1)")
                 self.record_line(node, time_override=rel, space_override="O(n)")
@@ -263,9 +332,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     def get_final_badge(self):
         for line in reversed(self.details):
             if "T(n) =" in line.get('complexity', ''): return line['complexity']
-        if self.max_complexity == 0: return "O(1)"
-        if self.max_complexity == 1: return "O(n)"
-        return f"O(n^{self.max_complexity})"
+        return self._build_time_str(self.max_poly, self.max_log)
 
     def get_final_asymptotic_badge(self):
         for line in reversed(self.details):
@@ -274,9 +341,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             elif "2T(n/2)" in comp: return "O(n log n)"
             elif "T(n-1) + T(n-2)" in comp: return "O(2^n)"
             elif "T(n-1)" in comp: return "O(n)"
-        if self.max_complexity == 0: return "O(1)"
-        if self.max_complexity == 1: return "O(n)"
-        return f"O(n^{self.max_complexity})"
+        return self._build_time_str(self.max_poly, self.max_log)
 
 @app.post("/api/analyze") 
 @app.post("/analyze") 
@@ -291,7 +356,8 @@ def analyze_complexity(payload: CodePayload):
             
         analyzer.details, analyzer.space_details = [], []
         analyzer.max_complexity, analyzer.max_space_weight = 0, 0
-        analyzer.current_depth, analyzer.loop_depth = 0, 0
+        analyzer.max_poly, analyzer.max_log = 0, 0
+        analyzer.current_depth, analyzer.loop_depth, analyzer.log_loop_depth = 0, 0, 0
         analyzer.visit(tree)
         
         is_recursive = any("T(n) =" in line.get('complexity', '') for line in analyzer.details)
