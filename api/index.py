@@ -343,7 +343,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             elif "T(n-1)" in comp: return "O(n)"
         return self._build_time_str(self.max_poly, self.max_log)
 
-@app.post("/api/analyze") 
 @app.post("/analyze") 
 def analyze_complexity(payload: CodePayload):
     try:
@@ -392,7 +391,6 @@ def analyze_complexity(payload: CodePayload):
     except Exception as e:
         return {"status": "error", "total": "Error", "total_recurrence": "Error", "lines": [], "recurrence_lines": [], "is_recursive": False}
 
-@app.post("/api/run")
 @app.post("/run")
 def run_code(payload: CodePayload):
     old_stdout = sys.stdout
@@ -407,7 +405,6 @@ def run_code(payload: CodePayload):
         sys.stdout = old_stdout
     return {"status": "success", "output": output}
 
-@app.post("/api/projects")
 @app.post("/projects")
 def save_project(project: ProjectModel):
     if projects_collection is None:
@@ -415,8 +412,7 @@ def save_project(project: ProjectModel):
     project_dict = project.model_dump()
     result = projects_collection.insert_one(project_dict)
     return {"status": "success", "message": "Project saved!", "id": str(result.inserted_id)}
-
-@app.get("/api/projects")
+)
 @app.get("/projects")
 def get_projects():
     if projects_collection is None:
