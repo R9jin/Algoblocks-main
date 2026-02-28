@@ -60,18 +60,20 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return "Code Block"
 
     def get_color(self, complexity_str):
+        if "n!" in complexity_str: return "#8e44ad" # Dark Purple for Factorial
         if "2^n" in complexity_str: return "#9b59b6" # Purple for Exponential
         if "n^2" in complexity_str or "n^3" in complexity_str: return "#e74c3c" # Red
         if "log" in complexity_str: return "#2980b9" # Blue
         if "O(n)" in complexity_str: return "#e67e22" # Orange
         return "#27ae60" # Green
-    #hello
+
     def record_line(self, node, complexity_override=None):
         power = self.loop_depth # <-- FIX: Math now ignores visual indentation
         
         if complexity_override:
             comp_str = complexity_override
-            if "2^n" in comp_str: power = max(power, 99)
+            if "n!" in comp_str: power = max(power, 100) # ADD THIS
+            elif "2^n" in comp_str: power = max(power, 99)
             elif "log" in comp_str: power = max(power, 1) 
             elif "O(n)" in comp_str: power = max(power, 1)
             elif "O(1)" in comp_str: power = max(power, 0)
@@ -125,6 +127,8 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         elif self.recursive_calls_count == 1:
             if "merge" in node.name:
                 self.custom_functions[node.name] = "O(n log n)"
+            elif "factorial" in node.name.lower(): # ADD THIS
+                self.custom_functions[node.name] = "O(n!)"
             else:
                 self.custom_functions[node.name] = "O(n)"
         else:
@@ -198,15 +202,19 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def get_final_badge(self):
-        # 1. Check if any line was recorded as exponential
+        # 1. Check for Factorial Time
+        if any("n!" in str(d.get('complexity')) for d in self.details):
+            return "O(n!)"
+            
+        # 2. Check if any line was recorded as exponential
         if any("2^n" in str(d.get('complexity')) for d in self.details):
             return "O(2^n)"
         
-        # 2. Check for N Log N (Merge Sort)
+        # 3. Check for N Log N (Merge Sort)
         if any("O(n log n)" in str(d.get('complexity')) for d in self.details):
             return "O(n log n)"
         
-        # 3. Fallback to loop-based complexity
+        # 4. Fallback to loop-based complexity
         if self.max_complexity == 0: return "O(1)"
         if self.max_complexity == 1: return "O(n)"
         return f"O(n^{self.max_complexity})"
@@ -243,6 +251,7 @@ def analyze_complexity(payload: CodePayload):
             "total": analyzer.get_final_badge(),
             "lines": analyzer.details
         }
+
     except Exception as e:
         print(f"Analyzer Error: {e}") 
         return {"status": "error", "total": "Error", "lines": []}
