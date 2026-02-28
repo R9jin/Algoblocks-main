@@ -108,17 +108,19 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return "Code Block"
 
     def get_color(self, complexity_str):
-        if "n!" in complexity_str: return "#8e44ad" # Dark Purple for Factorial
-        if "2^n" in complexity_str: return "#9b59b6" # Purple for Exponential
+        # Recurrence Relations (e.g., T(n) = n * T(n-1) + O(1))
+        if "T(n) =" in complexity_str: return "#8e44ad" # Dark Purple
+        if "n!" in complexity_str: return "#8e44ad" # Dark Purple
+        if "2^n" in complexity_str: return "#9b59b6" # Purple
         if "n^2" in complexity_str or "n^3" in complexity_str: return "#e74c3c" # Red
         if "log" in complexity_str: return "#2980b9" # Blue
-        if "O(n)" in complexity_str: return "#e67e22" # Orange
+        if "O(n)" in complexity_str or "T(n" in complexity_str: return "#e67e22" # Orange
         return "#27ae60" # Green
 
     def record_line(self, node, complexity_override=None):
         is_loop_header = isinstance(node, (ast.For, ast.While))
         
-        # Visual string for the UI
+        # Determine the string to show in the UI
         if complexity_override:
             comp_str = complexity_override
         elif is_loop_header:
@@ -126,19 +128,19 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         else:
             comp_str = "O(1)"
 
-        # Mathematical power for Total Badge ranking
+        # Get the color based on that string
+        color = self.get_color(comp_str)
+        line_text = self.get_code_snippet(node)
+
+        # Use 'current_weight' to track the mathematical total for the badge
         current_weight = self.loop_depth
         if complexity_override:
-            if "n log n" in comp_str: current_weight = max(current_weight, 2) # Ranked slightly above linear
-            elif "O(n)" in comp_str: current_weight = max(current_weight, 1)
-            elif "T(n-1)" in comp_str: current_weight = max(current_weight, 1)
-            # Add other weights for factorial/exponential as needed
+            if "n * T(n-1)" in comp_str or "n!" in comp_str: current_weight = 100
+            elif "2^n" in comp_str or "2T(" in comp_str: current_weight = 99
+            elif "n log n" in comp_str: current_weight = max(current_weight, 2)
+            elif "O(n)" in comp_str or "T(n" in comp_str: current_weight = max(current_weight, 1)
 
-        # ... (rest of your record_line logic remains the same)
-        if current_weight > self.max_complexity:
-            self.max_complexity = current_weight
-
-        # 4. Prevent Duplicate Lines in UI
+        # Update the details list with the color included
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             self.details[-1]["complexity"] = comp_str
             self.details[-1]["color"] = color
@@ -147,12 +149,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 "lineOfCode": line_text,
                 "complexity": comp_str,
                 "indent": self.current_depth,
-                "color": color
+                "color": color # This is what the frontend uses for styling
             })
 
-        # 5. Update global max_complexity based on the true mathematical power
-        if current_line_power > self.max_complexity:
-            self.max_complexity = current_line_power
+        if current_weight > self.max_complexity:
+            self.max_complexity = current_weight
             
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name 
