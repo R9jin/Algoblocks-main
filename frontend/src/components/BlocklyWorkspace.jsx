@@ -213,8 +213,6 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
 
       try {
         new WorkspaceSearch(workspace.current).init();
-        new ZoomToFitControl(workspace.current).init();
-        new PositionedMinimap(workspace.current).init();
         new Modal(workspace.current).init();
         new Backpack(workspace.current).init();
         new ContentHighlight(workspace.current).init();
