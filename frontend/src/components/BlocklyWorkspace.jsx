@@ -60,6 +60,27 @@ const customBlocks = [
     "colour": 210, // Same color as Functions category
     "tooltip": "Returns the value from this function.",
     "helpUrl": ""
+  },
+  {
+    "type": "custom_string_join",
+    "message0": "join list %1 with delimiter %2",
+    "args0": [
+      { "type": "input_value", "name": "LIST", "check": "Array" },
+      { "type": "input_value", "name": "DELIMITER", "check": "String" }
+    ],
+    "output": "String",
+    "colour": 160,
+    "tooltip": "Joins a list of strings into one string using a delimiter.",
+  },
+  {
+    "type": "string_to_list",
+    "message0": "create list from string %1",
+    "args0": [
+      { "type": "input_value", "name": "STRING", "check": "String" }
+    ],
+    "output": "Array",
+    "colour": 260, // Same color as standard List blocks
+    "tooltip": "Converts a word/string into a list of its individual characters.",
   }
 ];
 
@@ -128,6 +149,7 @@ const toolbox = {
       contents: [
         { kind: "block", type: "comment_block" }, 
         { kind: "block", type: "text" },
+        { kind: "block", type: "custom_string_join" },
         { kind: "block", type: "text_join" },
         { kind: "block", type: "text_append" },
         { kind: "block", type: "text_length" },
@@ -146,6 +168,7 @@ const toolbox = {
       name: "Lists",
       colour: "260",
       contents: [
+        { kind: "block", type: "string_to_list" }, // <--- ADD THIS LINE HERE
         { kind: "block", type: "lists_create_with", extraState: { itemCount: 0 } },
         { kind: "block", type: "lists_create_with" },
         { kind: "block", type: "lists_repeat", inputs: { NUM: { shadow: { type: "math_number", fields: { NUM: 5 } } } } },
@@ -241,7 +264,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       pythonGenerator.forBlock['comment_block'] = function(block) {
         const text = block.getFieldValue('TEXT');
         // Add pass\n so the AST parser doesn't crash on empty functions
-        return `# ${text}\npass\n`;
+        return `\n# ${text}\n`;
       };
 
       // --- CRASH-PROOF MATH ASSIGNMENT ---
@@ -314,6 +337,31 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         // Get the code from the block attached to the 'VALUE' input
         const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
         return `return ${value}\n`;
+      };
+
+      // --- CUSTOM JOIN GENERATOR ---
+      pythonGenerator.forBlock['custom_string_join'] = function(block) {
+        // Get the code attached to the LIST input, default to '[]' if empty
+        const list = pythonGenerator.valueToCode(block, 'LIST', pythonGenerator.ORDER_NONE) || '[]';
+        // Get the code attached to the DELIMITER input, default to "''" (empty string) if empty
+        const delimiter = pythonGenerator.valueToCode(block, 'DELIMITER', pythonGenerator.ORDER_MEMBER) || "''";
+        
+        // Create the standard Python syntax: delimiter.join(list)
+        const code = `${delimiter}.join(${list})`;
+        
+        // Because this block returns a value, it must return an array [code, precedence]
+        return [code, pythonGenerator.ORDER_FUNCTION_CALL];
+      };
+
+      // --- CUSTOM STRING TO LIST GENERATOR ---
+      pythonGenerator.forBlock['string_to_list'] = function(block) {
+        // Get the string or variable attached to the block
+        const stringVal = pythonGenerator.valueToCode(block, 'STRING', pythonGenerator.ORDER_NONE) || "''";
+        
+        // Generate the exact Python syntax: list(word)
+        const code = `list(${stringVal})`;
+        
+        return [code, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
       workspace.current.addChangeListener((event) => {

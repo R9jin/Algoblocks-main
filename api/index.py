@@ -39,24 +39,67 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.has_slicing = False
         self.has_loop = False # <--- ADD THIS
 
-    # --- NEW: The BFS Algorithm Pass ---
+        self.builtin_complexities = {
+            'sort': 'O(n log n)',
+            'join': 'O(n)',
+            'index': 'O(n)',
+            'count': 'O(n)',
+            'remove': 'O(n)',
+            'reverse': 'O(n)',
+            'copy': 'O(n)',
+            'clear': 'O(1)',
+            'append': 'O(1)'
+        }
+
+    # --- UPGRADED BFS PASS: Building a Call Graph ---
     def bfs_first_pass(self, tree):
         """
-        Pass 1: Breadth-First Search to map all functions before deep DFS analysis.
-        This solves the 'Forward Reference' problem.
+        Pass 1: Breadth-First Search to map all functions AND build a call graph.
+        This detects Indirect Recursion (A calls B, B calls A) which Blockly cannot do.
         """
-        queue = deque([tree])
+        # Store tuples of (Node, Enclosing_Function_Name)
+        queue = deque([(tree, None)]) 
+        self.call_graph = {} # Dictionary to store who calls who
         
         while queue:
-            current_node = queue.popleft()
+            current_node, current_func = queue.popleft()
             
-            # If the BFS finds a function, register it in the global map
+            # 1. Map Function Definitions
             if isinstance(current_node, ast.FunctionDef):
                 self.symbol_table[current_node.name] = current_node
-                
-            # Queue all immediate children for the next level of BFS
+                current_func = current_node.name
+                if current_func not in self.call_graph:
+                    self.call_graph[current_func] = set()
+            
+            # 2. Map Function Calls (Who is calling who?)
+            elif isinstance(current_node, ast.Call) and isinstance(current_node.func, ast.Name):
+                called_func = current_node.func.id
+                if current_func: # If this call happened inside a function definition
+                    self.call_graph[current_func].add(called_func)
+                    
+            # Queue children, passing down the current function context
             for child in ast.iter_child_nodes(current_node):
-                queue.append(child)
+                queue.append((child, current_func))
+                
+        # 3. Detect Indirect Recursion using the built graph
+        self.detect_indirect_recursion()
+
+    def detect_indirect_recursion(self):
+        """Helper to find cycles in the call graph using a simple DFS path check"""
+        for func in self.call_graph:
+            visited = set()
+            if self._has_cycle(func, visited):
+                # Pre-emptively mark this as highly complex!
+                self.custom_functions[func] = "O(2^n)" 
+
+    def _has_cycle(self, current_func, visited):
+        if current_func in visited:
+            return True
+        visited.add(current_func)
+        for neighbor in self.call_graph.get(current_func, []):
+            if self._has_cycle(neighbor, visited.copy()):
+                return True
+        return False
 
     def get_code_snippet(self, node):
         if hasattr(node, 'lineno'):
@@ -73,29 +116,29 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return "#27ae60" # Green
 
     def record_line(self, node, complexity_override=None):
-        power = self.loop_depth # <-- FIX: Math now ignores visual indentation
+        is_loop_header = isinstance(node, (ast.For, ast.While))
         
+        # Visual string for the UI
         if complexity_override:
             comp_str = complexity_override
-            if "n!" in comp_str: power = max(power, 100) # ADD THIS
-            elif "2^n" in comp_str: power = max(power, 99)
-            elif "log" in comp_str: power = max(power, 1) 
-            elif "O(n)" in comp_str: power = max(power, 1)
-            elif "O(1)" in comp_str: power = max(power, 0)
-            elif "^" in comp_str:
-                try: power = max(power, int(comp_str.split('^')[1].strip(')')))
-                except: pass
-        elif power == 0: 
+        elif is_loop_header:
+            comp_str = f"O(n^{self.loop_depth})" if self.loop_depth > 1 else "O(n)"
+        else:
             comp_str = "O(1)"
-        elif power == 1: 
-            comp_str = "O(n)"
-        else: 
-            comp_str = f"O(n^{power})"
 
-        color = self.get_color(comp_str)
-        line_text = self.get_code_snippet(node)
+        # Mathematical power for Total Badge ranking
+        current_weight = self.loop_depth
+        if complexity_override:
+            if "n log n" in comp_str: current_weight = max(current_weight, 2) # Ranked slightly above linear
+            elif "O(n)" in comp_str: current_weight = max(current_weight, 1)
+            elif "T(n-1)" in comp_str: current_weight = max(current_weight, 1)
+            # Add other weights for factorial/exponential as needed
 
-        # Prevent Duplicate Lines
+        # ... (rest of your record_line logic remains the same)
+        if current_weight > self.max_complexity:
+            self.max_complexity = current_weight
+
+        # 4. Prevent Duplicate Lines in UI
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             self.details[-1]["complexity"] = comp_str
             self.details[-1]["color"] = color
@@ -103,19 +146,20 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             self.details.append({
                 "lineOfCode": line_text,
                 "complexity": comp_str,
-                "indent": self.current_depth, # <-- Visual UI still uses current_depth
+                "indent": self.current_depth,
                 "color": color
             })
 
-        if power > self.max_complexity:
-            self.max_complexity = power
+        # 5. Update global max_complexity based on the true mathematical power
+        if current_line_power > self.max_complexity:
+            self.max_complexity = current_line_power
             
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name 
         self.recursive_calls_count = 0 
         self.has_recursion_in_loop = False 
         self.has_slicing = False           
-        self.has_loop = False # <--- RESET for each function
+        self.has_loop = False
         
         self.record_line(node, complexity_override="O(1)") 
         
@@ -126,28 +170,26 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
         self.current_depth -= 1
         
-        func_max_power = self.max_complexity 
-        
+        # Determine the relation based on structural flags
         if self.has_recursion_in_loop:
-            self.custom_functions[node.name] = "O(n!)"
-            
+            # e.g., Permutations (Recursion inside O(n) loop)
+            relation = "T(n) = n * T(n-1) + O(1)"
         elif self.recursive_calls_count >= 2:
-            # Check the mathematical max power (which now safely excludes recursive inflation)
-            if func_max_power >= 1 or self.has_slicing:
-                self.custom_functions[node.name] = "O(n log n)"
+            if self.has_slicing:
+                # e.g., Merge Sort
+                relation = "T(n) = 2T(n/2) + O(n)"
             else:
-                self.custom_functions[node.name] = "O(2^n)"
-                
+                # e.g., Fibonacci
+                relation = "T(n) = T(n-1) + T(n-2) + O(1)"
         elif self.recursive_calls_count == 1:
-            self.custom_functions[node.name] = "O(n)"
-            
+            # e.g., Linear Recursion
+            relation = "T(n) = T(n-1) + O(1)"
         else:
-            if func_max_power == 0: comp_str = "O(1)"
-            elif func_max_power == 1: comp_str = "O(n)"
-            else: comp_str = f"O(n^{func_max_power})"
-            self.custom_functions[node.name] = comp_str
-        
-        self.max_complexity = max(previous_max, func_max_power)
+            # Standard non-recursive
+            relation = f"O(n^{self.max_complexity})" if self.max_complexity > 0 else "O(1)"
+            
+        self.custom_functions[node.name] = relation
+        self.max_complexity = max(previous_max, self.max_complexity)
         self.current_function_name = None
 
     def visit_For(self, node):
@@ -184,24 +226,32 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Call(self, node):
+        # 1. Handle Function Calls (ast.Name) - like list(word) or print()
         if isinstance(node.func, ast.Name):
             func_name = node.func.id
             
+            # RECURSION CHECK (Educational T(n-1) notation)
             if func_name == self.current_function_name:
                 self.recursive_calls_count += 1
                 if self.loop_depth > 0:
                     self.has_recursion_in_loop = True
-                    
-                # --- NEW: Protect max_complexity from recursive inflation ---
-                temp_max = self.max_complexity 
-                if func_name in self.custom_functions:
-                    self.record_line(node, complexity_override=self.custom_functions[func_name])
-                else:
-                    self.record_line(node, complexity_override="O(n)" if self.recursive_calls_count == 1 else "O(2^n)")
-                self.max_complexity = temp_max # Restore it!
+                self.record_line(node, complexity_override="T(n-1)")
             
+            # BUILT-IN FUNCTION CHECK (from dict)
+            elif func_name in self.builtin_complexities:
+                self.record_line(node, complexity_override=self.builtin_complexities[func_name])
+            
+            # CUSTOM FUNCTION CHECK (calculated in BFS pass)
             elif func_name in self.custom_functions:
                 self.record_line(node, complexity_override=self.custom_functions[func_name])
+
+        # 2. Handle Method Calls (ast.Attribute) - like "".join(chars)
+        elif isinstance(node.func, ast.Attribute):
+            method_name = node.func.attr
+            
+            # Check if the method name exists in our centralized dictionary
+            if method_name in self.builtin_complexities:
+                self.record_line(node, complexity_override=self.builtin_complexities[method_name])
                 
         self.generic_visit(node)
 
@@ -210,19 +260,13 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def get_final_badge(self):
-        # 1. Check for Factorial Time
-        if any("n!" in str(d.get('complexity')) for d in self.details):
-            return "O(n!)"
-            
-        # 2. Check if any line was recorded as exponential
-        if any("2^n" in str(d.get('complexity')) for d in self.details):
-            return "O(2^n)"
+        # Scan through recorded lines to find the most complex relation
+        for line in reversed(self.details):
+            comp = line.get('complexity', '')
+            if "T(n) =" in comp:
+                return comp
         
-        # 3. Check for N Log N (Merge Sort)
-        if any("O(n log n)" in str(d.get('complexity')) for d in self.details):
-            return "O(n log n)"
-        
-        # 4. Fallback to loop-based complexity
+        # Fallback to standard Big-O for non-recursive code
         if self.max_complexity == 0: return "O(1)"
         if self.max_complexity == 1: return "O(n)"
         return f"O(n^{self.max_complexity})"
@@ -231,6 +275,15 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         # Detects structural array slicing like arr[:mid] or arr[mid:]
         if isinstance(node.slice, ast.Slice):
             self.has_slicing = True
+        self.generic_visit(node)
+
+    def visit_Assign(self, node):
+        self.record_line(node)
+        self.generic_visit(node)
+
+    def visit_AugAssign(self, node):
+        # This catches i += 1, total *= 2, etc.
+        self.record_line(node)
         self.generic_visit(node)
 
 # In api/index.py
