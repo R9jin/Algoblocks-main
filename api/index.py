@@ -25,14 +25,14 @@ class CodePayload(BaseModel):
 class ComplexityAnalyzer(ast.NodeVisitor):
     def __init__(self, source_code):
         self.source_lines = source_code.splitlines()
-        self.details = []           # Time Analysis Details
-        self.space_details = []     # Space Analysis Details
+        self.details = []           
+        self.space_details = []     
         self.current_depth = 0  
         self.loop_depth = 0     
-        self.max_complexity = 0     # Max Time Weight
-        self.max_space_weight = 0   # Max Space Weight
-        self.custom_functions = {}  # Time relations
-        self.custom_space = {}      # Space relations
+        self.max_complexity = 0 
+        self.max_space_weight = 0   
+        self.custom_functions = {} 
+        self.custom_space = {}      
         self.current_function_name = None  
         self.recursive_calls_count = 0
         self.symbol_table = {}
@@ -95,7 +95,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return "#27ae60" 
 
     def record_line(self, node, time_override=None, space_override=None):
-        """Records Time and Space complexity while preventing duplicate rows for the same line."""
         is_loop_header = isinstance(node, (ast.For, ast.While))
         line_text = self.get_code_snippet(node)
 
@@ -103,30 +102,37 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         time_str = time_override if time_override else (f"O(n^{self.loop_depth})" if is_loop_header and self.loop_depth > 1 else ("O(n)" if is_loop_header else "O(1)"))
         space_str = space_override if space_override else ("O(n)" if (self.has_slicing and not is_loop_header) or (self.current_function_name and self.recursive_calls_count > 0) else "O(1)")
 
-        # 2. Ranking Weights (Ensures Highest Complexity shows in the Badge)
+        # 2. Ranking Weights
         t_weight = self.loop_depth
         if any(x in time_str for x in ["n * T", "n!", "2^n", "T(n-1) + T"]): t_weight = 100
         elif "2T(" in time_str: t_weight = 99
+        elif "T(n) =" in time_str: t_weight = 98 # Catches linear recurrence relations
         elif "n log n" in time_str: t_weight = max(t_weight, 2)
         elif "O(n)" in time_str or "T(n" in time_str: t_weight = max(t_weight, 1)
 
         s_weight = 1 if "O(n)" in space_str else 0
         if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 100
 
-        # 3. GROUPING mechanism: Update last line if it matches, otherwise append
+        # 3. GROUPING mechanism: ONLY overwrite if the new operation is heavier (e.g. T(n) > O(1))
         # Time Pass
         if self.details and self.details[-1]["lineOfCode"] == line_text:
-            self.details[-1]["complexity"] = time_str
-            self.details[-1]["color"] = self.get_color(time_str)
+            existing_weight = self.details[-1].get("weight", -1)
+            if t_weight >= existing_weight:
+                self.details[-1]["complexity"] = time_str
+                self.details[-1]["color"] = self.get_color(time_str)
+                self.details[-1]["weight"] = t_weight
         else:
-            self.details.append({"lineOfCode": line_text, "complexity": time_str, "indent": self.current_depth, "color": self.get_color(time_str)})
+            self.details.append({"lineOfCode": line_text, "complexity": time_str, "indent": self.current_depth, "color": self.get_color(time_str), "weight": t_weight})
 
         # Space Pass
         if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
-            self.space_details[-1]["complexity"] = space_str
-            self.space_details[-1]["color"] = self.get_color(space_str)
+            existing_s_weight = self.space_details[-1].get("weight", -1)
+            if s_weight >= existing_s_weight:
+                self.space_details[-1]["complexity"] = space_str
+                self.space_details[-1]["color"] = self.get_color(space_str)
+                self.space_details[-1]["weight"] = s_weight
         else:
-            self.space_details.append({"lineOfCode": line_text, "complexity": space_str, "indent": self.current_depth, "color": self.get_color(space_str)})
+            self.space_details.append({"lineOfCode": line_text, "complexity": space_str, "indent": self.current_depth, "color": self.get_color(space_str), "weight": s_weight})
 
         if t_weight > self.max_complexity: self.max_complexity = t_weight
         if s_weight > self.max_space_weight: self.max_space_weight = s_weight
@@ -189,7 +195,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             if f_id == self.current_function_name:
                 self.recursive_calls_count += 1
                 if self.loop_depth > 0: self.has_recursion_in_loop = True
-                self.record_line(node, time_override="T(n-1)", space_override="O(n)")
+                
+                # Fetch full mathematical relation from the first pass instead of hardcoding "T(n-1)"
+                rel = self.custom_functions.get(f_id, "T(n-1)")
+                self.record_line(node, time_override=rel, space_override="O(n)")
+                
             elif f_id in self.builtin_complexities:
                 b = self.builtin_complexities[f_id]
                 self.record_line(node, time_override=b['time'], space_override=b['space'])
@@ -222,18 +232,23 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return f"O(n^{self.max_complexity})"
 
 @app.post("/api/analyze") 
-@app.post("analyze") 
+@app.post("/analyze") 
 def analyze_complexity(payload: CodePayload):
     try:
         tree = ast.parse(payload.code)
         analyzer = ComplexityAnalyzer(payload.code)
+        
+        # Pass 1: Identify all relations
         analyzer.bfs_first_pass(tree)
         for name, node in analyzer.symbol_table.items():
             analyzer.visit(node)
+            
+        # Pass 2: Map logic cleanly line by line
         analyzer.details, analyzer.space_details = [], []
         analyzer.max_complexity, analyzer.max_space_weight = 0, 0
         analyzer.current_depth, analyzer.loop_depth = 0, 0
         analyzer.visit(tree)
+        
         return {
             "status": "success",
             "total": analyzer.get_final_badge(),
