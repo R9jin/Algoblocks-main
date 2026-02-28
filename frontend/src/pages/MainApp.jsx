@@ -5,11 +5,14 @@ import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
 export default function MainApp() {
   const [analysisResult, setAnalysisResult] = useState({ 
     lines: [], 
+    recurrence_lines: [],
     total: "O(1)",
+    total_recurrence: "O(1)",
     space_lines: [],
-    space_total: "O(1)"
+    space_total: "O(1)",
+    is_recursive: false
   });
-  const [activeTab, setActiveTab] = useState("time");
+  const [activeTab, setActiveTab] = useState("time_asymptotic");
   const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
   const [consoleOutput, setConsoleOutput] = useState("Ready to run...");
   const [blocklyJson, setBlocklyJson] = useState(null);
@@ -33,10 +36,16 @@ export default function MainApp() {
       if (data.status === "success") {
         setAnalysisResult({ 
           total: data.total, 
+          total_recurrence: data.total_recurrence || data.total,
           lines: data.lines,
+          recurrence_lines: data.recurrence_lines || [],
           space_total: data.space_total || "O(1)",
-          space_lines: data.space_lines || []
+          space_lines: data.space_lines || [],
+          is_recursive: data.is_recursive || false
         });
+        
+        // Prevent getting stuck on the Recurrence tab if a new algorithm isn't recursive 
+        setActiveTab(prev => (prev === 'time_recurrence' && !data.is_recursive) ? 'time_asymptotic' : prev);
       }
     } catch (error) {
       console.error("Analysis Error:", error);
@@ -44,17 +53,14 @@ export default function MainApp() {
   };
 
   const loadAlgorithmTemplate = async (path) => {
-    // 1. Ask the user for confirmation before proceeding
     const confirmOverwrite = window.confirm(
       "Loading this algorithm will overwrite your current workspace. Any unsaved progress will be lost. Do you want to continue?"
     );
 
-    // 2. If they click "Cancel", exit the function immediately
     if (!confirmOverwrite) {
       return;
     }
 
-    // 3. If they clicked "OK", proceed with loading the template
     try {
       const response = await fetch(`/templates/${path}.json`);
       if (!response.ok) throw new Error("Template not found");
@@ -77,40 +83,38 @@ export default function MainApp() {
         setBlocklyJson(null);
         setAnalysisResult({ 
           lines: [], 
+          recurrence_lines: [],
           total: "O(1)",
+          total_recurrence: "O(1)",
           space_lines: [],
-          space_total: "O(1)"
+          space_total: "O(1)",
+          is_recursive: false
         });
+        setActiveTab("time_asymptotic");
       }
     }
   };
 
   const handleSave = () => {
-    // 1. Ask for a project name
     const projectName = window.prompt("Enter a name for your project file:", "my_algorithm");
     
-    // Only proceed if they entered a name and didn't cancel
     if (projectName) {
       if (!blocklyJson) {
         alert("The workspace is empty. Nothing to save!");
         return;
       }
 
-      // 2. Format the workspace data
       const jsonString = JSON.stringify(blocklyJson, null, 2);
       
-      // 3. Create a downloadable Blob
       const blob = new Blob([jsonString], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       
-      // 4. Create a temporary link and trigger the download
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${projectName.replace(/\s+/g, '_')}.json`; // Replaces spaces with underscores
+      link.download = `${projectName.replace(/\s+/g, '_')}.json`;
       document.body.appendChild(link);
       link.click();
       
-      // 5. Cleanup
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     }
@@ -159,7 +163,11 @@ export default function MainApp() {
         </div>
         
         {/* Right Side: Complexity */}
-        <div className="complexity-badge" style={{ color: '#00ff00', fontWeight: 'bold' }}>Total: {analysisResult.total}</div>
+        <div className="complexity-badge" style={{ color: '#00ff00', fontWeight: 'bold' }}>
+          Total: {activeTab === 'space' ? analysisResult.space_total : 
+                  activeTab === 'time_recurrence' ? analysisResult.total_recurrence : 
+                  analysisResult.total}
+        </div>
       </header>
 
       {/* MAIN BODY WITH ADJUSTABLE SIDEBAR */}
@@ -171,7 +179,7 @@ export default function MainApp() {
         style={{ flex: 1, display: 'flex' }}
       >
         {/* SIDEBAR */}
-        <aside style={{ background: '#1a1a2e', padding: '15px', overflowY: 'auto', height: '100%' }}>
+        <aside style={{ background: '#ffffff', padding: '15px', overflowY: 'auto', height: '100%' }}>
           <h3 style={{ color: '#C994FF', fontSize: '0.8rem', marginBottom: '15px', letterSpacing: '1px' }}>TEMPLATES</h3>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -234,7 +242,13 @@ export default function MainApp() {
                 ) : (
                   <div className="complexity-content">
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                      <button onClick={() => setActiveTab("time")} style={{ padding: '4px 10px', background: activeTab === 'time' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Time</button>
+                      <button onClick={() => setActiveTab("time_asymptotic")} style={{ padding: '4px 10px', background: activeTab === 'time_asymptotic' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Asymptotic Analysis</button>
+                      
+                      {/* ONLY rendered when is_recursive boolean is flagged true by python index.py */}
+                      {analysisResult.is_recursive && (
+                        <button onClick={() => setActiveTab("time_recurrence")} style={{ padding: '4px 10px', background: activeTab === 'time_recurrence' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Recurrence Relation</button>
+                      )}
+
                       <button onClick={() => setActiveTab("space")} style={{ padding: '4px 10px', background: activeTab === 'space' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Space</button>
                     </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
@@ -245,8 +259,10 @@ export default function MainApp() {
                         </tr>
                       </thead>
                       <tbody>
-                        {/* Use a fallback empty array to prevent crashes if space_lines is missing */}
-                        {(activeTab === 'time' ? analysisResult.lines : analysisResult.space_lines).map((row, i) => (
+                        {/* Tab Switcher Handler Map Array */}
+                        {(activeTab === 'time_asymptotic' ? analysisResult.lines : 
+                          activeTab === 'time_recurrence' ? analysisResult.recurrence_lines : 
+                          analysisResult.space_lines).map((row, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid rgba(127, 87, 249, 0.2)' }}>
                           {/* Left Column: Code Snippet with pedagogical indentation */}
                           <td style={{ 
@@ -261,7 +277,7 @@ export default function MainApp() {
                           
                           {/* Right Column: Complexity notation using the SAME color */}
                           <td style={{ 
-                            color: row.color || 'white', // Changed from '#E058FB' to row.color
+                            color: row.color || 'white',
                             textAlign: 'right', 
                             fontWeight: 'bold',
                             whiteSpace: 'nowrap',
@@ -309,7 +325,7 @@ export default function MainApp() {
         .template-btn { background: #34495e; color: #F5F5F5; border: none; padding: 10px; text-align: left; border-radius: 4px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
         .template-btn:hover { background: #7F57F9; transform: translateX(5px); }
         .hover-panel::-webkit-scrollbar { width: 6px; }
-        .hover-panel::-webkit-scrollbar-thumb { background: #4830A0; border-radius: 10px; }
+        .hover-panel::-webkit-scrollbar-thumb { background: #7d71aa; border-radius: 10px; }
       `}</style>
     </div>
   );
