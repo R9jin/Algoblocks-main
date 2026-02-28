@@ -44,33 +44,22 @@ const customBlocks = [
     "previousStatement": null,
     "nextStatement": null,
     "colour": 230,
-    "tooltip": "Modify a variable.",
-  },
-  // --- NEW MULTI-RETURN MUTATOR BLOCKS ---
-  {
-    "type": "return_mutator_container",
-    "message0": "Returns %1 %2",
-    "args0": [
-      { "type": "input_dummy" },
-      { "type": "input_statement", "name": "STACK" }
-    ],
-    "colour": 210
-  },
-  {
-    "type": "return_mutator_item",
-    "message0": "value",
-    "previousStatement": null,
-    "nextStatement": null,
-    "colour": 210
+    "tooltip": "Modify a variable (Add, Subtract, Multiply, Divide).",
   },
   {
     "type": "procedure_return_value",
-    "message0": "", 
+    "message0": "return %1",
+    "args0": [
+      {
+        "type": "input_value",
+        "name": "VALUE"
+      }
+    ],
     "previousStatement": null,
     "nextStatement": null,
-    "colour": 210,
-    "tooltip": "Returns value(s) from a function. Click the gear to return multiple items.",
-    "mutator": "return_mutator" // Links to the gear icon logic below
+    "colour": 210, // Same color as Functions category
+    "tooltip": "Returns the value from this function.",
+    "helpUrl": ""
   }
 ];
 
@@ -321,20 +310,10 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return ''; 
       };
 
-      // Replace your old procedure_return_value logic with this:
       pythonGenerator.forBlock['procedure_return_value'] = function(block) {
-        if (block.itemCount_ === 0) {
-          return 'return\n';
-        }
-        
-        const values = [];
-        for (let i = 0; i < block.itemCount_; i++) {
-          const val = pythonGenerator.valueToCode(block, 'VALUE' + i, pythonGenerator.ORDER_NONE) || 'None';
-          values.push(val);
-        }
-        
-        // If returning multiple values, join them with commas
-        return `return ${values.join(', ')}\n`;
+        // Get the code from the block attached to the 'VALUE' input
+        const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
+        return `return ${value}\n`;
       };
 
       workspace.current.addChangeListener((event) => {
@@ -353,91 +332,6 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       });
       observer.observe(blocklyDiv.current);
       blocklyDiv.current.resizeObserver = observer;
-    }
-
-        // --- REGISTER MUTATOR LOGIC ---
-    const returnMutatorMixin = {
-      mutationToDom: function() {
-        const container = Blockly.utils.xml.createElement('mutation');
-        container.setAttribute('items', this.itemCount_);
-        return container;
-      },
-      domToMutation: function(xmlElement) {
-        this.itemCount_ = parseInt(xmlElement.getAttribute('items'), 10) || 0;
-        this.updateShape_();
-      },
-      decompose: function(workspace) {
-        const containerBlock = workspace.newBlock('return_mutator_container');
-        containerBlock.initSvg();
-        let connection = containerBlock.getInput('STACK').connection;
-        for (let i = 0; i < this.itemCount_; i++) {
-          const itemBlock = workspace.newBlock('return_mutator_item');
-          itemBlock.initSvg();
-          connection.connect(itemBlock.previousConnection);
-          connection = itemBlock.nextConnection;
-        }
-        return containerBlock;
-      },
-      compose: function(containerBlock) {
-        let itemBlock = containerBlock.getInputTargetBlock('STACK');
-        const connections = [];
-        while (itemBlock) {
-          connections.push(itemBlock.valueConnection_);
-          itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
-        }
-        for (let i = 0; i < this.itemCount_; i++) {
-          const connection = this.getInput('VALUE' + i)?.connection?.targetConnection;
-          if (connection && connections.indexOf(connection) === -1) {
-            connection.disconnect();
-          }
-        }
-        this.itemCount_ = connections.length;
-        this.updateShape_();
-        for (let i = 0; i < this.itemCount_; i++) {
-          Blockly.Mutator.reconnect(connections[i], this, 'VALUE' + i);
-        }
-      },
-      saveConnections: function(containerBlock) {
-        let itemBlock = containerBlock.getInputTargetBlock('STACK');
-        let i = 0;
-        while (itemBlock) {
-          const input = this.getInput('VALUE' + i);
-          itemBlock.valueConnection_ = input && input.connection.targetConnection;
-          i++;
-          itemBlock = itemBlock.nextConnection && itemBlock.nextConnection.targetBlock();
-        }
-      },
-      updateShape_: function() {
-        // Remove old inputs
-        let i = 0;
-        while (this.getInput('VALUE' + i)) {
-          this.removeInput('VALUE' + i);
-          i++;
-        }
-        if (this.getInput('EMPTY')) this.removeInput('EMPTY');
-
-        // Add new inputs
-        if (this.itemCount_ === 0) {
-          this.appendDummyInput('EMPTY').appendField("return");
-        } else {
-          for (let i = 0; i < this.itemCount_; i++) {
-            const input = this.appendValueInput('VALUE' + i);
-            if (i === 0) input.appendField("return");
-          }
-        }
-      }
-    };
-
-    if (!Blockly.Extensions.isRegistered('return_mutator')) {
-      Blockly.Extensions.registerMutator(
-        'return_mutator',
-        returnMutatorMixin,
-        function() { // Initializes the block with 1 input by default
-          this.itemCount_ = 1;
-          this.updateShape_();
-        },
-        ['return_mutator_item']
-      );
     }
 
     return () => {
