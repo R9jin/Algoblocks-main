@@ -1,313 +1,221 @@
-// src/App.jsx
 import { useRef, useState } from "react";
 import Split from "react-split";
 import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
 
 export default function MainApp() {
-  // 1. Update initial state to include space complexity
   const [analysisResult, setAnalysisResult] = useState({ 
       lines: [], 
       total: "O(1)",
-      space_lines: [],     // NEW
-      space_total: "O(1)"  // NEW
+      space_lines: [],
+      space_total: "O(1)"
   });
   const [activeTab, setActiveTab] = useState("time");
   const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
   const [consoleOutput, setConsoleOutput] = useState("Ready to run...");
   const [blocklyJson, setBlocklyJson] = useState(null);
+  
+  const [viewMode, setViewMode] = useState("workspace"); 
+  const [bottomPanel, setBottomPanel] = useState(null); // Controls which panel is visible
 
   const workspaceRef = useRef(null);
 
   const handleBlocklyChange = async (json, pythonCode) => {
     setGeneratedPython(pythonCode);
     setBlocklyJson(json);
-    
     try {
       const response = await fetch('/api/analyze', { 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code: pythonCode })
       });
-
       const data = await response.json();
-      
       if (data.status === "success") {
         setAnalysisResult({ 
             total: data.total, 
             lines: data.lines,
-            space_total: data.space_total || "O(1)", // Fallback if backend isn't ready
+            space_total: data.space_total || "O(1)",
             space_lines: data.space_lines || []
         });
-      } else {
-        setAnalysisResult({ total: "Code Error", lines: [], space_total: "Code Error", space_lines: [] });
       }
     } catch (error) {
       console.error("Analysis Error:", error);
-      setAnalysisResult({ total: "Error", lines: [], space_total: "Error", space_lines: [] });
     }
   };
 
-  const saveConfiguration = () => {
-    if (!blocklyJson) {
-        alert("No blocks to save!");
-        return;
-    }
-
-    let fileName = prompt("Enter a name for your algorithm:", "my-algorithm");
-    
-    if (!fileName) return; 
-
-    if (!fileName.endsWith(".json")) {
-        fileName += ".json";
-    }
-
-    const jsonString = JSON.stringify(blocklyJson, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName; 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const clearAll = () => {
-    if (window.confirm("⚠️ Are you sure you want to delete all blocks? This cannot be undone.")) {
+  const loadAlgorithmTemplate = async (path) => {
+    try {
+      const response = await fetch(`/templates/${path}.json`);
+      if (!response.ok) throw new Error("Template not found");
+      const json = await response.json();
       if (workspaceRef.current) {
-        workspaceRef.current.clear();
+        const newCode = workspaceRef.current.loadTemplate(json);
+        handleBlocklyChange(json, newCode);
+        setViewMode("workspace");
       }
+    } catch (error) {
+      console.error("Failed to load template:", error);
     }
   };
 
   const runCode = async () => {
-      setConsoleOutput("> Running on server...");
-      
-      try {
-        const response = await fetch("/api/run", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: generatedPython }),
-        });
-
-        const data = await response.json();
-        
-        if (data.status === "success") {
-          setConsoleOutput(data.output + "\n> Program finished.");
-        } else {
-          setConsoleOutput("> Error: " + data.output);
-        }
-      } catch (error) {
-        console.error("Backend Error:", error);
-        setConsoleOutput("> Error: Could not connect to Python server.");
-      }
-    };
-
-    // Update handleTemplateSelect in App.jsx
-    const handleTemplateSelect = async (e) => {
-      const templatePath = e.target.value;
-      if (!templatePath) return; 
-
-      const confirmLoad = window.confirm("⚠️ Loading a template will overwrite your current workspace. Do you want to continue?");
-      if (!confirmLoad) {
-        e.target.value = ""; 
-        return;
-      }
-
-      try {
-        const response = await fetch(`/templates/${templatePath}.json`);
-        if (!response.ok) throw new Error("Template not found");
-        
-        const json = await response.json();
-        
-        if (workspaceRef.current) {
-          // 1. Load the template and get the code back
-          const newCode = workspaceRef.current.loadTemplate(json);
-          
-          // 2. Manually trigger the analysis for the new template
-          handleBlocklyChange(json, newCode); 
-        }
-      } catch (error) {
-        console.error("Failed to load template", error);
-        alert(`Could not find the file: /templates/${templatePath}.json`);
-      }
-      
-      e.target.value = ""; 
-    };
-
-  // --- NEW: THEME SWITCHER LOGIC ---
-  const handleThemeChange = (e) => {
-    if (workspaceRef.current) {
-      workspaceRef.current.setTheme(e.target.value);
+    setConsoleOutput("> Running...");
+    setBottomPanel("console"); // Auto-open console when running
+    try {
+      const response = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: generatedPython }),
+      });
+      const data = await response.json();
+      setConsoleOutput(data.status === "success" ? data.output : "> Error: " + data.output);
+    } catch (error) {
+      setConsoleOutput("> Connection Error");
     }
   };
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <div className="header-left-group">
-            <h1>AlgoBlocks</h1>
-
-            {/* --- NEW: THEME TOGGLE --- */}
-            <select 
-              className="save-button" 
-              style={{ backgroundColor: "#34495e", cursor: "pointer", marginRight: "10px" }}
-              onChange={handleThemeChange}
-              defaultValue="modern"
-            >
-              <option value="modern">☀️ Modern Theme</option>
-              <option value="dark">🌙 Dark Theme</option>
-            </select>
-
-            <select 
-              className="save-button" 
-              style={{ backgroundColor: "#8e44ad", cursor: "pointer", marginRight: "10px" }}
-              onChange={handleTemplateSelect}
-              defaultValue=""
-            >
-              <option value="" disabled>📁 PRE-MADE TEMPLATES</option>
-              
-              <optgroup label="Search Algorithms">
-                <option value="search/linear_search">Linear Search - O(n)</option>
-                <option value="search/binary_search">Binary Search - O(log n)</option>
-              </optgroup>
-              
-              <optgroup label="Sorting Algorithms">
-                <option value="sort/bubble_sort">Bubble Sort - O(n²)</option>
-                <option value="sort/insertion_sort">Insertion Sort - O(n²)</option>
-                <option value="sort/selection_sort">Selection Sort - O(n²)</option>
-                <option value="sort/merge_sort">Merge Sort - O(n log n)</option>
-              </optgroup>
-
-              <optgroup label="Recursive Algorithms">
-                <option value="recursive/recursive_fibonacci">Fibonacci (recursive) - O(2ⁿ)</option>
-                <option value="recursive/recursive_factorial">Factorial (recursive) - O(n)</option>
-              </optgroup>
-            </select>
-
-            <button className="save-button" onClick={saveConfiguration}>
-                💾 SAVE BLOCKS
-            </button>
-            <button 
-              className="save-button" 
-              onClick={clearAll} 
-              style={{ backgroundColor: "#e74c3c", marginLeft: "10px" }}
-            >
-                🗑️ CLEAR
-            </button>
+    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0f0f1a', overflow: 'hidden' }}>
+      
+      {/* HEADER */}
+      <header className="app-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: '60px', borderBottom: '1px solid #4830A0' }}>
+        <h1 style={{ fontSize: '1.2rem', color: '#E058FB', margin: 0 }}>ALGOBLOCKS</h1>
+        
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={() => setViewMode("workspace")} style={{ padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: viewMode === 'workspace' ? '#7F57F9' : '#34495e', color: 'white' }}>📂 Workspace</button>
+          <button onClick={() => setViewMode("python")} style={{ padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: viewMode === 'python' ? '#7F57F9' : '#34495e', color: 'white' }}>🐍 Python Code</button>
+          <button onClick={runCode} style={{ padding: '8px 25px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: '#27ae60', color: 'white', fontWeight: 'bold' }}>▶ RUN</button>
         </div>
-        <div className="complexity-badge">
-          Total Complexity: <strong>{analysisResult.total}</strong>
-        </div>
+        <div className="complexity-badge" style={{ color: '#00ff00', fontWeight: 'bold' }}>Total: {analysisResult.total}</div>
       </header>
 
+      {/* MAIN BODY WITH ADJUSTABLE SIDEBAR */}
       <Split 
-        className="main-content" 
-        sizes={[70, 30]} 
-        minSize={300}    
-        gutterSize={10} 
-        snapOffset={30}
+        className="main-split" 
+        sizes={[20, 80]} 
+        minSize={[150, 400]} 
+        gutterSize={8}
+        style={{ flex: 1, display: 'flex' }}
       >
-        <Split 
-          className="left-column" 
-          direction="vertical" 
-          sizes={[70, 30]} 
-          minSize={100}
-        >
-          <div className="workspace-area">
+        {/* SIDEBAR */}
+        <aside style={{ background: '#1a1a2e', padding: '15px', overflowY: 'auto', height: '100%' }}>
+          <h3 style={{ color: '#C994FF', fontSize: '0.8rem', marginBottom: '15px', letterSpacing: '1px' }}>TEMPLATES</h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* SEARCHING */}
+            <div>
+              <p style={{ color: '#7F57F9', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '5px' }}>SEARCHING</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <button className="template-btn" onClick={() => loadAlgorithmTemplate('search/linear_search')}>Linear Search</button>
+                <button className="template-btn" onClick={() => loadAlgorithmTemplate('search/binary_search')}>Binary Search</button>
+              </div>
+            </div>
+
+            {/* SORTING */}
+            <div>
+              <p style={{ color: '#7F57F9', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '5px' }}>SORTING</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <button className="template-btn" onClick={() => loadAlgorithmTemplate('sort/bubble_sort')}>Bubble Sort</button>
+                <button className="template-btn" onClick={() => loadAlgorithmTemplate('sort/merge_sort')}>Merge Sort</button>
+                <button className="template-btn" onClick={() => loadAlgorithmTemplate('sort/insertion_sort')}>Insertion Sort</button>
+                <button className="template-btn" onClick={() => loadAlgorithmTemplate('sort/selection_sort')}>Selection Sort</button>
+              </div>
+            </div>
+
+            {/* RECURSIVE */}
+            <div>
+              <p style={{ color: '#7F57F9', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '5px' }}>RECURSIVE</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <button className="template-btn" onClick={() => loadAlgorithmTemplate('recursive/recursive_factorial')}>Factorial</button>
+                <button className="template-btn" onClick={() => loadAlgorithmTemplate('recursive/recursive_fibonacci')}>Fibonacci</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* CONTENT AREA */}
+        <main style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
+          <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
             <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
           </div>
-          
-          <div className="code-area">
-            <div className="panel-header">Generated Python</div>
-            <pre>{generatedPython}</pre>
+          <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#0d0d0d', padding: '20px', overflow: 'auto' }}>
+            <pre style={{ color: '#F5F5F5', fontSize: '0.9rem', lineHeight: '1.5' }}>{generatedPython}</pre>
           </div>
-        </Split>
 
-        <Split 
-          className="right-column" 
-          direction="vertical" 
-          sizes={[50, 50]} 
-          minSize={100}
-        >
-          <div className="complexity-area">
-            {/* --- TABBED HEADER --- */}
-            <div className="panel-header tabbed-header" style={{ padding: 0, display: 'flex' }}>
-              <button 
-                style={{ flex: 1, padding: '8px', border: 'none', cursor: 'pointer', background: activeTab === 'time' ? '#fff' : '#e0e0e0', borderBottom: activeTab === 'time' ? '2px solid #3498db' : 'none', fontWeight: 'bold' }}
-                onClick={() => setActiveTab('time')}
-              >
-                Time Complexity ({analysisResult.total})
-              </button>
-              <button 
-                style={{ flex: 1, padding: '8px', border: 'none', cursor: 'pointer', background: activeTab === 'space' ? '#fff' : '#e0e0e0', borderBottom: activeTab === 'space' ? '2px solid #9b59b6' : 'none', fontWeight: 'bold' }}
-                onClick={() => setActiveTab('space')}
-              >
-                Space Complexity ({analysisResult.space_total})
-              </button>
+          {/* HOVERING CONSOLE / COMPLEXITY PANEL */}
+          {bottomPanel && (
+            <div className="hover-panel" style={{
+              position: 'absolute', bottom: '90px', left: '50%', transform: 'translateX(-50%)',
+              width: '500px', background: 'rgba(31, 20, 67, 0.95)', border: '1px solid #7F57F9',
+              borderRadius: '12px', zIndex: 1000, color: 'white', backdropFilter: 'blur(10px)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+            }}>
+              <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', background: '#4830A0', borderRadius: '11px 11px 0 0' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '0.8rem', letterSpacing: '1px' }}>{bottomPanel === 'console' ? '💻 CONSOLE' : '📊 COMPLEXITY ANALYSIS'}</span>
+                <button onClick={() => setBottomPanel(null)} style={{ background: 'none', color: 'white', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+              </div>
+              <div style={{ maxHeight: '250px', overflowY: 'auto', padding: '15px' }}>
+                {bottomPanel === 'console' ? (
+                  <pre style={{ margin: 0, color: '#00ff00', fontSize: '0.85rem', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{consoleOutput}</pre>
+                ) : (
+                  <div className="complexity-content">
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                      <button onClick={() => setActiveTab("time")} style={{ padding: '4px 10px', background: activeTab === 'time' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Time</button>
+                      <button onClick={() => setActiveTab("space")} style={{ padding: '4px 10px', background: activeTab === 'space' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Space</button>
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', borderBottom: '1px solid #4830A0' }}>
+                          <th style={{ paddingBottom: '5px' }}>Line of Code</th>
+                          <th style={{ paddingBottom: '5px' }}>Complexity</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(activeTab === 'time' ? analysisResult.lines : analysisResult.space_lines).map((row, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid rgba(127, 87, 249, 0.2)' }}>
+                            <td style={{ color: row.color || 'white', padding: '5px 0', paddingLeft: `${row.indent * 15}px`, fontFamily: 'monospace' }}>{row.lineOfCode}</td>
+                            <td style={{ color: '#E058FB', textAlign: 'right' }}>{row.complexity}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
+          )}
 
-            {/* --- CONDITIONAL TABLE RENDERING --- */}
-            {activeTab === 'time' ? (
-              <table>
-                <thead>
-                  <tr>
-                    <th>Logic</th>
-                    <th>Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {analysisResult.lines.map((row, i) => (
-                    <tr key={i} style={{ color: row.color }}>
-                      <td style={{ paddingLeft: `${row.indent * 15 + 5}px` }}>
-                        {row.lineOfCode}
-                      </td>
-                      <td>{row.complexity}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <table>
-                <thead>
-                  <tr>
-                    <th>Variables / Data Structures</th>
-                    <th>Space</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {analysisResult.space_lines && analysisResult.space_lines.length > 0 ? (
-                    analysisResult.space_lines.map((row, i) => (
-                      <tr key={i} style={{ color: row.color }}>
-                        <td style={{ paddingLeft: `${row.indent * 15 + 5}px` }}>
-                          {row.lineOfCode}
-                        </td>
-                        <td>{row.complexity}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="2" style={{ textAlign: "center", padding: "20px", color: "#7f8c8d" }}>
-                        O(1) Auxiliary Space Detected
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            )}
-          </div>
-
-          <div className="console-area">
-            <div className="panel-header console-header">
-              <span>Console</span>
-              <button className="run-button" onClick={runCode}>▶ RUN</button>
-            </div>
-            <pre className="console-output">{consoleOutput}</pre>
-          </div>
-        </Split>
-
+          {/* FLOATING BOTTOM CONTROLS */}
+          <footer style={{
+            position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', gap: '20px', background: 'rgba(26, 26, 26, 0.95)', padding: '10px 30px',
+            borderRadius: '50px', border: '2px solid #4830A0', zIndex: 1001, boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+          }}>
+            <button 
+              onClick={() => setBottomPanel(bottomPanel === 'console' ? null : 'console')} 
+              style={{ background: 'none', border: 'none', color: bottomPanel === 'console' ? '#E058FB' : 'white', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 'bold' }}
+            >
+              ⌨️ Console
+            </button>
+            <div style={{ width: '1px', background: '#4830A0', height: '20px' }}></div>
+            <button 
+              onClick={() => setBottomPanel(bottomPanel === 'complexity' ? null : 'complexity')} 
+              style={{ background: 'none', border: 'none', color: bottomPanel === 'complexity' ? '#E058FB' : 'white', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 'bold' }}
+            >
+              📊 Complexity
+            </button>
+          </footer>
+        </main>
       </Split>
+
+      <style>{`
+        .main-split { display: flex; width: 100%; }
+        .gutter { background-color: #4830A0; background-repeat: no-repeat; background-position: 50%; cursor: col-resize; transition: 0.2s; }
+        .gutter:hover { background-color: #7F57F9; }
+        .template-btn { background: #34495e; color: #F5F5F5; border: none; padding: 10px; text-align: left; border-radius: 4px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
+        .template-btn:hover { background: #7F57F9; transform: translateX(5px); }
+        .hover-panel::-webkit-scrollbar { width: 6px; }
+        .hover-panel::-webkit-scrollbar-thumb { background: #4830A0; border-radius: 10px; }
+      `}</style>
     </div>
   );
 }
