@@ -7,6 +7,7 @@ import ast
 from database import projects_collection
 from models import ProjectModel
 from bson import ObjectId
+from collections import deque
 
 app = FastAPI()
 
@@ -26,11 +27,36 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.source_lines = source_code.splitlines()
         self.details = []       
         self.current_depth = 0  
+        self.loop_depth = 0     
         self.max_complexity = 0 
-        self.has_sort = False
         self.custom_functions = {} 
-        self.current_function_name = None  # 🔥 FIX: Prevents AttributeError
+        self.current_function_name = None  
         self.recursive_calls_count = 0
+        self.symbol_table = {}
+        
+        # --- NEW: Structural Trackers ---
+        self.has_recursion_in_loop = False
+        self.has_slicing = False
+        self.has_loop = False # <--- ADD THIS
+
+    # --- NEW: The BFS Algorithm Pass ---
+    def bfs_first_pass(self, tree):
+        """
+        Pass 1: Breadth-First Search to map all functions before deep DFS analysis.
+        This solves the 'Forward Reference' problem.
+        """
+        queue = deque([tree])
+        
+        while queue:
+            current_node = queue.popleft()
+            
+            # If the BFS finds a function, register it in the global map
+            if isinstance(current_node, ast.FunctionDef):
+                self.symbol_table[current_node.name] = current_node
+                
+            # Queue all immediate children for the next level of BFS
+            for child in ast.iter_child_nodes(current_node):
+                queue.append(child)
 
     def get_code_snippet(self, node):
         if hasattr(node, 'lineno'):
@@ -39,6 +65,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return "Code Block"
 
     def get_color(self, complexity_str):
+        if "n!" in complexity_str: return "#8e44ad" # Dark Purple for Factorial
         if "2^n" in complexity_str: return "#9b59b6" # Purple for Exponential
         if "n^2" in complexity_str or "n^3" in complexity_str: return "#e74c3c" # Red
         if "log" in complexity_str: return "#2980b9" # Blue
@@ -46,130 +73,199 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return "#27ae60" # Green
 
     def record_line(self, node, complexity_override=None):
-        power = self.current_depth
+        power = self.loop_depth # <-- FIX: Math now ignores visual indentation
+        
         if complexity_override:
             comp_str = complexity_override
-        elif power == 0: comp_str = "O(1)"
-        elif power == 1: comp_str = "O(n)"
-        else: comp_str = f"O(n^{power})"
+            if "n!" in comp_str: power = max(power, 100) # ADD THIS
+            elif "2^n" in comp_str: power = max(power, 99)
+            elif "log" in comp_str: power = max(power, 1) 
+            elif "O(n)" in comp_str: power = max(power, 1)
+            elif "O(1)" in comp_str: power = max(power, 0)
+            elif "^" in comp_str:
+                try: power = max(power, int(comp_str.split('^')[1].strip(')')))
+                except: pass
+        elif power == 0: 
+            comp_str = "O(1)"
+        elif power == 1: 
+            comp_str = "O(n)"
+        else: 
+            comp_str = f"O(n^{power})"
 
         color = self.get_color(comp_str)
+        line_text = self.get_code_snippet(node)
 
-        self.details.append({
-            "lineOfCode": self.get_code_snippet(node),
-            "complexity": comp_str,
-            "indent": self.current_depth,
-            "color": color
-        })
+        # Prevent Duplicate Lines
+        if self.details and self.details[-1]["lineOfCode"] == line_text:
+            self.details[-1]["complexity"] = comp_str
+            self.details[-1]["color"] = color
+        else:
+            self.details.append({
+                "lineOfCode": line_text,
+                "complexity": comp_str,
+                "indent": self.current_depth, # <-- Visual UI still uses current_depth
+                "color": color
+            })
 
-        if not complexity_override and power > self.max_complexity:
+        if power > self.max_complexity:
             self.max_complexity = power
-
+            
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name 
-        self.recursive_calls_count = 0 # Reset count for the new function
-        self.record_line(node, complexity_override="O(1)")
+        self.recursive_calls_count = 0 
+        self.has_recursion_in_loop = False 
+        self.has_slicing = False           
+        self.has_loop = False # <--- RESET for each function
+        
+        self.record_line(node, complexity_override="O(1)") 
         
         previous_max = self.max_complexity
         self.max_complexity = 0
+        
+        self.current_depth += 1 
         self.generic_visit(node)
+        self.current_depth -= 1
         
         func_max_power = self.max_complexity 
         
-        # --- IMPROVED RECURSION LOGIC ---
-        if self.recursive_calls_count > 1:
-            # Multiple recursive calls (like Fibonacci) = Exponential
-            self.custom_functions[node.name] = "O(2^n)"
-        elif self.recursive_calls_count == 1:
-            # Single recursive call = Linear (or check for merge sort)
-            if "merge" in node.name:
+        if self.has_recursion_in_loop:
+            self.custom_functions[node.name] = "O(n!)"
+            
+        elif self.recursive_calls_count >= 2:
+            # Check the mathematical max power (which now safely excludes recursive inflation)
+            if func_max_power >= 1 or self.has_slicing:
                 self.custom_functions[node.name] = "O(n log n)"
             else:
-                self.custom_functions[node.name] = "O(n)"
+                self.custom_functions[node.name] = "O(2^n)"
+                
+        elif self.recursive_calls_count == 1:
+            self.custom_functions[node.name] = "O(n)"
+            
         else:
-            # Standard iterative complexity
-            if func_max_power == 0: 
-                comp_str = "O(1)"
-            elif func_max_power == 1: 
-                comp_str = "O(n)"
-            else: 
-                comp_str = f"O(n^{func_max_power})"
+            if func_max_power == 0: comp_str = "O(1)"
+            elif func_max_power == 1: comp_str = "O(n)"
+            else: comp_str = f"O(n^{func_max_power})"
             self.custom_functions[node.name] = comp_str
         
         self.max_complexity = max(previous_max, func_max_power)
         self.current_function_name = None
 
+    def visit_For(self, node):
+        self.has_loop = True      # <--- ADD THIS
+        self.loop_depth += 1      
+        self.record_line(node)    
+        
+        self.current_depth += 1   
+        self.generic_visit(node)  
+        self.current_depth -= 1   
+        
+        self.loop_depth -= 1      
+
+    def visit_While(self, node):
+        self.has_loop = True      # <--- ADD THIS
+        self.loop_depth += 1      
+        self.record_line(node)
+        
+        self.current_depth += 1   
+        self.generic_visit(node)
+        self.current_depth -= 1
+        
+        self.loop_depth -= 1
+
+    def visit_If(self, node):
+        self.record_line(node)
+        
+        self.current_depth += 1   # Safely indent 'if' bodies!
+        self.generic_visit(node)
+        self.current_depth -= 1
+
+    def visit_Expr(self, node):
+        self.record_line(node)
+        self.generic_visit(node)
+
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name):
             func_name = node.func.id
             
-            # Check if this is a recursive call
             if func_name == self.current_function_name:
                 self.recursive_calls_count += 1
-                # We label the specific line as exponential if it's the recursive call
-                self.record_line(node, complexity_override="O(2^n)" if self.recursive_calls_count > 1 else "O(n)")
-                return
-            
-            # Check if calling a previously defined custom function
-            if func_name in self.custom_functions:
-                self.record_line(node, complexity_override=self.custom_functions[func_name])
-                return
-
-        self.generic_visit(node)
-
-    def visit_For(self, node):
-        self.current_depth += 1
-        self.record_line(node) 
-        self.generic_visit(node) 
-        self.current_depth -= 1
-
-    def visit_While(self, node):
-        self.current_depth += 1
-        self.record_line(node)
-        self.generic_visit(node)
-        self.current_depth -= 1
-
-    def visit_If(self, node):
-        self.record_line(node)
-        self.generic_visit(node)
-
-    def visit_Expr(self, node):
-        if isinstance(node.value, ast.Call):
-            if isinstance(node.value.func, ast.Name):
-                func_name = node.value.func.id
+                if self.loop_depth > 0:
+                    self.has_recursion_in_loop = True
+                    
+                # --- NEW: Protect max_complexity from recursive inflation ---
+                temp_max = self.max_complexity 
                 if func_name in self.custom_functions:
                     self.record_line(node, complexity_override=self.custom_functions[func_name])
-                    return
+                else:
+                    self.record_line(node, complexity_override="O(n)" if self.recursive_calls_count == 1 else "O(2^n)")
+                self.max_complexity = temp_max # Restore it!
+            
+            elif func_name in self.custom_functions:
+                self.record_line(node, complexity_override=self.custom_functions[func_name])
+                
+        self.generic_visit(node)
+
+    def visit_Return(self, node):
         self.record_line(node)
+        self.generic_visit(node)
 
     def get_final_badge(self):
-        # 1. Check if any line was recorded as exponential
+        # 1. Check for Factorial Time
+        if any("n!" in str(d.get('complexity')) for d in self.details):
+            return "O(n!)"
+            
+        # 2. Check if any line was recorded as exponential
         if any("2^n" in str(d.get('complexity')) for d in self.details):
             return "O(2^n)"
         
-        # 2. Check for N Log N (Merge Sort)
+        # 3. Check for N Log N (Merge Sort)
         if any("O(n log n)" in str(d.get('complexity')) for d in self.details):
             return "O(n log n)"
         
-        # 3. Fallback to loop-based complexity
+        # 4. Fallback to loop-based complexity
         if self.max_complexity == 0: return "O(1)"
         if self.max_complexity == 1: return "O(n)"
         return f"O(n^{self.max_complexity})"
 
+    def visit_Subscript(self, node):
+        # Detects structural array slicing like arr[:mid] or arr[mid:]
+        if isinstance(node.slice, ast.Slice):
+            self.has_slicing = True
+        self.generic_visit(node)
+
 # In api/index.py
-@app.post("/api/analyze") # Required for Vercel routing
-@app.post("/analyze")     # Support for local testing
+@app.post("/api/analyze") 
+@app.post("/analyze")
 def analyze_complexity(payload: CodePayload):
     try:
         tree = ast.parse(payload.code)
         analyzer = ComplexityAnalyzer(payload.code)
+        
+        # 1. Map all functions
+        analyzer.bfs_first_pass(tree)
+        
+        # 2. PRE-COMPUTE: Calculate math for all functions
+        # We store the results in analyzer.custom_functions
+        for func_name, func_node in analyzer.symbol_table.items():
+            analyzer.visit(func_node)
+            
+        # 3. RESET ONLY VISUALS: Keep custom_functions!
+        analyzer.details = []
+        analyzer.max_complexity = 0
+        analyzer.current_depth = 0
+        analyzer.loop_depth = 0
+        
+        # 4. FINAL PASS: Now use the stored math to build the table
         analyzer.visit(tree)
+        
         return {
             "status": "success",
             "total": analyzer.get_final_badge(),
             "lines": analyzer.details
         }
-    except Exception:
+
+    except Exception as e:
+        print(f"Analyzer Error: {e}") 
         return {"status": "error", "total": "Error", "lines": []}
     
 @app.post("/api/run")
