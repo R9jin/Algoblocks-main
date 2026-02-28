@@ -15,7 +15,7 @@ export default function MainApp() {
   const [blocklyJson, setBlocklyJson] = useState(null);
   
   const [viewMode, setViewMode] = useState("workspace"); 
-  const [bottomPanel, setBottomPanel] = useState(null); 
+  const [bottomPanel, setBottomPanel] = useState(null); // Controls which panel is visible
 
   const workspaceRef = useRef(null);
 
@@ -59,7 +59,7 @@ export default function MainApp() {
 
   const runCode = async () => {
     setConsoleOutput("> Running...");
-    setBottomPanel("console"); 
+    setBottomPanel("console"); // Auto-open console when running
     try {
       const response = await fetch("/api/run", {
         method: "POST",
@@ -85,18 +85,18 @@ export default function MainApp() {
           <button onClick={() => setViewMode("python")} style={{ padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: viewMode === 'python' ? '#7F57F9' : '#34495e', color: 'white' }}>🐍 Python Code</button>
           <button onClick={runCode} style={{ padding: '8px 25px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: '#27ae60', color: 'white', fontWeight: 'bold' }}>▶ RUN</button>
         </div>
-        <div className="complexity-badge">Total: {analysisResult.total}</div>
+        <div className="complexity-badge" style={{ color: '#00ff00', fontWeight: 'bold' }}>Total: {analysisResult.total}</div>
       </header>
 
       {/* MAIN BODY WITH ADJUSTABLE SIDEBAR */}
       <Split 
         className="main-split" 
-        sizes={[20, 80]} // Sidebar takes 20% initially
+        sizes={[20, 80]} 
         minSize={[150, 400]} 
         gutterSize={8}
         style={{ flex: 1, display: 'flex' }}
       >
-        {/* ADJUSTABLE LEFT SIDEBAR */}
+        {/* SIDEBAR */}
         <aside style={{ background: '#1a1a2e', padding: '15px', overflowY: 'auto', height: '100%' }}>
           <h3 style={{ color: '#C994FF', fontSize: '0.8rem', marginBottom: '15px', letterSpacing: '1px' }}>TEMPLATES</h3>
           
@@ -141,50 +141,80 @@ export default function MainApp() {
             <pre style={{ color: '#F5F5F5', fontSize: '0.9rem', lineHeight: '1.5' }}>{generatedPython}</pre>
           </div>
 
-          {/* HOVERING CONSOLE / COMPLEXITY */}
+          {/* HOVERING CONSOLE / COMPLEXITY PANEL */}
           {bottomPanel && (
             <div className="hover-panel" style={{
               position: 'absolute', bottom: '90px', left: '50%', transform: 'translateX(-50%)',
-              width: '450px', background: 'rgba(31, 20, 67, 0.95)', border: '1px solid #7F57F9',
-              borderRadius: '12px', zIndex: 1000, color: 'white', backdropFilter: 'blur(10px)'
+              width: '500px', background: 'rgba(31, 20, 67, 0.95)', border: '1px solid #7F57F9',
+              borderRadius: '12px', zIndex: 1000, color: 'white', backdropFilter: 'blur(10px)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
             }}>
-              <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: '#4830A0', borderRadius: '11px 11px 0 0' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>{bottomPanel.toUpperCase()}</span>
-                <button onClick={() => setBottomPanel(null)} style={{ background: 'none', color: 'white', border: 'none', cursor: 'pointer' }}>✕</button>
+              <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', background: '#4830A0', borderRadius: '11px 11px 0 0' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '0.8rem', letterSpacing: '1px' }}>{bottomPanel === 'console' ? '💻 CONSOLE' : '📊 COMPLEXITY ANALYSIS'}</span>
+                <button onClick={() => setBottomPanel(null)} style={{ background: 'none', color: 'white', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
               </div>
               <div style={{ maxHeight: '250px', overflowY: 'auto', padding: '15px' }}>
                 {bottomPanel === 'console' ? (
-                  <pre style={{ margin: 0, color: '#00ff00', fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>{consoleOutput}</pre>
+                  <pre style={{ margin: 0, color: '#00ff00', fontSize: '0.85rem', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{consoleOutput}</pre>
                 ) : (
-                  <table style={{ width: '100%' }}>
-                    <tbody>
-                      {(activeTab === 'time' ? analysisResult.lines : analysisResult.space_lines).map((row, i) => (
-                        <tr key={i}><td style={{color: row.color, paddingLeft: `${row.indent * 15}px`}}>{row.lineOfCode}</td><td>{row.complexity}</td></tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="complexity-content">
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                      <button onClick={() => setActiveTab("time")} style={{ padding: '4px 10px', background: activeTab === 'time' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Time</button>
+                      <button onClick={() => setActiveTab("space")} style={{ padding: '4px 10px', background: activeTab === 'space' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Space</button>
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', borderBottom: '1px solid #4830A0' }}>
+                          <th style={{ paddingBottom: '5px' }}>Line of Code</th>
+                          <th style={{ paddingBottom: '5px' }}>Complexity</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(activeTab === 'time' ? analysisResult.lines : analysisResult.space_lines).map((row, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid rgba(127, 87, 249, 0.2)' }}>
+                            <td style={{ color: row.color || 'white', padding: '5px 0', paddingLeft: `${row.indent * 15}px`, fontFamily: 'monospace' }}>{row.lineOfCode}</td>
+                            <td style={{ color: '#E058FB', textAlign: 'right' }}>{row.complexity}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* BOTTOM CENTER CONTROLS */}
+          {/* FLOATING BOTTOM CONTROLS */}
           <footer style={{
             position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-            display: 'flex', gap: '15px', background: 'rgba(26, 26, 26, 0.9)', padding: '10px 25px',
-            borderRadius: '50px', border: '1px solid #4830A0', zIndex: 1001
+            display: 'flex', gap: '20px', background: 'rgba(26, 26, 26, 0.95)', padding: '10px 30px',
+            borderRadius: '50px', border: '2px solid #4830A0', zIndex: 1001, boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
           }}>
-            <button onClick={() => setBottomPanel('console')} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.9rem' }}>⌨️ Console</button>
-            <button onClick={() => setBottomPanel('complexity')} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.9rem' }}>📊 Complexity</button>
+            <button 
+              onClick={() => setBottomPanel(bottomPanel === 'console' ? null : 'console')} 
+              style={{ background: 'none', border: 'none', color: bottomPanel === 'console' ? '#E058FB' : 'white', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 'bold' }}
+            >
+              ⌨️ Console
+            </button>
+            <div style={{ width: '1px', background: '#4830A0', height: '20px' }}></div>
+            <button 
+              onClick={() => setBottomPanel(bottomPanel === 'complexity' ? null : 'complexity')} 
+              style={{ background: 'none', border: 'none', color: bottomPanel === 'complexity' ? '#E058FB' : 'white', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 'bold' }}
+            >
+              📊 Complexity
+            </button>
           </footer>
         </main>
       </Split>
 
       <style>{`
         .main-split { display: flex; width: 100%; }
-        .gutter { background-color: #4830A0; background-repeat: no-repeat; background-position: 50%; cursor: col-resize; }
+        .gutter { background-color: #4830A0; background-repeat: no-repeat; background-position: 50%; cursor: col-resize; transition: 0.2s; }
+        .gutter:hover { background-color: #7F57F9; }
         .template-btn { background: #34495e; color: #F5F5F5; border: none; padding: 10px; text-align: left; border-radius: 4px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
-        .template-btn:hover { background: #7F57F9; }
+        .template-btn:hover { background: #7F57F9; transform: translateX(5px); }
+        .hover-panel::-webkit-scrollbar { width: 6px; }
+        .hover-panel::-webkit-scrollbar-thumb { background: #4830A0; border-radius: 10px; }
       `}</style>
     </div>
   );
