@@ -39,6 +39,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         
         self.has_recursion_in_loop = False
         self.has_slicing = False
+        self.has_division = False
 
         self.builtin_complexities = {
             'sort': {'time': 'O(n log n)', 'space': 'O(n)'},
@@ -100,20 +101,20 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
         # 1. Determine Visual Strings
         time_str = time_override if time_override else (f"O(n^{self.loop_depth})" if is_loop_header and self.loop_depth > 1 else ("O(n)" if is_loop_header else "O(1)"))
-        space_str = space_override if space_override else ("O(n)" if (self.has_slicing and not is_loop_header) or (self.current_function_name and self.recursive_calls_count > 0) else "O(1)")
+        space_str = space_override if space_override else "O(1)"
 
         # 2. Ranking Weights
         t_weight = self.loop_depth
         if any(x in time_str for x in ["n * T", "n!", "2^n", "T(n-1) + T"]): t_weight = 100
         elif "2T(" in time_str: t_weight = 99
-        elif "T(n) =" in time_str: t_weight = 98 # Catches linear recurrence relations
+        elif "T(n) =" in time_str: t_weight = 98 
         elif "n log n" in time_str: t_weight = max(t_weight, 2)
         elif "O(n)" in time_str or "T(n" in time_str: t_weight = max(t_weight, 1)
 
         s_weight = 1 if "O(n)" in space_str else 0
         if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 100
 
-        # 3. GROUPING mechanism: ONLY overwrite if the new operation is heavier (e.g. T(n) > O(1))
+        # 3. GROUPING mechanism: ONLY overwrite if the new operation is heavier 
         # Time Pass
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             existing_weight = self.details[-1].get("weight", -1)
@@ -142,6 +143,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.recursive_calls_count = 0 
         self.has_recursion_in_loop = False 
         self.has_slicing = False           
+        self.has_division = False
         
         self.record_line(node, time_override="O(1)", space_override="O(1)") 
         
@@ -155,14 +157,15 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if self.has_recursion_in_loop:
             relation = "T(n) = n * T(n-1) + O(1)"
         elif self.recursive_calls_count >= 2:
-            relation = "T(n) = 2T(n/2) + O(n)" if self.has_slicing else "T(n) = T(n-1) + T(n-2) + O(1)"
+            relation = "T(n) = 2T(n/2) + O(n)" if (self.has_slicing or self.has_division) else "T(n) = T(n-1) + T(n-2) + O(1)"
         elif self.recursive_calls_count == 1:
             relation = "T(n) = T(n-1) + O(1)"
         else:
-            relation = f"O(n^{self.max_complexity})" if self.max_complexity > 0 else "O(1)"
+            relation = f"O(n^{self.max_complexity})" if self.max_complexity > 1 else ("O(n)" if self.max_complexity == 1 else "O(1)")
             
         self.custom_functions[node.name] = relation
-        self.custom_space[node.name] = "O(n)" if self.recursive_calls_count > 0 else "O(1)"
+        self.custom_space[node.name] = "O(n)" if (self.recursive_calls_count > 0 or self.max_space_weight > 0) else "O(1)"
+        
         self.max_complexity = max(prev_t, self.max_complexity)
         self.max_space_weight = max(prev_s, self.max_space_weight)
         self.current_function_name = None
@@ -218,10 +221,44 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if isinstance(node.slice, ast.Slice): self.has_slicing = True
         self.generic_visit(node)
 
-    def visit_Assign(self, node): self.record_line(node); self.generic_visit(node)
-    def visit_AugAssign(self, node): self.record_line(node); self.generic_visit(node)
-    def visit_Return(self, node): self.record_line(node); self.generic_visit(node)
-    def visit_Expr(self, node): self.record_line(node); self.generic_visit(node)
+    def visit_BinOp(self, node):
+        if isinstance(node.op, (ast.Div, ast.FloorDiv)):
+            self.has_division = True
+        self.generic_visit(node)
+
+    def visit_Assign(self, node): 
+        space_override = None
+        if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
+            if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
+                space_override = "O(n)"
+        elif isinstance(node.value, ast.ListComp):
+            space_override = "O(n)"
+        elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
+            space_override = "O(n)"
+            
+        self.record_line(node, space_override=space_override)
+        self.generic_visit(node)
+
+    def visit_AugAssign(self, node): 
+        self.record_line(node)
+        self.generic_visit(node)
+
+    def visit_Return(self, node): 
+        space_override = None
+        if node.value:
+            if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
+                if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
+                    space_override = "O(n)"
+            elif isinstance(node.value, ast.ListComp):
+                space_override = "O(n)"
+            elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
+                space_override = "O(n)"
+        self.record_line(node, space_override=space_override)
+        self.generic_visit(node)
+
+    def visit_Expr(self, node): 
+        self.record_line(node)
+        self.generic_visit(node)
 
     def get_final_badge(self):
         for line in reversed(self.details):
