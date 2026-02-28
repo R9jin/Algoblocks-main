@@ -17,7 +17,6 @@ import { PositionedMinimap } from "@blockly/workspace-minimap";
 import { ZoomToFitControl } from "@blockly/zoom-to-fit";
 
 Blockly.setLocale(En);
-
 // --- 1. DEFINE CUSTOM BLOCKS ---
 const customBlocks = [
   {
@@ -224,24 +223,10 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         console.warn("Plugin init skipped:", e.message);
       }
 
-      pythonGenerator.init = function(workspace) {
-        this.variableDB_ = new Blockly.Names(this.RESERVED_WORDS_);
-        this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);
-        this.nameDB_.setVariableMap(workspace.getVariableMap());
-        this.definitions_ = Object.create(null);
-        this.functionNames_ = Object.create(null);
-
-        this.isInitialized = true;
-      };
-
-      pythonGenerator.finish = function(code) {
-        const definitions = Object.values(this.definitions_);
-        return definitions.join('\n\n') + '\n\n' + code;
-      };
-
       pythonGenerator.forBlock['comment_block'] = function(block) {
         const text = block.getFieldValue('TEXT');
-        return `# ${text}\n`;
+        // Add pass\n so the AST parser doesn't crash on empty functions
+        return `# ${text}\npass\n`;
       };
 
       // --- CRASH-PROOF MATH ASSIGNMENT ---
@@ -258,7 +243,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return `${variable} ${symbol} ${value}\n`;
       };
 
-      // --- CRASH-PROOF CONTROLS_FOR (NO COMMA 1, CLEAN INDENTS) ---
+      // --- CRASH-PROOF CONTROLS_FOR (FIXED RANGE BOUNDARIES) ---
       pythonGenerator.forBlock['controls_for'] = function(block) {
         const variable = pythonGenerator.getVariableName(block.getFieldValue('VAR'));
         const from = pythonGenerator.valueToCode(block, 'FROM', pythonGenerator.ORDER_NONE) || '0';
@@ -268,12 +253,13 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         let rangeCode;
         if (step.trim() === '1') {
           if (from.trim() === '0') {
-            rangeCode = `range(${to})`;
+            // Added int(...) + 1 so the loop reaches the target number
+            rangeCode = `range(int(${to}) + 1)`;
           } else {
-            rangeCode = `range(${from}, ${to})`;
+            rangeCode = `range(${from}, int(${to}) + 1)`;
           }
         } else {
-          rangeCode = `range(${from}, ${to}, ${step})`;
+          rangeCode = `range(${from}, int(${to}) + 1, ${step})`;
         }
         
         let branch = pythonGenerator.statementToCode(block, 'DO') || pythonGenerator.PASS;
