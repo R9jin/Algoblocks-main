@@ -240,17 +240,37 @@ export default function MainApp() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
                         <tr style={{ textAlign: 'left', borderBottom: '1px solid #4830A0' }}>
-                          <th style={{ paddingBottom: '5px' }}>Line of Code</th>
-                          <th style={{ paddingBottom: '5px' }}>Complexity</th>
+                          <th style={{ paddingBottom: '5px', color: '#7F57F9' }}>Line of Code</th>
+                          <th style={{ paddingBottom: '5px', color: '#7F57F9', textAlign: 'right' }}>Complexity</th>
                         </tr>
                       </thead>
                       <tbody>
+                        {/* Use a fallback empty array to prevent crashes if space_lines is missing */}
                         {(activeTab === 'time' ? analysisResult.lines : analysisResult.space_lines).map((row, i) => (
-                          <tr key={i} style={{ borderBottom: '1px solid rgba(127, 87, 249, 0.2)' }}>
-                            <td style={{ color: row.color || 'white', padding: '5px 0', paddingLeft: `${row.indent * 15}px`, fontFamily: 'monospace' }}>{row.lineOfCode}</td>
-                            <td style={{ color: '#E058FB', textAlign: 'right' }}>{row.complexity}</td>
-                          </tr>
-                        ))}
+                        <tr key={i} style={{ borderBottom: '1px solid rgba(127, 87, 249, 0.2)' }}>
+                          {/* Left Column: Code Snippet with pedagogical indentation */}
+                          <td style={{ 
+                            color: row.color || 'white', 
+                            padding: '8px 0', 
+                            paddingLeft: `${(row.indent || 0) * 15}px`, 
+                            fontFamily: 'monospace',
+                            fontSize: '0.9rem'
+                          }}>
+                            {row.lineOfCode}
+                          </td>
+                          
+                          {/* Right Column: Complexity notation using the SAME color */}
+                          <td style={{ 
+                            color: row.color || 'white', // Changed from '#E058FB' to row.color
+                            textAlign: 'right', 
+                            fontWeight: 'bold',
+                            whiteSpace: 'nowrap',
+                            paddingLeft: '20px'
+                          }}>
+                            {row.complexity}
+                          </td>
+                        </tr>
+                      ))}
                       </tbody>
                     </table>
                   </div>
