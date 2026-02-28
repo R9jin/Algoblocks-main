@@ -6,15 +6,12 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 // --- STABLE PLUGIN IMPORTS ---
 import { Modal } from "@blockly/plugin-modal";
-import { WorkspaceSearch } from "@blockly/plugin-workspace-search";
 import { shadowBlockConversionChangeListener } from "@blockly/shadow-block-converter";
 import DarkTheme from "@blockly/theme-dark";
 import ModernTheme from "@blockly/theme-modern";
 import "@blockly/toolbox-search";
 import { Backpack } from "@blockly/workspace-backpack";
 import { ContentHighlight } from "@blockly/workspace-content-highlight";
-import { PositionedMinimap } from "@blockly/workspace-minimap";
-import { ZoomToFitControl } from "@blockly/zoom-to-fit";
 
 Blockly.setLocale(En);
 // --- 1. DEFINE CUSTOM BLOCKS ---
@@ -60,6 +57,26 @@ const customBlocks = [
     "colour": 210, // Same color as Functions category
     "tooltip": "Returns the value from this function.",
     "helpUrl": ""
+  },
+  {
+      "type": "python_join",
+      "message0": "%1 .join( %2 )",
+      "args0": [
+        { 
+          "type": "input_value", 
+          "name": "DELIMITER", 
+          "check": "String" 
+        },
+        { 
+          "type": "input_value", 
+          "name": "LIST", 
+          "check": null // null allows it to accept variables like 'characters'
+        }
+      ],
+      "inputsInline": true,
+      "output": "String", // It outputs a string that can be plugged into a print block
+      "colour": 160,
+      "tooltip": "Joins a list into a string. Equivalent to Python's delimiter.join(list)",
   }
 ];
 
@@ -126,8 +143,15 @@ const toolbox = {
       name: "Text",
       colour: "160",
       contents: [
-        { kind: "block", type: "comment_block" }, 
+        { kind: "block", type: "comment_block" },
         { kind: "block", type: "text" },
+        {
+          kind: "block",
+          type: "python_join",
+          inputs: {
+            DELIMITER: { shadow: { type: "text", fields: { TEXT: "" } } }
+          }
+        },
         { kind: "block", type: "text_join" },
         { kind: "block", type: "text_append" },
         { kind: "block", type: "text_length" },
@@ -213,8 +237,6 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
 
       try {
         new WorkspaceSearch(workspace.current).init();
-        new ZoomToFitControl(workspace.current).init();
-        new PositionedMinimap(workspace.current).init();
         new Modal(workspace.current).init();
         new Backpack(workspace.current).init();
         new ContentHighlight(workspace.current).init();
@@ -226,7 +248,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       pythonGenerator.forBlock['comment_block'] = function(block) {
         const text = block.getFieldValue('TEXT');
         // Add pass\n so the AST parser doesn't crash on empty functions
-        return `# ${text}\npass\n`;
+        return `# ${text}\n`;
       };
 
       // --- CRASH-PROOF MATH ASSIGNMENT ---
@@ -293,13 +315,26 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
             return list + '.insert(' + at + ', ' + value + ')\n';
           }
         }
-        return ''; 
+        return '';
       };
 
       pythonGenerator.forBlock['procedure_return_value'] = function(block) {
         // Get the code from the block attached to the 'VALUE' input
         const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
         return `return ${value}\n`;
+      };
+
+      pythonGenerator.forBlock['python_join'] = function(block) {
+        // Get the delimiter (e.g., the "" text block)
+        const delimiter = pythonGenerator.valueToCode(block, 'DELIMITER', pythonGenerator.ORDER_MEMBER) || "''";
+        
+        // Get the list variable (e.g., the 'characters' variable)
+        const list = pythonGenerator.valueToCode(block, 'LIST', pythonGenerator.ORDER_NONE) || '[]';
+        
+        // Generate the code: "".join(characters)
+        const code = `${delimiter}.join(${list})`;
+        
+        return [code, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
       workspace.current.addChangeListener((event) => {
