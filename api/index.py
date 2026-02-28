@@ -196,7 +196,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.recursive_calls_count += 1
                 if self.loop_depth > 0: self.has_recursion_in_loop = True
                 
-                # Fetch full mathematical relation from the first pass instead of hardcoding "T(n-1)"
                 rel = self.custom_functions.get(f_id, "T(n-1)")
                 self.record_line(node, time_override=rel, space_override="O(n)")
                 
@@ -231,6 +230,17 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if self.max_complexity == 1: return "O(n)"
         return f"O(n^{self.max_complexity})"
 
+    def get_final_asymptotic_badge(self):
+        for line in reversed(self.details):
+            comp = line.get('complexity', '')
+            if "T(n) = n * T(n-1)" in comp: return "O(n!)"
+            elif "2T(n/2)" in comp: return "O(n log n)"
+            elif "T(n-1) + T(n-2)" in comp: return "O(2^n)"
+            elif "T(n-1)" in comp: return "O(n)"
+        if self.max_complexity == 0: return "O(1)"
+        if self.max_complexity == 1: return "O(n)"
+        return f"O(n^{self.max_complexity})"
+
 @app.post("/api/analyze") 
 @app.post("/analyze") 
 def analyze_complexity(payload: CodePayload):
@@ -238,26 +248,46 @@ def analyze_complexity(payload: CodePayload):
         tree = ast.parse(payload.code)
         analyzer = ComplexityAnalyzer(payload.code)
         
-        # Pass 1: Identify all relations
         analyzer.bfs_first_pass(tree)
         for name, node in analyzer.symbol_table.items():
             analyzer.visit(node)
             
-        # Pass 2: Map logic cleanly line by line
         analyzer.details, analyzer.space_details = [], []
         analyzer.max_complexity, analyzer.max_space_weight = 0, 0
         analyzer.current_depth, analyzer.loop_depth = 0, 0
         analyzer.visit(tree)
         
+        is_recursive = any("T(n) =" in line.get('complexity', '') for line in analyzer.details)
+
+        asymptotic_lines = []
+        for line in analyzer.details:
+            comp = line['complexity']
+            asymp = comp
+            if "T(n) = n * T(n-1)" in comp: asymp = "O(n!)"
+            elif "2T(n/2)" in comp: asymp = "O(n log n)"
+            elif "T(n-1) + T(n-2)" in comp: asymp = "O(2^n)"
+            elif "T(n-1)" in comp: asymp = "O(n)"
+            
+            asymptotic_lines.append({
+                "lineOfCode": line["lineOfCode"],
+                "complexity": asymp,
+                "indent": line.get("indent", 0),
+                "color": analyzer.get_color(asymp),
+                "weight": line.get("weight", 0)
+            })
+
         return {
             "status": "success",
-            "total": analyzer.get_final_badge(),
-            "lines": analyzer.details,
+            "total": analyzer.get_final_asymptotic_badge(),
+            "total_recurrence": analyzer.get_final_badge(),
+            "lines": asymptotic_lines,
+            "recurrence_lines": analyzer.details,
             "space_total": "O(n)" if analyzer.max_space_weight > 0 else "O(1)",
-            "space_lines": analyzer.space_details
+            "space_lines": analyzer.space_details,
+            "is_recursive": is_recursive
         }
     except Exception as e:
-        return {"status": "error", "total": "Error", "lines": []}
+        return {"status": "error", "total": "Error", "total_recurrence": "Error", "lines": [], "recurrence_lines": [], "is_recursive": False}
 
 @app.post("/api/run")
 @app.post("/run")
