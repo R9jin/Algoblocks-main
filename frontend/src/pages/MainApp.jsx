@@ -1,7 +1,7 @@
 // src/App.jsx
 import { useRef, useState } from "react";
 import Split from "react-split";
-import BlocklyWorkspace from "./components/BlocklyWorkspace.jsx";
+import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
 
 export default function MainApp() {
   // 1. Update initial state to include space complexity
