@@ -4,7 +4,14 @@ import Split from "react-split";
 import BlocklyWorkspace from "./components/BlocklyWorkspace.jsx";
 
 export default function App() {
-  const [analysisResult, setAnalysisResult] = useState({ lines: [], total: "O(1)" });
+  // 1. Update initial state to include space complexity
+  const [analysisResult, setAnalysisResult] = useState({ 
+      lines: [], 
+      total: "O(1)",
+      space_lines: [],     // NEW
+      space_total: "O(1)"  // NEW
+  });
+  const [activeTab, setActiveTab] = useState("time");
   const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
   const [consoleOutput, setConsoleOutput] = useState("Ready to run...");
   const [blocklyJson, setBlocklyJson] = useState(null);
@@ -27,15 +34,16 @@ export default function App() {
       if (data.status === "success") {
         setAnalysisResult({ 
             total: data.total, 
-            lines: data.lines 
+            lines: data.lines,
+            space_total: data.space_total || "O(1)", // Fallback if backend isn't ready
+            space_lines: data.space_lines || []
         });
       } else {
-        // 🔥 ADD THIS: Clear the UI if the code is incomplete/broken
-        setAnalysisResult({ total: "Code Error", lines: [] });
+        setAnalysisResult({ total: "Code Error", lines: [], space_total: "Code Error", space_lines: [] });
       }
     } catch (error) {
       console.error("Analysis Error:", error);
-      setAnalysisResult({ total: "Error", lines: [] });
+      setAnalysisResult({ total: "Error", lines: [], space_total: "Error", space_lines: [] });
     }
   };
 
@@ -223,25 +231,70 @@ export default function App() {
           minSize={100}
         >
           <div className="complexity-area">
-            <div className="panel-header">Time Complexity</div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Logic</th>
-                  <th>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analysisResult.lines.map((row, i) => (
-                  <tr key={i} style={{ color: row.color }}>
-                    <td style={{ paddingLeft: `${row.indent * 15 + 5}px` }}>
-                      {row.lineOfCode}
-                    </td>
-                    <td>{row.complexity}</td>
+            {/* --- TABBED HEADER --- */}
+            <div className="panel-header tabbed-header" style={{ padding: 0, display: 'flex' }}>
+              <button 
+                style={{ flex: 1, padding: '8px', border: 'none', cursor: 'pointer', background: activeTab === 'time' ? '#fff' : '#e0e0e0', borderBottom: activeTab === 'time' ? '2px solid #3498db' : 'none', fontWeight: 'bold' }}
+                onClick={() => setActiveTab('time')}
+              >
+                Time Complexity ({analysisResult.total})
+              </button>
+              <button 
+                style={{ flex: 1, padding: '8px', border: 'none', cursor: 'pointer', background: activeTab === 'space' ? '#fff' : '#e0e0e0', borderBottom: activeTab === 'space' ? '2px solid #9b59b6' : 'none', fontWeight: 'bold' }}
+                onClick={() => setActiveTab('space')}
+              >
+                Space Complexity ({analysisResult.space_total})
+              </button>
+            </div>
+
+            {/* --- CONDITIONAL TABLE RENDERING --- */}
+            {activeTab === 'time' ? (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Logic</th>
+                    <th>Time</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {analysisResult.lines.map((row, i) => (
+                    <tr key={i} style={{ color: row.color }}>
+                      <td style={{ paddingLeft: `${row.indent * 15 + 5}px` }}>
+                        {row.lineOfCode}
+                      </td>
+                      <td>{row.complexity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Variables / Data Structures</th>
+                    <th>Space</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analysisResult.space_lines && analysisResult.space_lines.length > 0 ? (
+                    analysisResult.space_lines.map((row, i) => (
+                      <tr key={i} style={{ color: row.color }}>
+                        <td style={{ paddingLeft: `${row.indent * 15 + 5}px` }}>
+                          {row.lineOfCode}
+                        </td>
+                        <td>{row.complexity}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="2" style={{ textAlign: "center", padding: "20px", color: "#7f8c8d" }}>
+                        O(1) Auxiliary Space Detected
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
 
           <div className="console-area">
