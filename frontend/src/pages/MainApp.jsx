@@ -220,7 +220,7 @@ export default function MainApp() {
           {bottomPanel && (
             <div className="hover-panel" style={{
               position: 'absolute', bottom: '90px', left: '50%', transform: 'translateX(-50%)',
-              width: '500px', background: 'rgba(31, 20, 67, 0.95)', border: '1px solid #7F57F9',
+              width: '800px', background: 'rgba(31, 20, 67, 0.95)', border: '1px solid #7F57F9',
               borderRadius: '12px', zIndex: 1000, color: 'white', backdropFilter: 'blur(10px)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
             }}>
