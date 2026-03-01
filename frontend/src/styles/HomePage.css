@@ -1,4 +1,8 @@
-  .landing-container {
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.landing-container {
       display: flex;
       flex-direction: column;
       height: 100vh;
@@ -26,15 +30,23 @@
     color: #F5F5F5;
     border-bottom: 1px solid #4830A0;
   }
-  
-  .logo {
+
+    .logo-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-img {
+    width: 50px;   /* smaller */
+    height: 50px;
+    object-fit: contain;
+  }
+
+  .logo-text {
+    margin: 0;
     font-size: 1.5rem;
     font-weight: bold;
-    margin: 0;
-    background: linear-gradient(135deg, #ffffff, rgb(255, 255, 255));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
   
   .nav-links {
@@ -89,12 +101,15 @@
   .landing-main::-webkit-scrollbar {
     display: none;
   }
-  
-  .gradient-text {
-    background: linear-gradient(135deg, #E058FB, #C994FF);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    
+  .slogan-text {
+    color: white;
+    font-size: 4rem; /* optional */
+    font-weight: bold; /* optional */
+  }
+
+  .accent {
+    color: #B570FA;
   }
   
   .hero {
@@ -105,7 +120,7 @@
 
   .hero-subtitle {
     font-size: 1.2rem;
-    color: #C994FF;
+    color: #ffffff;
     margin: 0 0 2rem 0;
   }
 
@@ -279,3 +294,4 @@
     color: #C994FF;
     border-top: 1px solid #4830A0;
   }
+  
