@@ -268,3 +268,109 @@
   color: #8a8a8a;
   font-size: 0.9rem;
 }
+
+/* ========================= */
+/* Responsive Improvements */
+/* ========================= */
+
+/* Large Tablets */
+@media (max-width: 1024px) {
+  .dashboard-main,
+  .dashboard-sidebar {
+    padding: 25px;
+  }
+
+  .section-title {
+    font-size: 1.7rem;
+  }
+}
+
+/* Tablets */
+@media (max-width: 768px) {
+
+  /* Stack sidebar below main content */
+  .dashboard-body {
+    flex-direction: column;
+  }
+
+  .dashboard-sidebar {
+    border-left: none;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  /* Header wraps properly */
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+    padding: 15px 20px;
+  }
+
+  .dashboard-header .header-left,
+  .dashboard-header .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-main,
+  .dashboard-sidebar {
+    padding: 20px;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+  }
+
+  .learning-path-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .banner-arrow {
+    align-self: flex-end;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+
+  .dashboard-main,
+  .dashboard-sidebar {
+    padding: 15px;
+  }
+
+  .section-title {
+    font-size: 1.3rem;
+  }
+
+  /* Make buttons full width on small screens */
+  .btn-new-project,
+  .btn-open-project {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Smaller profile icon */
+  .user-profile-icon {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+
+  /* Grid becomes tighter */
+  .template-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Banner icon smaller */
+  .banner-icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .banner-icon img {
+    width: 40px;
+    height: 40px;
+  }
+}

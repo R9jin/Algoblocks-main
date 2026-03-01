@@ -427,3 +427,136 @@
   font-weight: bold; 
   white-space: nowrap; 
 }
+
+/* ========================= */
+/* Responsive Enhancements */
+/* ========================= */
+
+/* Large Tablets */
+@media (max-width: 1024px) {
+
+  .project-name {
+    display: none; /* prevent header crowding */
+  }
+
+  .complexity-table {
+    width: 100%;
+  }
+}
+
+/* Tablets */
+@media (max-width: 768px) {
+
+  /* Stack sidebar and workspace vertically */
+  .workspace-split {
+    flex-direction: column;
+  }
+
+  .gutter {
+    display: none; /* disable drag divider on small screens */
+  }
+
+  .templates-sidebar {
+    height: 250px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  /* Header wraps */
+  .workspace-header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 15px;
+    gap: 10px;
+  }
+
+  .header-left,
+  .header-center,
+  .header-right {
+    flex: 100%;
+    justify-content: space-between;
+  }
+
+  .view-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Footer adjusts */
+  .workspace-footer {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 15px;
+    gap: 10px;
+  }
+
+  .footer-left,
+  .footer-right {
+    flex: 100%;
+    justify-content: space-between;
+  }
+
+  /* Bottom panel height safer on tablets */
+  .bottom-hover-panel {
+    max-height: 50%;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+
+  .workspace-header {
+    padding: 8px 10px;
+  }
+
+  .action-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .toggle-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+
+  .templates-sidebar {
+    height: 200px;
+  }
+
+  .sidebar-search {
+    padding: 10px;
+  }
+
+  .sidebar-list {
+    padding: 10px;
+  }
+
+  .workspace-footer {
+    padding: 8px 10px;
+  }
+
+  .footer-tab {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  /* Make complexity table scroll horizontally */
+  .complexity-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .complexity-table {
+    min-width: 500px;
+  }
+
+  .panel-body {
+    padding: 12px;
+  }
+
+  .console-output {
+    font-size: 0.75rem;
+  }
+
+  .python-code-pre {
+    font-size: 0.8rem;
+  }
+}
