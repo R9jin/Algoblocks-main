@@ -4,6 +4,9 @@ import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
 import "../styles/MainApp.css";
 
 export default function MainApp() {
+
+  const location = useLocation(); // <-- initialize location
+
   const [analysisResult, setAnalysisResult] = useState({ 
     lines: [], 
     recurrence_lines: [],
@@ -52,13 +55,12 @@ export default function MainApp() {
     }
   };
 
-  const loadAlgorithmTemplate = async (path) => {
-    const confirmOverwrite = window.confirm(
-      "Loading this algorithm will overwrite your current workspace. Any unsaved progress will be lost. Do you want to continue?"
-    );
-
-    if (!confirmOverwrite) {
-      return;
+const loadAlgorithmTemplate = async (path, skipConfirm = false) => {
+    if (!skipConfirm) {
+      const confirmOverwrite = window.confirm(
+        "Loading this algorithm will overwrite your current workspace. Any unsaved progress will be lost. Do you want to continue?"
+      );
+      if (!confirmOverwrite) return;
     }
 
     try {
@@ -74,6 +76,20 @@ export default function MainApp() {
       console.error("Failed to load template:", error);
     }
   };
+
+  // 2. ADD THIS EFFECT right below `loadAlgorithmTemplate`
+  useEffect(() => {
+    // If we arrived from the dashboard with a template selected
+    if (location.state && location.state.templatePath) {
+      // Add a slight delay to ensure Blockly is fully injected in the DOM before loading
+      setTimeout(() => {
+        loadAlgorithmTemplate(location.state.templatePath, true);
+        
+        // Clear the state so it doesn't trigger again if the component re-renders
+        window.history.replaceState({}, document.title);
+      }, 300);
+    }
+  }, [location.state]);
 
   const handleClear = () => {
     if (window.confirm("Are you sure you want to clear the workspace? All unsaved progress will be lost.")) {

@@ -1,9 +1,10 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import Dashboard from "./pages/Dashboard"; // <-- Import it
+import ForgotPassword from "./pages/ForgotPassword";
 import LandingPage from "./pages/HomePage";
+import MainApp from "./pages/MainApp";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
-import ForgotPassword from "./pages/ForgotPassword";
-import MainApp from "./pages/MainApp";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/dashboard" element={<Dashboard />} /> {/* <-- Add route */}
         <Route path="/app" element={<MainApp />} />
       </Routes>
     </BrowserRouter>

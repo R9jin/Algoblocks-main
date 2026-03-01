@@ -11,7 +11,8 @@ export default function SignUp() {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Sign up with", name, email, password);
-    navigate("/app");
+    // Changed this line to route to dashboard
+    navigate("/dashboard"); 
   };
 
   return (
