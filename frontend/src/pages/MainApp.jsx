@@ -1,17 +1,28 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom"; // Removed useNavigate
 import Split from "react-split";
 import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
+import WorkspaceHeader from "../components/WorkspaceHeader.jsx"; // <-- 1. Import the header
+import "../styles/MainApp.css";
+
+const SIDEBAR_TEMPLATES = [
+  { name: "Linear Search", path: "search/linear_search", desc: "Sequentially checks each element until the target is found or the list is exhausted." },
+  { name: "Bubble Sort", path: "sort/bubble_sort", desc: "Repeatedly swaps adjacent elements if they are in the wrong order." },
+  { name: "Selection Sort", path: "sort/selection_sort", desc: "Finds the minimum element from the unsorted part and places it at the beginning." },
+  { name: "Insertion Sort", path: "sort/insertion_sort", desc: "Builds the final sorted array one element at a time by inserting elements into their correct position." },
+  { name: "Merge Sort", path: "sort/merge_sort", desc: "Divides the array into halves, sorts them, and merges them back." },
+  { name: "Factorial (Recursive)", path: "recursive/recursive_factorial", desc: "Calculates the factorial of a number using recursion." },
+  { name: "Fibonacci (Recursive)", path: "recursive/recursive_fibonacci", desc: "Generates the Fibonacci sequence using recursive calls." },
+  { name: "Permutation (Recursive)", path: "recursive/recursive_permutation", desc: "Generates all permutations of a string using backtracking." }
+];
 
 export default function MainApp() {
+  const location = useLocation();
+
   const [analysisResult, setAnalysisResult] = useState({ 
-    lines: [], 
-    recurrence_lines: [],
-    total: "O(1)",
-    total_recurrence: "O(1)",
-    space_lines: [],
-    space_total: "O(1)",
-    is_recursive: false
+    lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false
   });
+  
   const [activeTab, setActiveTab] = useState("time_asymptotic");
   const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
   const [consoleOutput, setConsoleOutput] = useState("Ready to run...");
@@ -19,9 +30,50 @@ export default function MainApp() {
   
   const [viewMode, setViewMode] = useState("workspace"); 
   const [bottomPanel, setBottomPanel] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // --- DRAG TO RESIZE LOGIC ---
+  const [panelHeight, setPanelHeight] = useState(300);
+  const isDragging = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging.current) return;
+      // Calculate new height: total window height - mouse Y position - footer height (48px)
+      const newHeight = window.innerHeight - e.clientY - 48;
+      
+      // Clamp the height between 150px and the top of the window
+      if (newHeight >= 150 && newHeight <= window.innerHeight - 150) {
+        setPanelHeight(newHeight);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging.current) {
+        isDragging.current = false;
+        document.body.style.cursor = "default";
+        document.body.style.userSelect = "auto";
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
+  const handleDragStart = (e) => {
+    e.preventDefault(); // Prevents accidental text selection while dragging
+    isDragging.current = true;
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+  };
+  // ----------------------------
 
   const workspaceRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   const handleBlocklyChange = async (json, pythonCode) => {
     setGeneratedPython(pythonCode);
@@ -43,8 +95,6 @@ export default function MainApp() {
           space_lines: data.space_lines || [],
           is_recursive: data.is_recursive || false
         });
-        
-        // Prevent getting stuck on the Recurrence tab if a new algorithm isn't recursive 
         setActiveTab(prev => (prev === 'time_recurrence' && !data.is_recursive) ? 'time_asymptotic' : prev);
       }
     } catch (error) {
@@ -52,15 +102,11 @@ export default function MainApp() {
     }
   };
 
-  const loadAlgorithmTemplate = async (path) => {
-    const confirmOverwrite = window.confirm(
-      "Loading this algorithm will overwrite your current workspace. Any unsaved progress will be lost. Do you want to continue?"
-    );
-
-    if (!confirmOverwrite) {
-      return;
+  const loadAlgorithmTemplate = async (path, skipConfirm = false) => {
+    if (!skipConfirm) {
+      const confirmOverwrite = window.confirm("Loading this algorithm will overwrite your current workspace. Do you want to continue?");
+      if (!confirmOverwrite) return;
     }
-
     try {
       const response = await fetch(`/templates/${path}.json`);
       if (!response.ok) throw new Error("Template not found");
@@ -75,48 +121,42 @@ export default function MainApp() {
     }
   };
 
+  useEffect(() => {
+    if (location.state && location.state.templatePath) {
+      setTimeout(() => {
+        loadAlgorithmTemplate(location.state.templatePath, true);
+        window.history.replaceState({}, document.title);
+      }, 300);
+    }
+  }, [location.state]);
+
   const handleClear = () => {
     if (window.confirm("Are you sure you want to clear the workspace? All unsaved progress will be lost.")) {
       if (workspaceRef.current) {
         workspaceRef.current.clear();
         setGeneratedPython("# Drag blocks to generate Python code");
         setBlocklyJson(null);
-        setAnalysisResult({ 
-          lines: [], 
-          recurrence_lines: [],
-          total: "O(1)",
-          total_recurrence: "O(1)",
-          space_lines: [],
-          space_total: "O(1)",
-          is_recursive: false
-        });
+        setAnalysisResult({ lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false });
         setActiveTab("time_asymptotic");
+        setBottomPanel(null);
       }
     }
   };
 
   const handleSave = () => {
     const projectName = window.prompt("Enter a name for your project file:", "my_algorithm");
-    
-    if (projectName) {
-      if (!blocklyJson) {
-        alert("The workspace is empty. Nothing to save!");
-        return;
-      }
-
-      const jsonString = JSON.stringify(blocklyJson, null, 2);
-      
-      const blob = new Blob([jsonString], { type: "application/json" });
+    if (projectName && blocklyJson) {
+      const blob = new Blob([JSON.stringify(blocklyJson, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      
       const link = document.createElement("a");
       link.href = url;
       link.download = `${projectName.replace(/\s+/g, '_')}.json`;
       document.body.appendChild(link);
       link.click();
-      
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+    } else if (!blocklyJson) {
+      alert("The workspace is empty. Nothing to save!");
     }
   };
 
@@ -136,197 +176,143 @@ export default function MainApp() {
     }
   };
 
-  return (
-    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0f0f1a', overflow: 'hidden' }}>
-      {/* HEADER */}
-      <header className="app-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: '60px', borderBottom: '1px solid #4830A0' }}>
-        
-        {/* Left Side: Logo & Workspace Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <h1 style={{ fontSize: '1.2rem', color: '#E058FB', margin: 0 }}>ALGOBLOCKS</h1>
-          
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={handleSave} className="save-button" style={{ padding: '6px 15px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: '#3498db', color: 'white', fontWeight: 'bold' }}>
-              💾 Save
-            </button>
-            <button onClick={handleClear} style={{ padding: '6px 15px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: '#e74c3c', color: 'white', fontWeight: 'bold' }}>
-              🗑️ Clear
-            </button>
-          </div>
-        </div>
-        
-        {/* Center: View Modes & Run */}
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={() => setViewMode("workspace")} style={{ padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: viewMode === 'workspace' ? '#7F57F9' : '#34495e', color: 'white' }}>📂 Workspace</button>
-          <button onClick={() => setViewMode("python")} style={{ padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: viewMode === 'python' ? '#7F57F9' : '#34495e', color: 'white' }}>🐍 Python Code</button>
-          <button onClick={runCode} style={{ padding: '8px 25px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: '#27ae60', color: 'white', fontWeight: 'bold' }}>▶ RUN</button>
-        </div>
-        
-        {/* Right Side: Complexity */}
-        <div className="complexity-badge" style={{ color: '#00ff00', fontWeight: 'bold' }}>
-          Total: {activeTab === 'space' ? analysisResult.space_total : 
-                  activeTab === 'time_recurrence' ? analysisResult.total_recurrence : 
-                  analysisResult.total}
-        </div>
-      </header>
+const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      {/* MAIN BODY WITH ADJUSTABLE SIDEBAR */}
+  return (
+    <div className="workspace-app-container">
+      
+      {/* 2. Replace the raw <header> block with the component and pass the props */}
+      <WorkspaceHeader 
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        runCode={runCode}
+        setBottomPanel={setBottomPanel}
+        handleSave={handleSave}
+      />
+
+      {/* MAIN SPLIT VIEW */}
       <Split 
-        className="main-split" 
+        className="workspace-split" 
         sizes={[20, 80]} 
-        minSize={[150, 400]} 
+        minSize={[250, 400]} 
         gutterSize={8}
-        style={{ flex: 1, display: 'flex' }}
       >
         {/* SIDEBAR */}
-        <aside style={{ background: '#ffffff', padding: '15px', overflowY: 'auto', height: '100%' }}>
-          <h3 style={{ color: '#C994FF', fontSize: '0.8rem', marginBottom: '15px', letterSpacing: '1px' }}>TEMPLATES</h3>
+        <aside className="templates-sidebar">
+          <div className="sidebar-search">
+            <img src="/assets/search-icon.png" alt="Search" className="search-icon" />
+            <input 
+              type="text" 
+              placeholder="Search Templates" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* SEARCHING */}
-            <div>
-              <p style={{ color: '#7F57F9', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '5px' }}>SEARCHING</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <button className="template-btn" onClick={() => loadAlgorithmTemplate('search/linear_search')}>Linear Search</button>
-                <button className="template-btn" onClick={() => loadAlgorithmTemplate('search/binary_search')}>Binary Search</button>
+          <div className="sidebar-list">
+            {filteredTemplates.map((template) => (
+              <div key={template.name} className="sidebar-card" onClick={() => loadAlgorithmTemplate(template.path)}>
+                <h4>{template.name}</h4>
+                <p>{template.desc}</p>
               </div>
-            </div>
-
-            {/* SORTING */}
-            <div>
-              <p style={{ color: '#7F57F9', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '5px' }}>SORTING</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <button className="template-btn" onClick={() => loadAlgorithmTemplate('sort/bubble_sort')}>Bubble Sort</button>
-                <button className="template-btn" onClick={() => loadAlgorithmTemplate('sort/merge_sort')}>Merge Sort</button>
-                <button className="template-btn" onClick={() => loadAlgorithmTemplate('sort/insertion_sort')}>Insertion Sort</button>
-                <button className="template-btn" onClick={() => loadAlgorithmTemplate('sort/selection_sort')}>Selection Sort</button>
-              </div>
-            </div>
-
-            {/* RECURSIVE */}
-            <div>
-              <p style={{ color: '#7F57F9', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '5px' }}>RECURSIVE</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <button className="template-btn" onClick={() => loadAlgorithmTemplate('recursive/recursive_factorial')}>Factorial</button>
-                <button className="template-btn" onClick={() => loadAlgorithmTemplate('recursive/recursive_fibonacci')}>Fibonacci</button>
-                <button className="template-btn" onClick={() => loadAlgorithmTemplate('recursive/recursive_permutation')}>Permutation</button>
-              </div>
-            </div>
+            ))}
+            {filteredTemplates.length === 0 && (
+              <p className="no-results">No templates found.</p>
+            )}
           </div>
         </aside>
 
-        {/* CONTENT AREA */}
-        <main style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
-          <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
-            <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
-          </div>
-          <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#0d0d0d', padding: '20px', overflow: 'auto' }}>
-            <pre style={{ color: '#F5F5F5', fontSize: '0.9rem', lineHeight: '1.5' }}>{generatedPython}</pre>
+        {/* MAIN WORKSPACE AREA */}
+        <main className="workspace-main">
+          
+          {/* Blocks or Python Editor */}
+          <div className="editor-container">
+            <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
+              <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
+            </div>
+            <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#0d0d0d', padding: '20px', overflow: 'auto' }}>
+              <pre className="python-code-pre">{generatedPython}</pre>
+            </div>
           </div>
 
-          {/* HOVERING CONSOLE / COMPLEXITY PANEL */}
+          {/* DOCKED RESIZABLE HOVER PANEL */}
           {bottomPanel && (
-            <div className="hover-panel" style={{
-              position: 'absolute', bottom: '90px', left: '50%', transform: 'translateX(-50%)',
-              width: '800px', background: 'rgba(31, 20, 67, 0.95)', border: '1px solid #7F57F9',
-              borderRadius: '12px', zIndex: 1000, color: 'white', backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
-            }}>
-              <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', background: '#4830A0', borderRadius: '11px 11px 0 0' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '0.8rem', letterSpacing: '1px' }}>{bottomPanel === 'console' ? '💻 CONSOLE' : '📊 COMPLEXITY ANALYSIS'}</span>
-                <button onClick={() => setBottomPanel(null)} style={{ background: 'none', color: 'white', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+            <div className="bottom-hover-panel" style={{ height: `${panelHeight}px` }}>
+              {/* DRAG HANDLE FOR RESIZING */}
+              <div className="panel-resizer" onMouseDown={handleDragStart}>
+                <div className="resizer-dash"></div>
               </div>
-              <div style={{ maxHeight: '250px', overflowY: 'auto', padding: '15px' }}>
+              
+              <div className="panel-header">
+                <span className="panel-title">{bottomPanel === 'console' ? 'Console Output' : 'Complexity Analysis'}</span>
+                <button onClick={() => setBottomPanel(null)} className="panel-close-btn">✕</button>
+              </div>
+              <div className="panel-body">
                 {bottomPanel === 'console' ? (
-                  <pre style={{ margin: 0, color: '#00ff00', fontSize: '0.85rem', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{consoleOutput}</pre>
+                  <pre className="console-output">{consoleOutput}</pre>
                 ) : (
                   <div className="complexity-content">
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                      <button onClick={() => setActiveTab("time_asymptotic")} style={{ padding: '4px 10px', background: activeTab === 'time_asymptotic' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Asymptotic Analysis</button>
-                      
-                      {/* ONLY rendered when is_recursive boolean is flagged true by python index.py */}
+                    <div className="complexity-tabs">
+                      <button onClick={() => setActiveTab("time_asymptotic")} className={`tab-btn ${activeTab === 'time_asymptotic' ? 'active' : ''}`}>Asymptotic Analysis</button>
                       {analysisResult.is_recursive && (
-                        <button onClick={() => setActiveTab("time_recurrence")} style={{ padding: '4px 10px', background: activeTab === 'time_recurrence' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Recurrence Relation</button>
+                        <button onClick={() => setActiveTab("time_recurrence")} className={`tab-btn ${activeTab === 'time_recurrence' ? 'active' : ''}`}>Recurrence Relation</button>
                       )}
-
-                      <button onClick={() => setActiveTab("space")} style={{ padding: '4px 10px', background: activeTab === 'space' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Space</button>
+                      <button onClick={() => setActiveTab("space")} className={`tab-btn ${activeTab === 'space' ? 'active' : ''}`}>Space</button>
+                      <span className="total-badge">Total: {activeTab === 'space' ? analysisResult.space_total : activeTab === 'time_recurrence' ? analysisResult.total_recurrence : analysisResult.total}</span>
                     </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                      <thead>
-                        <tr style={{ textAlign: 'left', borderBottom: '1px solid #4830A0' }}>
-                          <th style={{ paddingBottom: '5px', color: '#7F57F9' }}>Line of Code</th>
-                          <th style={{ paddingBottom: '5px', color: '#7F57F9', textAlign: 'right' }}>Complexity</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {/* Tab Switcher Handler Map Array */}
-                        {(activeTab === 'time_asymptotic' ? analysisResult.lines : 
-                          activeTab === 'time_recurrence' ? analysisResult.recurrence_lines : 
-                          analysisResult.space_lines).map((row, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid rgba(127, 87, 249, 0.2)' }}>
-                          {/* Left Column: Code Snippet with pedagogical indentation */}
-                          <td style={{ 
-                            color: row.color || 'white', 
-                            padding: '8px 0', 
-                            paddingLeft: `${(row.indent || 0) * 15}px`, 
-                            fontFamily: 'monospace',
-                            fontSize: '0.9rem'
-                          }}>
-                            {row.lineOfCode}
-                          </td>
-                          
-                          {/* Right Column: Complexity notation using the SAME color */}
-                          <td style={{ 
-                            color: row.color || 'white',
-                            textAlign: 'right', 
-                            fontWeight: 'bold',
-                            whiteSpace: 'nowrap',
-                            paddingLeft: '20px'
-                          }}>
-                            {row.complexity}
-                          </td>
-                        </tr>
-                      ))}
-                      </tbody>
-                    </table>
+                    
+                    {/* CENTERED & COMPACT TABLE WRAPPER */}
+                    <div className="complexity-table-wrapper">
+                      <table className="complexity-table">
+                        <thead>
+                          <tr>
+                            <th>Line of Code</th>
+                            <th className="right-align">Complexity</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(activeTab === 'time_asymptotic' ? analysisResult.lines : activeTab === 'time_recurrence' ? analysisResult.recurrence_lines : analysisResult.space_lines).map((row, i) => (
+                            <tr key={i}>
+                              <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>{row.lineOfCode}</td>
+                              <td className="complexity-cell" style={{ color: row.color || 'white' }}>{row.complexity}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* FLOATING BOTTOM CONTROLS */}
-          <footer style={{
-            position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-            display: 'flex', gap: '20px', background: 'rgba(26, 26, 26, 0.95)', padding: '10px 30px',
-            borderRadius: '50px', border: '2px solid #4830A0', zIndex: 1001, boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
-          }}>
-            <button 
-              onClick={() => setBottomPanel(bottomPanel === 'console' ? null : 'console')} 
-              style={{ background: 'none', border: 'none', color: bottomPanel === 'console' ? '#E058FB' : 'white', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 'bold' }}
-            >
-              ⌨️ Console
-            </button>
-            <div style={{ width: '1px', background: '#4830A0', height: '20px' }}></div>
-            <button 
-              onClick={() => setBottomPanel(bottomPanel === 'complexity' ? null : 'complexity')} 
-              style={{ background: 'none', border: 'none', color: bottomPanel === 'complexity' ? '#E058FB' : 'white', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 'bold' }}
-            >
-              📊 Complexity
-            </button>
+          {/* DOCKED FOOTER */}
+          <footer className="workspace-footer">
+            <div className="footer-left">
+              <button 
+                className={`footer-tab ${bottomPanel === 'console' ? 'active' : ''}`}
+                onClick={() => setBottomPanel(bottomPanel === 'console' ? null : 'console')}
+              >
+                <img src="/assets/console-icon.png" alt="Console" className="tab-icon" /> Console
+              </button>
+              <button 
+                className={`footer-tab ${bottomPanel === 'complexity' ? 'active' : ''}`}
+                onClick={() => setBottomPanel(bottomPanel === 'complexity' ? null : 'complexity')}
+              >
+                <img src="/assets/complexity-icon.png" alt="Complexity" className="tab-icon" /> Complexity
+              </button>
+            </div>
+            
+            <div className="footer-right">
+              <button className="footer-action-icon" onClick={handleClear} title="Clear Workspace">
+                <img src="/assets/recursive-icon.png" alt="Refresh" />
+              </button>
+            </div>
           </footer>
+
         </main>
       </Split>
-
-      <style>{`
-        .main-split { display: flex; width: 100%; }
-        .gutter { background-color: #4830A0; background-repeat: no-repeat; background-position: 50%; cursor: col-resize; transition: 0.2s; }
-        .gutter:hover { background-color: #7F57F9; }
-        .template-btn { background: #34495e; color: #F5F5F5; border: none; padding: 10px; text-align: left; border-radius: 4px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
-        .template-btn:hover { background: #7F57F9; transform: translateX(5px); }
-        .hover-panel::-webkit-scrollbar { width: 6px; }
-        .hover-panel::-webkit-scrollbar-thumb { background: #7d71aa; border-radius: 10px; }
-      `}</style>
     </div>
   );
 }
