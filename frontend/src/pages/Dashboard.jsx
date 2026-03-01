@@ -130,15 +130,29 @@ export default function Dashboard() {
           </div>
 
           <div className="template-category">
-            <h3 className="category-label">RECURSIVE ALGORITHMS</h3>
+            <h3 className="category-label">SORTING ALGORITHMS</h3>
             <div className="template-grid">
-              {TEMPLATES.recursive.map((temp) => (
+              {TEMPLATES.sorting.map((temp) => (
                 <div key={temp.name} className="template-card" onClick={() => handleTemplateClick(temp)}>
                   <div className="card-header">
                     <img src={temp.icon} alt={temp.name} className="card-icon-img" />
                     <h4>{temp.name}</h4>
                   </div>
-                  <p className="template-card-desc">{temp.desc}</p>
+                  
+                  {/* NEW WRAPPER FOR HOVER REVEAL */}
+                  <div className="card-hover-content">
+                    <p className="template-card-desc">{temp.desc}</p>
+                    <button 
+                      className="try-template-btn"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevents double-triggering the card click
+                        handleTemplateClick(temp);
+                      }}
+                    >
+                      Test Template →
+                    </button>
+                  </div>
+
                 </div>
               ))}
             </div>
