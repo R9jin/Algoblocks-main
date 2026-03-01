@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import Split from "react-split";
 import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
+import "../styles/MainApp.css";
 
 export default function MainApp() {
   const [analysisResult, setAnalysisResult] = useState({ 
@@ -21,7 +22,6 @@ export default function MainApp() {
   const [bottomPanel, setBottomPanel] = useState(null);
 
   const workspaceRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   const handleBlocklyChange = async (json, pythonCode) => {
     setGeneratedPython(pythonCode);
@@ -137,33 +137,38 @@ export default function MainApp() {
   };
 
   return (
-    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0f0f1a', overflow: 'hidden' }}>
+    <div className="app-container">
       {/* HEADER */}
-      <header className="app-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: '60px', borderBottom: '1px solid #4830A0' }}>
+      <header className="app-header">
         
         {/* Left Side: Logo & Workspace Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <h1 style={{ fontSize: '1.2rem', color: '#E058FB', margin: 0 }}>ALGOBLOCKS</h1>
-          
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={handleSave} className="save-button" style={{ padding: '6px 15px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: '#3498db', color: 'white', fontWeight: 'bold' }}>
-              💾 Save
-            </button>
-            <button onClick={handleClear} style={{ padding: '6px 15px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: '#e74c3c', color: 'white', fontWeight: 'bold' }}>
-              🗑️ Clear
-            </button>
+        <div className="header-left">
+          <h1 className="app-logo">ALGOBLOCKS</h1>
+          <div className="header-actions">
+            <button onClick={handleSave} className="save-button">💾 Save</button>
+            <button onClick={handleClear} className="clear-button">🗑️ Clear</button>
           </div>
         </div>
         
         {/* Center: View Modes & Run */}
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={() => setViewMode("workspace")} style={{ padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: viewMode === 'workspace' ? '#7F57F9' : '#34495e', color: 'white' }}>📂 Workspace</button>
-          <button onClick={() => setViewMode("python")} style={{ padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: viewMode === 'python' ? '#7F57F9' : '#34495e', color: 'white' }}>🐍 Python Code</button>
-          <button onClick={runCode} style={{ padding: '8px 25px', borderRadius: '5px', cursor: 'pointer', border: 'none', background: '#27ae60', color: 'white', fontWeight: 'bold' }}>▶ RUN</button>
+        <div className="header-center">
+          <button 
+            onClick={() => setViewMode("workspace")} 
+            className={`view-mode-btn ${viewMode === 'workspace' ? 'active' : ''}`}
+          >
+            📂 Workspace
+          </button>
+          <button 
+            onClick={() => setViewMode("python")} 
+            className={`view-mode-btn ${viewMode === 'python' ? 'active' : ''}`}
+          >
+            🐍 Python Code
+          </button>
+          <button onClick={runCode} className="run-btn">▶ RUN</button>
         </div>
         
         {/* Right Side: Complexity */}
-        <div className="complexity-badge" style={{ color: '#00ff00', fontWeight: 'bold' }}>
+        <div className="complexity-badge">
           Total: {activeTab === 'space' ? analysisResult.space_total : 
                   activeTab === 'time_recurrence' ? analysisResult.total_recurrence : 
                   analysisResult.total}
@@ -172,21 +177,21 @@ export default function MainApp() {
 
       {/* MAIN BODY WITH ADJUSTABLE SIDEBAR */}
       <Split 
-        className="main-split" 
+        cclassName="main-split" 
         sizes={[20, 80]} 
         minSize={[150, 400]} 
         gutterSize={8}
         style={{ flex: 1, display: 'flex' }}
       >
         {/* SIDEBAR */}
-        <aside style={{ background: '#ffffff', padding: '15px', overflowY: 'auto', height: '100%' }}>
-          <h3 style={{ color: '#C994FF', fontSize: '0.8rem', marginBottom: '15px', letterSpacing: '1px' }}>TEMPLATES</h3>
+        <aside className="sidebar">
+          <h3 className="sidebar-title">TEMPLATES</h3>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="sidebar-categories">
             {/* SEARCHING */}
             <div>
-              <p style={{ color: '#7F57F9', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '5px' }}>SEARCHING</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <p className="category-title">SEARCHING</p>
+              <div className="category-buttons">
                 <button className="template-btn" onClick={() => loadAlgorithmTemplate('search/linear_search')}>Linear Search</button>
                 <button className="template-btn" onClick={() => loadAlgorithmTemplate('search/binary_search')}>Binary Search</button>
               </div>
@@ -194,8 +199,8 @@ export default function MainApp() {
 
             {/* SORTING */}
             <div>
-              <p style={{ color: '#7F57F9', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '5px' }}>SORTING</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <p className="category-title">SORTING</p>
+              <div className="category-buttons">
                 <button className="template-btn" onClick={() => loadAlgorithmTemplate('sort/bubble_sort')}>Bubble Sort</button>
                 <button className="template-btn" onClick={() => loadAlgorithmTemplate('sort/merge_sort')}>Merge Sort</button>
                 <button className="template-btn" onClick={() => loadAlgorithmTemplate('sort/insertion_sort')}>Insertion Sort</button>
@@ -205,8 +210,8 @@ export default function MainApp() {
 
             {/* RECURSIVE */}
             <div>
-              <p style={{ color: '#7F57F9', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '5px' }}>RECURSIVE</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <p className="category-title">RECURSIVE</p>
+              <div className="category-buttons">
                 <button className="template-btn" onClick={() => loadAlgorithmTemplate('recursive/recursive_factorial')}>Factorial</button>
                 <button className="template-btn" onClick={() => loadAlgorithmTemplate('recursive/recursive_fibonacci')}>Fibonacci</button>
                 <button className="template-btn" onClick={() => loadAlgorithmTemplate('recursive/recursive_permutation')}>Permutation</button>
@@ -216,46 +221,57 @@ export default function MainApp() {
         </aside>
 
         {/* CONTENT AREA */}
-        <main style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
-          <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
+        <main className="main-content">
+          <div className="workspace-wrapper" style={{ display: viewMode === 'workspace' ? 'block' : 'none' }}>
             <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
           </div>
-          <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#0d0d0d', padding: '20px', overflow: 'auto' }}>
-            <pre style={{ color: '#F5F5F5', fontSize: '0.9rem', lineHeight: '1.5' }}>{generatedPython}</pre>
+          
+          <div className="python-wrapper" style={{ display: viewMode === 'python' ? 'block' : 'none' }}>
+            <pre className="python-code-pre">{generatedPython}</pre>
           </div>
 
           {/* HOVERING CONSOLE / COMPLEXITY PANEL */}
           {bottomPanel && (
-            <div className="hover-panel" style={{
-              position: 'absolute', bottom: '90px', left: '50%', transform: 'translateX(-50%)',
-              width: '800px', background: 'rgba(31, 20, 67, 0.95)', border: '1px solid #7F57F9',
-              borderRadius: '12px', zIndex: 1000, color: 'white', backdropFilter: 'blur(10px)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
-            }}>
-              <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 15px', background: '#4830A0', borderRadius: '11px 11px 0 0' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '0.8rem', letterSpacing: '1px' }}>{bottomPanel === 'console' ? '💻 CONSOLE' : '📊 COMPLEXITY ANALYSIS'}</span>
-                <button onClick={() => setBottomPanel(null)} style={{ background: 'none', color: 'white', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+            <div className="hover-panel">
+              <div className="panel-header">
+                <span className="panel-title">{bottomPanel === 'console' ? '💻 CONSOLE' : '📊 COMPLEXITY ANALYSIS'}</span>
+                <button onClick={() => setBottomPanel(null)} className="panel-close-btn">✕</button>
               </div>
-              <div style={{ maxHeight: '250px', overflowY: 'auto', padding: '15px' }}>
+              <div className="panel-body">
                 {bottomPanel === 'console' ? (
-                  <pre style={{ margin: 0, color: '#00ff00', fontSize: '0.85rem', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{consoleOutput}</pre>
+                  <pre className="console-output">{consoleOutput}</pre>
                 ) : (
                   <div className="complexity-content">
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                      <button onClick={() => setActiveTab("time_asymptotic")} style={{ padding: '4px 10px', background: activeTab === 'time_asymptotic' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Asymptotic Analysis</button>
+                    <div className="complexity-tabs">
+                      <button 
+                        onClick={() => setActiveTab("time_asymptotic")} 
+                        className={`tab-btn ${activeTab === 'time_asymptotic' ? 'active' : ''}`}
+                      >
+                        Asymptotic Analysis
+                      </button>
                       
                       {/* ONLY rendered when is_recursive boolean is flagged true by python index.py */}
                       {analysisResult.is_recursive && (
-                        <button onClick={() => setActiveTab("time_recurrence")} style={{ padding: '4px 10px', background: activeTab === 'time_recurrence' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Recurrence Relation</button>
+                        <button 
+                          onClick={() => setActiveTab("time_recurrence")} 
+                          className={`tab-btn ${activeTab === 'time_recurrence' ? 'active' : ''}`}
+                        >
+                          Recurrence Relation
+                        </button>
                       )}
 
-                      <button onClick={() => setActiveTab("space")} style={{ padding: '4px 10px', background: activeTab === 'space' ? '#7F57F9' : '#34495e', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>Space</button>
+                      <button 
+                        onClick={() => setActiveTab("space")} 
+                        className={`tab-btn ${activeTab === 'space' ? 'active' : ''}`}
+                      >
+                        Space
+                      </button>
                     </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <table className="complexity-table">
                       <thead>
-                        <tr style={{ textAlign: 'left', borderBottom: '1px solid #4830A0' }}>
-                          <th style={{ paddingBottom: '5px', color: '#7F57F9' }}>Line of Code</th>
-                          <th style={{ paddingBottom: '5px', color: '#7F57F9', textAlign: 'right' }}>Complexity</th>
+                        <tr>
+                          <th>Line of Code</th>
+                          <th className="right-align">Complexity</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -263,26 +279,14 @@ export default function MainApp() {
                         {(activeTab === 'time_asymptotic' ? analysisResult.lines : 
                           activeTab === 'time_recurrence' ? analysisResult.recurrence_lines : 
                           analysisResult.space_lines).map((row, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid rgba(127, 87, 249, 0.2)' }}>
+                        <tr key={i}>
                           {/* Left Column: Code Snippet with pedagogical indentation */}
-                          <td style={{ 
-                            color: row.color || 'white', 
-                            padding: '8px 0', 
-                            paddingLeft: `${(row.indent || 0) * 15}px`, 
-                            fontFamily: 'monospace',
-                            fontSize: '0.9rem'
-                          }}>
+                          <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${(row.indent || 0) * 15}px` }}>
                             {row.lineOfCode}
                           </td>
                           
                           {/* Right Column: Complexity notation using the SAME color */}
-                          <td style={{ 
-                            color: row.color || 'white',
-                            textAlign: 'right', 
-                            fontWeight: 'bold',
-                            whiteSpace: 'nowrap',
-                            paddingLeft: '20px'
-                          }}>
+                          <td className="complexity-cell" style={{ color: row.color || 'white' }}>
                             {row.complexity}
                           </td>
                         </tr>
@@ -296,37 +300,23 @@ export default function MainApp() {
           )}
 
           {/* FLOATING BOTTOM CONTROLS */}
-          <footer style={{
-            position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-            display: 'flex', gap: '20px', background: 'rgba(26, 26, 26, 0.95)', padding: '10px 30px',
-            borderRadius: '50px', border: '2px solid #4830A0', zIndex: 1001, boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
-          }}>
+          <footer className="floating-footer">
             <button 
               onClick={() => setBottomPanel(bottomPanel === 'console' ? null : 'console')} 
-              style={{ background: 'none', border: 'none', color: bottomPanel === 'console' ? '#E058FB' : 'white', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 'bold' }}
+              className={`footer-btn ${bottomPanel === 'console' ? 'active' : 'inactive'}`}
             >
               ⌨️ Console
             </button>
-            <div style={{ width: '1px', background: '#4830A0', height: '20px' }}></div>
+            <div className="footer-divider"></div>
             <button 
               onClick={() => setBottomPanel(bottomPanel === 'complexity' ? null : 'complexity')} 
-              style={{ background: 'none', border: 'none', color: bottomPanel === 'complexity' ? '#E058FB' : 'white', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 'bold' }}
+              className={`footer-btn ${bottomPanel === 'complexity' ? 'active' : 'inactive'}`}
             >
               📊 Complexity
             </button>
           </footer>
         </main>
       </Split>
-
-      <style>{`
-        .main-split { display: flex; width: 100%; }
-        .gutter { background-color: #4830A0; background-repeat: no-repeat; background-position: 50%; cursor: col-resize; transition: 0.2s; }
-        .gutter:hover { background-color: #7F57F9; }
-        .template-btn { background: #34495e; color: #F5F5F5; border: none; padding: 10px; text-align: left; border-radius: 4px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
-        .template-btn:hover { background: #7F57F9; transform: translateX(5px); }
-        .hover-panel::-webkit-scrollbar { width: 6px; }
-        .hover-panel::-webkit-scrollbar-thumb { background: #7d71aa; border-radius: 10px; }
-      `}</style>
     </div>
   );
 }
