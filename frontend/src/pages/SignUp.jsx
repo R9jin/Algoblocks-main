@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "./Auth.css";
+import "../styles/Auth.css";
 
 export default function SignUp() {
   const [name, setName] = useState("");
