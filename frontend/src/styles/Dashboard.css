@@ -148,11 +148,14 @@
   margin-bottom: 15px;
 }
 
+/* ... keep your other existing dashboard CSS ... */
+
 .template-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 20px;
   margin-bottom: 40px;
+  align-items: start; /* Prevents cards from stretching heights to match neighbors */
 }
 
 .template-card {
@@ -161,7 +164,7 @@
   border-radius: 10px;
   padding: 20px;
   cursor: pointer;
-  transition: transform 0.2s, background-color 0.2s;
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
 .template-card:hover {
@@ -169,19 +172,20 @@
   background-color: #e0d4ff;
 }
 
-/* --- Add Card Image sizing --- */
 .card-header {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
 }
-
-/* Replace .card-icon with this */
-.card-icon-img {
-  width: 30px;
-  height: 30px;
-  object-fit: contain; /* Prevents image stretching */
+/* Header of the card */
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Removed the hardcoded margin-bottom so the card is compact when collapsed */
+  margin-bottom: 0; 
+  transition: margin-bottom 0.3s ease;
 }
 
 .card-header h4 {
@@ -190,12 +194,36 @@
   font-size: 1.1rem;
 }
 
-.template-card p {
+.card-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain; 
+}
+
+/* Base state: Completely hidden and collapsed */
+.template-card-desc {
   margin: 0;
   color: #555;
   font-size: 0.85rem;
-  line-height: 1.4;
+  line-height: 1.5;
+  
+  /* Hide the text and collapse the height */
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  
+  /* Animate max-height, opacity, and the top margin smoothly */
+  transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out, margin-top 0.3s ease-in-out;
 }
+
+/* Hover state: Expand the height, fade in the text, and add spacing */
+.template-card:hover .template-card-desc {
+  max-height: 150px; /* Must be larger than the text height to allow expansion */
+  opacity: 1;
+  margin-top: 12px; /* Adds space between the header and the text ONLY when opened */
+}
+
+/* ... keep sidebar and banner CSS ... */
 
 /* Sidebar */
 .sidebar-label {

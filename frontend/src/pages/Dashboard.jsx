@@ -1,22 +1,67 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import DashboardHeader from "../components/DashboardHeader"; // <-- Import the new header
 import "../styles/Dashboard.css";
 
-// 1. Add the "icon" property to your templates
 const TEMPLATES = {
   sorting: [
-    { name: "Bubble Sort", path: "sort/bubble_sort", desc: "Repeatedly swaps adjacent elements...", icon: "/assets/sort-icon.png" },
-    { name: "Selection Sort", path: "sort/selection_sort", desc: "Finds the minimum element...", icon: "/assets/sort-icon.png" },
-    { name: "Insertion Sort", path: "sort/insertion_sort", desc: "Builds the final sorted array...", icon: "/assets/sort-icon.png" },
-    { name: "Merge Sort", path: "sort/merge_sort", desc: "Divides array into halves...", icon: "/assets/sort-icon.png" }
+    { 
+      name: "Bubble Sort", 
+      path: "sort/bubble_sort", 
+      desc: "Repeatedly steps through the list, compares adjacent elements, and swaps them if they are in the wrong order. The pass through the list is repeated until the list is sorted. Simple but inefficient for large datasets.", 
+      icon: "/assets/sort-icon.png" 
+    },
+    { 
+      name: "Selection Sort", 
+      path: "sort/selection_sort", 
+      desc: "Divides the input list into two parts: a sorted sublist and an unsorted sublist. It repeatedly selects the smallest element from the unsorted sublist and swaps it with the leftmost unsorted element.", 
+      icon: "/assets/sort-icon.png" 
+    },
+    { 
+      name: "Insertion Sort", 
+      path: "sort/insertion_sort", 
+      desc: "Builds the final sorted array one item at a time. It iterates through the input elements, growing a sorted array behind it by comparing the current element to the largest value in the sorted array.", 
+      icon: "/assets/sort-icon.png" 
+    },
+    { 
+      name: "Merge Sort", 
+      path: "sort/merge_sort", 
+      desc: "A highly efficient divide-and-conquer algorithm that recursively splits the list into halves until each sublist contains one element, then merges those sublists to produce new sorted sublists.", 
+      icon: "/assets/sort-icon.png" 
+    }
   ],
   searching: [
-    { name: "Linear Search", path: "search/linear_search", desc: "Checks every element...", icon: "/assets/search-icon.png" },
-    { name: "Binary Search", path: "search/binary_search", desc: "Finds element in sorted array...", icon: "/assets/search-icon.png" }
+    { 
+      name: "Linear Search", 
+      path: "search/linear_search", 
+      desc: "Checks every element in the list sequentially until the desired element is found or the list ends. It is straightforward and works on unsorted lists, but has an O(n) time complexity.", 
+      icon: "/assets/search-icon.png" 
+    },
+    { 
+      name: "Binary Search", 
+      path: "search/binary_search", 
+      desc: "Finds the position of a target value within a sorted array by repeatedly dividing the search interval in half. Very efficient with an O(log n) time complexity, but requires the array to be sorted first.", 
+      icon: "/assets/search-icon.png" 
+    }
   ],
   recursive: [
-    { name: "Factorial", path: "recursive/recursive_factorial", desc: "Calculates the factorial...", icon: "/assets/recursive-icon.png" },
-    { name: "Fibonacci", path: "recursive/recursive_fibonacci", desc: "Generates the Fibonacci...", icon: "/assets/recursive-icon.png" },
-    { name: "Permutation", path: "recursive/recursive_permutation", desc: "Generates all permutations...", icon: "/assets/recursive-icon.png" }
+    { 
+      name: "Factorial", 
+      path: "recursive/recursive_factorial", 
+      desc: "Calculates the factorial of a non-negative integer using a recursive function where n! = n * (n-1)!, with the base case of 0! = 1. A classic example of mathematical recursion.", 
+      icon: "/assets/recursive-icon.png" 
+    },
+    { 
+      name: "Fibonacci", 
+      path: "recursive/recursive_fibonacci", 
+      desc: "Generates the Fibonacci sequence where each number is the sum of the two preceding ones. This template uses a standard recursive approach to compute the nth Fibonacci number.", 
+      icon: "/assets/recursive-icon.png" 
+    },
+    { 
+      name: "Permutation", 
+      path: "recursive/recursive_permutation", 
+      desc: "Generates all possible arrangements of a given set of characters or items. Uses a recursive backtracking algorithm to systematically explore and build different permutations.", 
+      icon: "/assets/recursive-icon.png" 
+    }
   ]
 };
 
@@ -33,27 +78,14 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      {/* HEADER (unchanged) */}
-      <header className="dashboard-header">
-        <div className="header-left">
-          <div className="logo-container">
-            <img src="/assets/algoblocks_logo.png" alt="Logo" className="logo-img" />
-            <h1 className="logo-text" style={{color: '#3C2D76'}}>ALGOBLOCKS</h1>
-          </div>
-          <Link to="/" className="back-home">&gt; Back to Home</Link>
-        </div>
-        
-        <div className="header-right">
-          <button className="btn-open-project">📁 Open Project</button>
-          <button className="btn-new-project" onClick={() => navigate('/app')}>+ New Project</button>
-          <div className="user-profile-icon">👤</div>
-        </div>
-      </header>
+      
+      {/* 1. Insert the reusable header component here */}
+      <DashboardHeader />
 
+      {/* BODY */}
       <div className="dashboard-body">
         <main className="dashboard-main">
           
-          {/* 2. Replace Banner Emoji with Image */}
           <div className="learning-path-banner">
             <div className="banner-icon">
               <img src="/assets/learning-icon.png" alt="Learning Path" />
@@ -67,7 +99,6 @@ export default function Dashboard() {
 
           <h1 className="section-title">Pre-made Templates</h1>
 
-          {/* 3. Replace Card Emojis with Images mapped from the dictionary */}
           <div className="template-category">
             <h3 className="category-label">SORTING ALGORITHMS</h3>
             <div className="template-grid">
@@ -77,7 +108,7 @@ export default function Dashboard() {
                     <img src={temp.icon} alt={temp.name} className="card-icon-img" />
                     <h4>{temp.name}</h4>
                   </div>
-                  <p>{temp.desc}</p>
+                  <p className="template-card-desc">{temp.desc}</p>
                 </div>
               ))}
             </div>
@@ -92,7 +123,7 @@ export default function Dashboard() {
                     <img src={temp.icon} alt={temp.name} className="card-icon-img" />
                     <h4>{temp.name}</h4>
                   </div>
-                  <p>{temp.desc}</p>
+                  <p className="template-card-desc">{temp.desc}</p>
                 </div>
               ))}
             </div>
@@ -107,7 +138,7 @@ export default function Dashboard() {
                     <img src={temp.icon} alt={temp.name} className="card-icon-img" />
                     <h4>{temp.name}</h4>
                   </div>
-                  <p>{temp.desc}</p>
+                  <p className="template-card-desc">{temp.desc}</p>
                 </div>
               ))}
             </div>
