@@ -166,7 +166,7 @@ export default function Dashboard() {
                       className="try-template-btn"
                       onClick={() => handleTemplateClick(temp)}
                     >
-                      Test Template →
+                      Test Template
                     </button>
                   </div>
                 </div>

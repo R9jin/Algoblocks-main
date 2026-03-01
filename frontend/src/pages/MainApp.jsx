@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom"; // Removed useNavigate
 import Split from "react-split";
 import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
+import WorkspaceHeader from "../components/WorkspaceHeader.jsx"; // <-- 1. Import the header
 import "../styles/MainApp.css";
 
 const SIDEBAR_TEMPLATES = [
@@ -17,7 +18,6 @@ const SIDEBAR_TEMPLATES = [
 
 export default function MainApp() {
   const location = useLocation();
-  const navigate = useNavigate();
 
   const [analysisResult, setAnalysisResult] = useState({ 
     lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false
@@ -176,39 +176,19 @@ export default function MainApp() {
     }
   };
 
-  const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
+const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="workspace-app-container">
-      {/* HEADER */}
-      <header className="workspace-header">
-        <div className="header-left">
-          <button className="back-btn" onClick={() => navigate('/dashboard')}>
-            <img src="/assets/back-icon.png" alt="Back" className="btn-icon" /> 
-            Back to Dashboard
-          </button>
-          <span className="project-name">Untitled Project</span>
-        </div>
-        
-        <div className="header-center">
-          <div className="view-toggle">
-            <button className={`toggle-btn ${viewMode === 'workspace' ? 'active' : ''}`} onClick={() => setViewMode("workspace")}>Workspace</button>
-            <button className={`toggle-btn ${viewMode === 'python' ? 'active' : ''}`} onClick={() => setViewMode("python")}>Python Code</button>
-          </div>
-        </div>
-        
-        <div className="header-right">
-          <button onClick={runCode} className="action-btn btn-run">
-            <img src="/assets/play-icon.png" alt="Run" className="btn-icon" /> Run
-          </button>
-          <button onClick={() => setBottomPanel("complexity")} className="action-btn btn-analyze">
-            <img src="/assets/complexity-icon.png" alt="Analyze" className="btn-icon" /> Analyze
-          </button>
-          <button onClick={handleSave} className="action-btn btn-save">
-            Sign in to save
-          </button>
-        </div>
-      </header>
+      
+      {/* 2. Replace the raw <header> block with the component and pass the props */}
+      <WorkspaceHeader 
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        runCode={runCode}
+        setBottomPanel={setBottomPanel}
+        handleSave={handleSave}
+      />
 
       {/* MAIN SPLIT VIEW */}
       <Split 
@@ -326,7 +306,7 @@ export default function MainApp() {
             
             <div className="footer-right">
               <button className="footer-action-icon" onClick={handleClear} title="Clear Workspace">
-                <img src="/assets/refresh-icon.png" alt="Refresh" />
+                <img src="/assets/recursive-icon.png" alt="Refresh" />
               </button>
             </div>
           </footer>
