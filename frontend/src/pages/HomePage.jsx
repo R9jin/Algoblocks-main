@@ -1,22 +1,20 @@
 import { Link } from "react-router-dom";
-import "../styles//HomePage.css";
+import Header from "../components/Header";
+import "../styles/HomePage.css";
  
 export default function LandingPage() {
   return (
     <div className="landing-container">
-      <nav className="landing-nav">
-        <h1 className="logo">ALGOBLOCKS</h1>
-        <div className="nav-links">
-          <Link to="/signin" className="nav-btn signin">Sign In</Link>
-          <Link to="/app" className="nav-btn signup">Start Learning</Link>
-        </div>
-      </nav>
+      
+      {/* Replaced the raw <nav> with our new component */}
+      <Header />
 
       <main className="landing-main">
         {/* Hero Section */}
         <section className="hero">
-          <h1 className="gradient-text">
-            Think in Steps.<br />Analyze in Depth.
+          <h1 className="slogan-text">
+            Think in <span className="accent">Steps</span>.<br />
+            <span className="accent">Analyze</span> in Depth.
           </h1>
           <p className="hero-subtitle">
             Build algorithms with interactive blocks and<br />
@@ -24,7 +22,7 @@ export default function LandingPage() {
             performance in real-time.
           </p>
           <div className="hero-buttons">
-            <Link to="/app" className="btn-primary">Launch Playground →</Link>
+            <Link to="/app" className="btn-primary">Launch Playground</Link>
             <button className="btn-secondary">Watch Demo</button>
           </div>
         </section>
