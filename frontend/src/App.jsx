@@ -4,6 +4,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import LandingPage from "./pages/HomePage";
 import LearningPath from "./pages/LearningPath"; // <-- 1. Import it here
 import MainApp from "./pages/MainApp";
+import Projects from "./pages/Projects"; // <-- ADD THIS LINE
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 
