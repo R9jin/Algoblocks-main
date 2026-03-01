@@ -1,8 +1,3 @@
-body {
-  font-family: 'Inter', sans-serif;
-}
-
-/* Container & Splitting */
 .workspace-app-container {
   display: flex;
   flex-direction: column;
