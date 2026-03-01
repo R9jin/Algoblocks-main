@@ -14,18 +14,14 @@ export default function DashboardHeader() {
       </div>
       
       <div className="header-right">
+        {/* Updated Open Project Button */}
         <button className="btn-open-project">
           <img src="/assets/folder-icon.png" alt="Open Project" className="btn-icon-open" /> 
           Open Project
         </button>
 
         <button className="btn-new-project" onClick={() => navigate('/app')}>+ New Project</button>
-        
-        {/* Updated User Profile Icon */}
-        <div className="user-profile-icon">
-          <img src="/assets/user-icon.png" alt="User Profile" />
-        </div>
-
+        <div className="user-profile-icon">👤</div>
       </div>
     </header>
   );

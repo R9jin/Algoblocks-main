@@ -86,7 +86,7 @@ export default function Dashboard() {
       <div className="dashboard-body">
         <main className="dashboard-main">
           
-          <div className="learning-path-banner">
+          <div className="learning-path-banner" onClick={() => navigate('/learning-path')}>
             <div className="banner-icon">
               <img src="/assets/learning-icon.png" alt="Learning Path" />
             </div>
