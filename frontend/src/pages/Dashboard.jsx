@@ -103,12 +103,22 @@ export default function Dashboard() {
             <h3 className="category-label">SORTING ALGORITHMS</h3>
             <div className="template-grid">
               {TEMPLATES.sorting.map((temp) => (
-                <div key={temp.name} className="template-card" onClick={() => handleTemplateClick(temp)}>
+                /* Removed onClick from the card itself */
+                <div key={temp.name} className="template-card">
                   <div className="card-header">
                     <img src={temp.icon} alt={temp.name} className="card-icon-img" />
                     <h4>{temp.name}</h4>
                   </div>
-                  <p className="template-card-desc">{temp.desc}</p>
+                  
+                  <div className="card-hover-content">
+                    <p className="template-card-desc">{temp.desc}</p>
+                    <button 
+                      className="try-template-btn"
+                      onClick={() => handleTemplateClick(temp)}
+                    >
+                      Test Template →
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -118,41 +128,47 @@ export default function Dashboard() {
             <h3 className="category-label">SEARCHING ALGORITHMS</h3>
             <div className="template-grid">
               {TEMPLATES.searching.map((temp) => (
-                <div key={temp.name} className="template-card" onClick={() => handleTemplateClick(temp)}>
+                /* Removed onClick from the card itself */
+                <div key={temp.name} className="template-card">
                   <div className="card-header">
                     <img src={temp.icon} alt={temp.name} className="card-icon-img" />
                     <h4>{temp.name}</h4>
                   </div>
-                  <p className="template-card-desc">{temp.desc}</p>
+                  
+                  <div className="card-hover-content">
+                    <p className="template-card-desc">{temp.desc}</p>
+                    <button 
+                      className="try-template-btn"
+                      onClick={() => handleTemplateClick(temp)}
+                    >
+                      Test Template →
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
           <div className="template-category">
-            <h3 className="category-label">SORTING ALGORITHMS</h3>
+            <h3 className="category-label">RECURSIVE ALGORITHMS</h3>
             <div className="template-grid">
-              {TEMPLATES.sorting.map((temp) => (
-                <div key={temp.name} className="template-card" onClick={() => handleTemplateClick(temp)}>
+              {TEMPLATES.recursive.map((temp) => (
+                /* Removed onClick from the card itself */
+                <div key={temp.name} className="template-card">
                   <div className="card-header">
                     <img src={temp.icon} alt={temp.name} className="card-icon-img" />
                     <h4>{temp.name}</h4>
                   </div>
                   
-                  {/* NEW WRAPPER FOR HOVER REVEAL */}
                   <div className="card-hover-content">
                     <p className="template-card-desc">{temp.desc}</p>
                     <button 
                       className="try-template-btn"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevents double-triggering the card click
-                        handleTemplateClick(temp);
-                      }}
+                      onClick={() => handleTemplateClick(temp)}
                     >
                       Test Template →
                     </button>
                   </div>
-
                 </div>
               ))}
             </div>
