@@ -521,6 +521,14 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return [code, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
+      pythonGenerator.forBlock['comment_block'] = function(block) {
+        // Fetch the text typed into the block
+        const text = block.getFieldValue('TEXT') || '';
+        
+        // Return it formatted as a Python comment
+        return `# ${text}\n`;
+      };
+
       // ==========================================
       // OVERRIDE: Listen to ALL structural workspace events
       // ==========================================
