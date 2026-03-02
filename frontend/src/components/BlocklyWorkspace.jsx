@@ -255,7 +255,16 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         workspace.current.clear();
         Blockly.serialization.workspaces.load(json, workspace.current);
         Blockly.Events.enable(); 
-        return pythonGenerator.workspaceToCode(workspace.current);
+        
+        // FIX: Wait 100ms to let Blockly fully initialize block variables & mutations
+        // Then manually trigger the onChange event to generate the code and analyze it.
+        setTimeout(() => {
+          const code = pythonGenerator.workspaceToCode(workspace.current);
+          const currentJson = Blockly.serialization.workspaces.save(workspace.current);
+          if (onChangeRef.current) onChangeRef.current(currentJson, code);
+        }, 100);
+
+        return ""; // We no longer need to return the code synchronously
       }
       return "";
     },

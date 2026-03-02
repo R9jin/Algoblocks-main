@@ -168,12 +168,14 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         # Combine loop depth and function overrides for the internal weight
         total_poly = current_poly + override_poly
         total_log = current_log + override_log
+        
+        local_weight = 0
 
         if time_override and is_recurrence:
             time_str = time_override
             t_weight = 1000
+            local_weight = 1000
         else:
-            # FIX: Only use local complexities for the display string
             display_poly = override_poly
             display_log = override_log
             
@@ -188,33 +190,39 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         display_poly = 1
 
             time_str = self._build_time_str(display_poly, display_log)
-            
-            # Ensure the weight still accurately reflects the nested depth for the total badge
             t_weight = total_poly * 10 + total_log * 5
+            
+            # FIX: Calculate a local weight purely based on the display string
+            local_weight = display_poly * 10 + display_log * 5
 
         space_str = space_override if space_override else "O(1)"
         s_weight = 10 if "O(n)" in space_str else 0
         if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
 
-        # GROUPING mechanism: ONLY overwrite if the new operation is heavier
+        # GROUPING mechanism: ONLY overwrite if the new operation is STRICTLY heavier overall
+        # OR if it has the same total weight but a heavier local display complexity.
         if self.details and self.details[-1]["lineOfCode"] == line_text:
-            existing_weight = self.details[-1].get("weight", -1)
-            if t_weight >= existing_weight:
+            existing_t_weight = self.details[-1].get("weight", -1)
+            existing_local_weight = self.details[-1].get("local_weight", -1)
+            
+            if t_weight > existing_t_weight or (t_weight == existing_t_weight and local_weight > existing_local_weight):
                 self.details[-1]["complexity"] = time_str
                 self.details[-1]["color"] = self.get_color(time_str)
                 self.details[-1]["weight"] = t_weight
+                self.details[-1]["local_weight"] = local_weight
         else:
             self.details.append({
                 "lineOfCode": line_text, 
                 "complexity": time_str, 
                 "indent": self.current_depth, 
                 "color": self.get_color(time_str), 
-                "weight": t_weight
+                "weight": t_weight,
+                "local_weight": local_weight
             })
 
         if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
             existing_s_weight = self.space_details[-1].get("weight", -1)
-            if s_weight >= existing_s_weight:
+            if s_weight > existing_s_weight: # FIX: Changed from >= to >
                 self.space_details[-1]["complexity"] = space_str
                 self.space_details[-1]["color"] = self.get_color(space_str)
                 self.space_details[-1]["weight"] = s_weight
@@ -236,7 +244,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             
         if s_weight > self.max_space_weight: 
             self.max_space_weight = s_weight
-            
+
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name 
         self.recursive_calls_count = 0 
@@ -275,7 +283,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def visit_For(self, node):
         self.loop_depth += 1      
-        self.record_line(node, is_loop_header=True, is_log_loop=False)    # Explicitly O(n)
+        self.record_line(node)    # FIX: Removed outdated arguments
         self.current_depth += 1   
         self.generic_visit(node)  
         self.current_depth -= 1   
@@ -288,7 +296,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         else:
             self.loop_depth += 1      
             
-        self.record_line(node, is_loop_header=True, is_log_loop=is_log)   # Dynamically O(n) or O(log n)
+        self.record_line(node)   # FIX: Removed outdated arguments
         
         self.current_depth += 1   
         self.generic_visit(node)
