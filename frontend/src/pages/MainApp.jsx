@@ -112,9 +112,11 @@ export default function MainApp() {
       const response = await fetch(`/templates/${path}.json`);
       if (!response.ok) throw new Error("Template not found");
       const json = await response.json();
+      
       if (workspaceRef.current) {
-        const newCode = workspaceRef.current.loadTemplate(json);
-        handleBlocklyChange(json, newCode);
+        // FIX: Just tell the workspace to load. The setTimeout inside 
+        // BlocklyWorkspace will automatically trigger handleBlocklyChange for us!
+        workspaceRef.current.loadTemplate(json);
         setViewMode("workspace");
       }
     } catch (error) {
