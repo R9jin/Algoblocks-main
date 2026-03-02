@@ -32,18 +32,18 @@ class CodePayload(BaseModel):
 class ComplexityAnalyzer(ast.NodeVisitor):
     def __init__(self, source_code):
         self.source_lines = source_code.splitlines()
-        self.details = []           
-        self.space_details = []     
-        self.current_depth = 0  
-        self.loop_depth = 0     
+        self.details = []
+        self.space_details = []
+        self.current_depth = 0
+        self.loop_depth = 0
         self.log_loop_depth = 0
-        self.max_complexity = 0 
+        self.max_complexity = 0
         self.max_poly = 0
         self.max_log = 0
-        self.max_space_weight = 0   
-        self.custom_functions = {} 
-        self.custom_space = {}      
-        self.current_function_name = None  
+        self.max_space_weight = 0
+        self.custom_functions = {}
+        self.custom_space = {}
+        self.current_function_name = None
         self.recursive_calls_count = 0
         self.symbol_table = {}
         
@@ -60,29 +60,46 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             'copy': {'time': 'O(n)', 'space': 'O(n)'}
         }
 
-    def bfs_first_pass(self, tree):
+def bfs_first_pass(self, tree):
         queue = deque([(tree, None)]) 
         self.call_graph = {}
+        
         while queue:
             current_node, current_func = queue.popleft()
+            
             if isinstance(current_node, ast.FunctionDef):
                 self.symbol_table[current_node.name] = current_node
                 current_func = current_node.name
                 if current_func not in self.call_graph:
                     self.call_graph[current_func] = set()
+                    
             elif isinstance(current_node, ast.Call) and isinstance(current_node.func, ast.Name):
                 called_func = current_node.func.id
                 if current_func:
                     self.call_graph[current_func].add(called_func)
+            
+            # --- NEW: Catch O(N) space operations in the first pass ---
+            elif isinstance(current_node, (ast.List, ast.ListComp)) or \
+                (isinstance(current_node, ast.Call) and isinstance(current_node.func, ast.Attribute) and current_node.func.attr in ['append', 'copy']):
+                if current_func:
+                    self.custom_space[current_func] = "O(n)"
+            # ----------------------------------------------------------
+
             for child in ast.iter_child_nodes(current_node):
                 queue.append((child, current_func))
+                
+        for func_name, called_funcs in self.call_graph.items():
+            if func_name in called_funcs:
+                # Store this so the second pass instantly knows it's a recurrence relation
+                self.custom_functions[func_name] = "T(n)"
+
         self.detect_indirect_recursion()
 
     def detect_indirect_recursion(self):
         for func in self.call_graph:
             visited = set()
             if self._has_cycle(func, visited):
-                self.custom_functions[func] = "O(2^n)" 
+                self.custom_functions[func] = "O(2^n)"
 
     def _has_cycle(self, current_func, visited):
         if current_func in visited: return True
