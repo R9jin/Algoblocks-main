@@ -286,6 +286,12 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
         renderer: "geras", 
         theme: pastelTheme, 
+        grid: {
+          spacing: 25,      // The distance between the dots
+          length: 3,        // A length of 1 to 3 makes it look like a dot rather than a line
+          colour: '#6e6e6e',// A soft grey color that looks great on a white background
+          snap: true        // Optional: Set to true if you want blocks to "snap" to the dots
+        }
       });
 
       try {

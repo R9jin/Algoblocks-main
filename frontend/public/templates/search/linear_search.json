@@ -28,7 +28,7 @@
           }
         },
         "fields": {
-          "NAME": "search2"
+          "NAME": "linear_search"
         },
         "inputs": {
           "STACK": {
@@ -309,7 +309,7 @@
                       "type": "procedures_callreturn",
                       "id": "l_l)80h_-@;vXOD)eGW%",
                       "extraState": {
-                        "name": "search2",
+                        "name": "linear_search",
                         "params": [
                           "list",
                           "x"

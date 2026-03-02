@@ -387,38 +387,62 @@
   font-weight: bold;
   font-size: 0.9rem;
 }
-
-/* Wrapper pulls the table into the center and limits its max-width */
+/* --- COMPLEXITY TABLE (REFINED FOR READABILITY) --- */
 .complexity-table-wrapper {
   display: flex;
   justify-content: center;
   width: 100%;
+  padding-bottom: 20px;
 }
 
 .complexity-table {
-  width: 600px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 750px; /* Slightly wider to accommodate longer code lines */
   border-collapse: collapse;
-  font-size: 0.85rem;
-  background: rgba(0, 0, 0, 0.25);
+  font-size: 0.9rem;
+  background: #1C1236; /* Solid, deep background for high contrast */
   border-radius: 8px;
-  overflow: hidden; /* Clips the child elements to respect border-radius */
+  overflow: hidden; 
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Slight drop shadow */
 }
 
+/* Distinct header styling */
 .complexity-table th { 
-  padding: 12px 20px; 
-  color: #C994FF; 
+  padding: 14px 20px; 
+  color: #EBE4FF; /* Brighter, crisper header text */
+  background: #2D1F52; /* Distinct background to separate from code */
   text-align: left; 
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 .complexity-table th.right-align { text-align: right; }
 
-.complexity-table thead tr { border-bottom: 1px solid #4830A0; }
-.complexity-table tbody tr { border-bottom: 1px solid rgba(127, 87, 249, 0.2); }
+/* Thicker border under the header */
+.complexity-table thead tr { 
+  border-bottom: 2px solid #7F57F9; 
+}
+
+/* Base row styling */
+.complexity-table tbody tr { 
+  border-bottom: 1px solid rgba(127, 87, 249, 0.15); 
+  transition: background-color 0.15s ease;
+}
+
+/* Zebra striping for easy reading */
+.complexity-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Highlight row on hover so users don't lose their place */
+.complexity-table tbody tr:hover {
+  background: rgba(127, 87, 249, 0.15);
+}
 
 .code-cell { 
   padding: 10px 20px; 
-  font-family: monospace; 
+  font-family: 'Fira Code', 'Courier New', monospace; /* Strict monospace for code */
   font-size: 0.9rem; 
+  line-height: 1.4;
 }
 
 .complexity-cell { 
@@ -426,6 +450,8 @@
   padding: 10px 20px; 
   font-weight: bold; 
   white-space: nowrap; 
+  font-family: 'Fira Code', 'Courier New', monospace; /* Match font with the code */
+  font-size: 0.95rem; /* Make the O(N) badge slightly larger */
 }
 
 /* ========================= */
