@@ -109,11 +109,19 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if not isinstance(node, ast.While):
             return False
         for child in ast.walk(node):
-            if isinstance(child, ast.BinOp) and isinstance(child.op, (ast.Div, ast.FloorDiv)):
-                if isinstance(child.right, ast.Constant) and child.right.value == 2:
+            if isinstance(child, ast.BinOp):
+                # Standard division: x / 2 or x // 2
+                if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.right, ast.Constant) and child.right.value == 2:
                     return True
-            elif isinstance(child, ast.AugAssign) and isinstance(child.op, (ast.Div, ast.FloorDiv)):
-                if isinstance(child.value, ast.Constant) and child.value.value == 2:
+                # Bitwise right shift: x >> 1 (equivalent to floor division by 2)
+                if isinstance(child.op, ast.RShift) and isinstance(child.right, ast.Constant) and child.right.value == 1:
+                    return True
+            elif isinstance(child, ast.AugAssign):
+                # Aug assignments: x /= 2, x //= 2
+                if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.value, ast.Constant) and child.value.value == 2:
+                    return True
+                # Aug assignments: x >>= 1
+                if isinstance(child.op, ast.RShift) and isinstance(child.value, ast.Constant) and child.value.value == 1:
                     return True
         return False
 
@@ -128,7 +136,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if poly > 1 and log == 1: return f"O(n^{poly} log n)"
         return f"O(n^{poly} log^{log} n)"
 
-    def record_line(self, node, time_override=None, space_override=None):
+    def record_line(self, node, time_override=None, space_override=None, is_loop_header=False):
         line_text = self.get_code_snippet(node)
 
         # 1. Base depth of loops
@@ -157,7 +165,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         override_poly = int(match.group(1))
                         override_log = 1 if "log n" in time_override else 0
 
-        # Combine loop depth and function overrides
+        # Combine loop depth and function overrides for the TRUE internal weight
         total_poly = current_poly + override_poly
         total_log = current_log + override_log
 
@@ -165,7 +173,14 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             time_str = time_override
             t_weight = 1000
         else:
-            time_str = self._build_time_str(total_poly, total_log)
+            # === THE FIX IS HERE ===
+            # If it's a loop header, display the total loop complexity.
+            # If it's a standard inner line, only display its base/override complexity.
+            display_poly = total_poly if is_loop_header else override_poly
+            display_log = total_log if is_loop_header else override_log
+            
+            time_str = self._build_time_str(display_poly, display_log)
+            # t_weight STILL uses the totals so your overall app badge calculates correctly!
             t_weight = total_poly * 10 + total_log * 5
 
         space_str = space_override if space_override else "O(1)"
@@ -198,7 +213,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.max_log = (t_weight % 10) // 5
             
         if s_weight > self.max_space_weight: self.max_space_weight = s_weight
-
+        
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name 
         self.recursive_calls_count = 0 
@@ -297,8 +312,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_BinOp(self, node):
-        if isinstance(node.op, (ast.Div, ast.FloorDiv)):
+        # Treat Division, Floor Division, and Right Shift (>>) as "division" operations 
+        # so the analyzer knows when lists are being split in half.
+        if isinstance(node.op, (ast.Div, ast.FloorDiv, ast.RShift)):
             self.has_division = True
+            
         self.generic_visit(node)
 
     def visit_Assign(self, node): 

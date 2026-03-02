@@ -16,6 +16,35 @@ import { ContentHighlight } from "@blockly/workspace-content-highlight";
 import { PositionedMinimap } from "@blockly/workspace-minimap";
 
 Blockly.setLocale(En);
+
+// --- DEFINE CUSTOM PASTEL THEME ---
+const pastelTheme = Blockly.Theme.defineTheme('pastelTheme', {
+  base: ModernTheme,
+  categoryStyles: {
+    logic_category: { colour: "#c1a0e8" },
+    loop_category: { colour: "#8bcf8b" },
+    math_category: { colour: "#4C97FF" },
+    text_category: { colour: "#d5a52a" },
+    list_category: { colour: "#4DB6AC" },
+    variable_category: { colour: "#f38286" },
+    procedure_category: { colour: "#7a6b66" }
+  },
+  blockStyles: {
+    logic_blocks: { colourPrimary: "#c1a0e8", colourSecondary: "#B8A0D6", colourTertiary: "#A38CC1" },
+    loop_blocks: { colourPrimary: "#8bcf8b", colourSecondary: "#90BC90", colourTertiary: "#7CA77C" },
+    math_blocks: { colourPrimary: "#4C97FF", colourSecondary: "#2c80f5", colourTertiary: "#2A70CC" },
+    text_blocks: { colourPrimary: "#d5a52a", colourSecondary: "#E5AF2C", colourTertiary: "#CC9A26" },
+    list_blocks: { colourPrimary: "#4DB6AC", colourSecondary: "#42A097", colourTertiary: "#388C83" },
+    variable_blocks: { colourPrimary: "#f38286", colourSecondary: "#DB888B", colourTertiary: "#C27679" },
+    procedure_blocks: { colourPrimary: "#7a6b66", colourSecondary: "#BDB2AE", colourTertiary: "#A89D9A" }
+  },
+  fontStyle: {
+    family: "'Outfit', 'Inter', sans-serif", // Uses the fonts from your index.html
+    weight: "500", // Makes the text slightly bolder/crisper
+    size: 13       // Adjust the size to fit the blocks nicely
+  }
+});
+
 // --- 1. DEFINE CUSTOM BLOCKS ---
 const customBlocks = [
   {
@@ -42,7 +71,7 @@ const customBlocks = [
     "inputsInline": true,
     "previousStatement": null,
     "nextStatement": null,
-    "colour": 230,
+    "colour": "#4C97FF",
     "tooltip": "Modify a variable (Add, Subtract, Multiply, Divide).",
   },
   {
@@ -56,7 +85,7 @@ const customBlocks = [
     ],
     "previousStatement": null,
     "nextStatement": null,
-    "colour": 210, // Same color as Functions category
+    "colour": "#7a6b66", // Same color as Functions category
     "tooltip": "Returns the value from this function.",
     "helpUrl": ""
   },
@@ -68,7 +97,7 @@ const customBlocks = [
       { "type": "input_value", "name": "DELIMITER", "check": "String" }
     ],
     "output": "String",
-    "colour": 160,
+    "colour": "#d5a52a",
     "tooltip": "Joins a list of strings into one string using a delimiter.",
   },
   {
@@ -78,9 +107,33 @@ const customBlocks = [
       { "type": "input_value", "name": "STRING", "check": "String" }
     ],
     "output": "Array",
-    "colour": 260, // Same color as standard List blocks
+    "colour": "#4DB6AC", // Same color as standard List blocks
     "tooltip": "Converts a word/string into a list of its individual characters.",
-  }
+  },
+  {
+    "type": "math_advanced_operators",
+    "message0": "%1 %2 %3",
+    "args0": [
+      { "type": "input_value", "name": "A", "check": "Number" },
+      {
+        "type": "field_dropdown",
+        "name": "OP",
+        "options": [
+          ["//", "FLOOR_DIV"],
+          ["**", "POWER"],
+          [">>", "RSHIFT"],
+          ["<<", "LSHIFT"],
+          ["&", "BIT_AND"],
+          ["|", "BIT_OR"]
+        ]
+      },
+      { "type": "input_value", "name": "B", "check": "Number" }
+    ],
+    "inputsInline": true,
+    "output": "Number",
+    "colour": "#4C97FF",
+    "tooltip": "Advanced operators: Floor Division (//), Power (**), Bitwise Shifts (>>, <<), and Bitwise Logic (&, |)",
+  },
 ];
 
 if (Blockly.common && Blockly.common.defineBlocksWithJsonArray) {
@@ -97,7 +150,7 @@ const toolbox = {
     {
       kind: "category",
       name: "Logic",
-      colour: "210",
+      categorystyle: "logic_category", // Replaced colour
       contents: [
         { kind: "block", type: "controls_if" },
         { kind: "block", type: "logic_compare" },
@@ -112,7 +165,7 @@ const toolbox = {
     {
       kind: "category",
       name: "Loops",
-      colour: "120",
+      categorystyle: "loop_category", // Replaced colour
       contents: [
         { kind: "block", type: "controls_repeat_ext", inputs: { TIMES: { shadow: { type: "math_number", fields: { NUM: 10 } } } } },
         { kind: "block", type: "controls_whileUntil" },
@@ -124,10 +177,11 @@ const toolbox = {
     {
       kind: "category",
       name: "Math",
-      colour: "230",
+      categorystyle: "math_category", // Replaced colour
       contents: [
         { kind: "block", type: "math_number", fields: { NUM: 123 } },
         { kind: "block", type: "math_arithmetic", inputs: { A: { shadow: { type: "math_number", fields: { NUM: 1 } } }, B: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
+        { kind: "block", type: "math_advanced_operators" },
         { kind: "block", type: "math_assignment", inputs: { DELTA: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
         { kind: "block", type: "math_single" },
         { kind: "block", type: "math_trig" },
@@ -144,7 +198,7 @@ const toolbox = {
     {
       kind: "category",
       name: "Text",
-      colour: "160",
+      categorystyle: "text_category", // Replaced colour
       contents: [
         { kind: "block", type: "comment_block" }, 
         { kind: "block", type: "text" },
@@ -165,7 +219,7 @@ const toolbox = {
     {
       kind: "category",
       name: "Lists",
-      colour: "260",
+      categorystyle: "list_category", // Replaced colour
       contents: [
         { kind: "block", type: "string_to_list" }, 
         { kind: "block", type: "lists_create_with", extraState: { itemCount: 0 } },
@@ -181,8 +235,8 @@ const toolbox = {
         { kind: "block", type: "lists_sort" },
       ],
     },
-    { kind: "category", name: "Variables", colour: "330", custom: "VARIABLE" },
-    { kind: "category", name: "Functions", colour: "290", custom: "PROCEDURE" },
+    { kind: "category", name: "Variables", categorystyle: "variable_category", custom: "VARIABLE" },
+    { kind: "category", name: "Functions", categorystyle: "procedure_category", custom: "PROCEDURE" },
   ],
 };
 
@@ -207,7 +261,8 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
     },
     setTheme: (themeName) => {
       if (workspace.current) {
-        workspace.current.setTheme(themeName === 'dark' ? DarkTheme : ModernTheme);
+        // Change ModernTheme to pastelTheme here
+        workspace.current.setTheme(themeName === 'dark' ? DarkTheme : pastelTheme); 
       }
     }
   }));
@@ -230,7 +285,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         move: { scrollbars: true, drag: true, wheel: true },
         zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
         renderer: "geras", 
-        theme: ModernTheme, 
+        theme: pastelTheme, 
       });
 
       try {
@@ -350,6 +405,44 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         const stringVal = pythonGenerator.valueToCode(block, 'STRING', pythonGenerator.ORDER_NONE) || "''";
         const code = `list(${stringVal})`;
         return [code, pythonGenerator.ORDER_FUNCTION_CALL];
+      };
+
+      pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
+        const operator = block.getFieldValue('OP');
+        const a = pythonGenerator.valueToCode(block, 'A', pythonGenerator.ORDER_NONE) || '0';
+        const b = pythonGenerator.valueToCode(block, 'B', pythonGenerator.ORDER_NONE) || '0';
+        
+        let opSymbol = '';
+        let order = pythonGenerator.ORDER_NONE;
+        
+        switch (operator) {
+          case 'FLOOR_DIV': 
+            opSymbol = '//'; 
+            order = pythonGenerator.ORDER_MULTIPLICATIVE; 
+            break;
+          case 'POWER': 
+            opSymbol = '**'; 
+            order = pythonGenerator.ORDER_EXPONENTIATION; 
+            break;
+          case 'RSHIFT': 
+            opSymbol = '>>'; 
+            order = pythonGenerator.ORDER_BITWISE_SHIFT; 
+            break;
+          case 'LSHIFT': 
+            opSymbol = '<<'; 
+            order = pythonGenerator.ORDER_BITWISE_SHIFT; 
+            break;
+          case 'BIT_AND': 
+            opSymbol = '&'; 
+            order = pythonGenerator.ORDER_BITWISE_AND; 
+            break;
+          case 'BIT_OR': 
+            opSymbol = '|'; 
+            order = pythonGenerator.ORDER_BITWISE_OR; 
+            break;
+        }
+        
+        return [`${a} ${opSymbol} ${b}`, order];
       };
 
       // ==========================================
