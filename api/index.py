@@ -60,7 +60,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             'copy': {'time': 'O(n)', 'space': 'O(n)'}
         }
 
-def bfs_first_pass(self, tree):
+    def bfs_first_pass(self, tree):
         queue = deque([(tree, None)]) 
         self.call_graph = {}
         
@@ -77,20 +77,12 @@ def bfs_first_pass(self, tree):
                 called_func = current_node.func.id
                 if current_func:
                     self.call_graph[current_func].add(called_func)
-            
-            # --- NEW: Catch O(N) space operations in the first pass ---
-            elif isinstance(current_node, (ast.List, ast.ListComp)) or \
-                (isinstance(current_node, ast.Call) and isinstance(current_node.func, ast.Attribute) and current_node.func.attr in ['append', 'copy']):
-                if current_func:
-                    self.custom_space[current_func] = "O(n)"
-            # ----------------------------------------------------------
 
             for child in ast.iter_child_nodes(current_node):
                 queue.append((child, current_func))
                 
         for func_name, called_funcs in self.call_graph.items():
             if func_name in called_funcs:
-                # Store this so the second pass instantly knows it's a recurrence relation
                 self.custom_functions[func_name] = "T(n)"
 
         self.detect_indirect_recursion()
@@ -361,15 +353,26 @@ def bfs_first_pass(self, tree):
             
         self.generic_visit(node)
 
+    # Inside visit_Assign
     def visit_Assign(self, node): 
-        space_override = None
-        if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
-            if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
+        # Default space for variables (n, i, return values) is O(1)
+        space_override = "O(1)"
+        
+        # Catch O(n) Auxiliary Space creations:
+        if node.value:
+            # 1. List Multiplication: arr = [0] * n
+            if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
+                if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
+                    space_override = "O(n)"
+            # 2. List Comprehension: arr = [x for x in nums]
+            elif isinstance(node.value, ast.ListComp):
                 space_override = "O(n)"
-        elif isinstance(node.value, ast.ListComp):
-            space_override = "O(n)"
-        elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
-            space_override = "O(n)"
+            # 3. Array Slicing: left_half = arr[:mid]
+            elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
+                space_override = "O(n)"
+            # 4. Copying an array: arr2 = arr.copy()
+            elif isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == 'copy':
+                space_override = "O(n)"
             
         self.record_line(node, space_override=space_override)
         self.generic_visit(node)
@@ -377,9 +380,10 @@ def bfs_first_pass(self, tree):
     def visit_AugAssign(self, node): 
         self.record_line(node)
         self.generic_visit(node)
-
+    
     def visit_Return(self, node): 
-        space_override = None
+        space_override = "O(1)" # Default return space
+        
         if node.value:
             if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
                 if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
@@ -388,9 +392,10 @@ def bfs_first_pass(self, tree):
                 space_override = "O(n)"
             elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
                 space_override = "O(n)"
+                
         self.record_line(node, space_override=space_override)
         self.generic_visit(node)
-
+    
     def visit_Expr(self, node): 
         self.record_line(node)
         self.generic_visit(node)
