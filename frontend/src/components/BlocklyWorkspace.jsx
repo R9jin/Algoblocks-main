@@ -413,14 +413,13 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return [code, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
-      pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
+pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
         const operator = block.getFieldValue('OP');
-        const a = pythonGenerator.valueToCode(block, 'A', pythonGenerator.ORDER_NONE) || '0';
-        const b = pythonGenerator.valueToCode(block, 'B', pythonGenerator.ORDER_NONE) || '0';
         
         let opSymbol = '';
         let order = pythonGenerator.ORDER_NONE;
         
+        // 1. Determine the operator and its strict precedence level FIRST
         switch (operator) {
           case 'FLOOR_DIV': 
             opSymbol = '//'; 
@@ -447,6 +446,10 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
             order = pythonGenerator.ORDER_BITWISE_OR; 
             break;
         }
+        
+        // 2. Pass the resolved 'order' so Blockly automatically adds ( ) when needed
+        const a = pythonGenerator.valueToCode(block, 'A', order) || '0';
+        const b = pythonGenerator.valueToCode(block, 'B', order) || '0';
         
         return [`${a} ${opSymbol} ${b}`, order];
       };
