@@ -165,7 +165,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         override_poly = int(match.group(1))
                         override_log = 1 if "log n" in time_override else 0
 
-        # Combine loop depth and function overrides
+        # Combine loop depth and function overrides for the internal weight
         total_poly = current_poly + override_poly
         total_log = current_log + override_log
 
@@ -173,7 +173,23 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             time_str = time_override
             t_weight = 1000
         else:
-            time_str = self._build_time_str(total_poly, total_log)
+            # FIX: Only use local complexities for the display string
+            display_poly = override_poly
+            display_log = override_log
+            
+            # If it's a loop declaration itself, show its local O(n) or O(log n)
+            if not time_override:
+                if isinstance(node, ast.For):
+                    display_poly = 1
+                elif isinstance(node, ast.While):
+                    if self._is_log_loop(node):
+                        display_log = 1
+                    else:
+                        display_poly = 1
+
+            time_str = self._build_time_str(display_poly, display_log)
+            
+            # Ensure the weight still accurately reflects the nested depth for the total badge
             t_weight = total_poly * 10 + total_log * 5
 
         space_str = space_override if space_override else "O(1)"
@@ -188,7 +204,13 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.details[-1]["color"] = self.get_color(time_str)
                 self.details[-1]["weight"] = t_weight
         else:
-            self.details.append({"lineOfCode": line_text, "complexity": time_str, "indent": self.current_depth, "color": self.get_color(time_str), "weight": t_weight})
+            self.details.append({
+                "lineOfCode": line_text, 
+                "complexity": time_str, 
+                "indent": self.current_depth, 
+                "color": self.get_color(time_str), 
+                "weight": t_weight
+            })
 
         if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
             existing_s_weight = self.space_details[-1].get("weight", -1)
@@ -197,16 +219,24 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.space_details[-1]["color"] = self.get_color(space_str)
                 self.space_details[-1]["weight"] = s_weight
         else:
-            self.space_details.append({"lineOfCode": line_text, "complexity": space_str, "indent": self.current_depth, "color": self.get_color(space_str), "weight": s_weight})
+            self.space_details.append({
+                "lineOfCode": line_text, 
+                "complexity": space_str, 
+                "indent": self.current_depth, 
+                "color": self.get_color(space_str), 
+                "weight": s_weight
+            })
 
+        # Track max depth dynamically
         if t_weight > self.max_complexity: 
             self.max_complexity = t_weight
             if t_weight < 998:
                 self.max_poly = t_weight // 10
                 self.max_log = (t_weight % 10) // 5
             
-        if s_weight > self.max_space_weight: self.max_space_weight = s_weight
-
+        if s_weight > self.max_space_weight: 
+            self.max_space_weight = s_weight
+            
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name 
         self.recursive_calls_count = 0 
@@ -245,7 +275,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def visit_For(self, node):
         self.loop_depth += 1      
-        self.record_line(node)    
+        self.record_line(node, is_loop_header=True, is_log_loop=False)    # Explicitly O(n)
         self.current_depth += 1   
         self.generic_visit(node)  
         self.current_depth -= 1   
@@ -258,7 +288,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         else:
             self.loop_depth += 1      
             
-        self.record_line(node)
+        self.record_line(node, is_loop_header=True, is_log_loop=is_log)   # Dynamically O(n) or O(log n)
         
         self.current_depth += 1   
         self.generic_visit(node)
@@ -268,13 +298,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             self.log_loop_depth -= 1
         else:
             self.loop_depth -= 1
-
-    def visit_If(self, node):
-        self.record_line(node)
-        self.current_depth += 1   
-        self.generic_visit(node)
-        self.current_depth -= 1
-
+            
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name):
             f_id = node.func.id
