@@ -37,9 +37,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.current_depth = 0
         self.loop_depth = 0
         self.log_loop_depth = 0
+        self.sqrt_loop_depth = 0  # NEW: Track square root loops
         self.max_complexity = 0
         self.max_poly = 0
         self.max_log = 0
+        self.max_sqrt = 0         # NEW: Track max square root
         self.max_space_weight = 0
         self.custom_functions = {}
         self.custom_space = {}
@@ -111,8 +113,25 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if "2^n" in complexity_str or "2T(" in complexity_str: return "#9b59b6" 
         if "n^2" in complexity_str or "n^3" in complexity_str: return "#e74c3c" 
         if "log" in complexity_str: return "#2980b9" 
+        if "√n" in complexity_str: return "#16a085" # NEW: Teal color for Square Root
         if "O(n)" in complexity_str or "T(n" in complexity_str: return "#e67e22" 
         return "#27ae60" 
+
+    def _build_time_str(self, poly, log, sqrt=0):
+        if poly == 0 and log == 0 and sqrt == 0: return "O(1)"
+        
+        parts = []
+        if poly == 1: parts.append("n")
+        elif poly > 1: parts.append(f"n^{poly}")
+        
+        if sqrt == 1: parts.append("√n")
+        elif sqrt > 1: parts.append(f"(√n)^{sqrt}")
+        
+        if log == 1: parts.append("log n")
+        elif log > 1: parts.append(f"log^{log} n")
+        
+        if not parts: return "O(1)"
+        return f"O({' '.join(parts)})"
 
     def _is_log_loop(self, node):
         if not isinstance(node, ast.While):
@@ -134,27 +153,18 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     return True
         return False
 
-    def _build_time_str(self, poly, log):
-        if poly == 0 and log == 0: return "O(1)"
-        if poly == 0 and log == 1: return "O(log n)"
-        if poly == 0 and log > 1: return f"O(log^{log} n)"
-        if poly == 1 and log == 0: return "O(n)"
-        if poly == 1 and log == 1: return "O(n log n)"
-        if poly == 1 and log > 1: return f"O(n log^{log} n)"
-        if poly > 1 and log == 0: return f"O(n^{poly})"
-        if poly > 1 and log == 1: return f"O(n^{poly} log n)"
-        return f"O(n^{poly} log^{log} n)"
-
     def record_line(self, node, time_override=None, space_override=None):
         line_text = self.get_code_snippet(node)
 
         # 1. Base depth of loops
         current_poly = self.loop_depth
         current_log = self.log_loop_depth
+        current_sqrt = getattr(self, 'sqrt_loop_depth', 0)
         
         # 2. Add complexity from function calls/overrides
         override_poly = 0
         override_log = 0
+        override_sqrt = 0
         is_recurrence = False
 
         if time_override:
@@ -166,6 +176,8 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     override_log = 1
                 elif "O(log n)" in time_override:
                     override_log = 1
+                elif "O(√n)" in time_override:
+                    override_sqrt = 1
                 elif "O(n)" in time_override:
                     override_poly = 1
                 else:
@@ -174,9 +186,10 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         override_poly = int(match.group(1))
                         override_log = 1 if "log n" in time_override else 0
 
-        # Combine loop depth and function overrides for the internal weight
+        # Combine loop depth and function overrides
         total_poly = current_poly + override_poly
         total_log = current_log + override_log
+        total_sqrt = current_sqrt + override_sqrt
         
         local_weight = 0
 
@@ -187,29 +200,28 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         else:
             display_poly = override_poly
             display_log = override_log
+            display_sqrt = override_sqrt
             
-            # If it's a loop declaration itself, show its local O(n) or O(log n)
             if not time_override:
                 if isinstance(node, ast.For):
                     display_poly = 1
                 elif isinstance(node, ast.While):
                     if self._is_log_loop(node):
                         display_log = 1
+                    elif self._is_sqrt_loop(node):
+                        display_sqrt = 1
                     else:
                         display_poly = 1
 
-            time_str = self._build_time_str(display_poly, display_log)
-            t_weight = total_poly * 10 + total_log * 5
-            
-            # FIX: Calculate a local weight purely based on the display string
-            local_weight = display_poly * 10 + display_log * 5
+            # Sqrt sits between O(log n) [weight 5] and O(n) [weight 10], so we give it a weight of 7
+            time_str = self._build_time_str(display_poly, display_log, display_sqrt)
+            t_weight = total_poly * 10 + total_sqrt * 7 + total_log * 5
+            local_weight = display_poly * 10 + display_sqrt * 7 + display_log * 5
 
         space_str = space_override if space_override else "O(1)"
         s_weight = 10 if "O(n)" in space_str else 0
         if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
 
-        # GROUPING mechanism: ONLY overwrite if the new operation is STRICTLY heavier overall
-        # OR if it has the same total weight but a heavier local display complexity.
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             existing_t_weight = self.details[-1].get("weight", -1)
             existing_local_weight = self.details[-1].get("local_weight", -1)
@@ -231,7 +243,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
         if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
             existing_s_weight = self.space_details[-1].get("weight", -1)
-            if s_weight > existing_s_weight: # FIX: Changed from >= to >
+            if s_weight > existing_s_weight:
                 self.space_details[-1]["complexity"] = space_str
                 self.space_details[-1]["color"] = self.get_color(space_str)
                 self.space_details[-1]["weight"] = s_weight
@@ -244,21 +256,22 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 "weight": s_weight
             })
 
-        # Track max depth dynamically
+        # Track max depth dynamically using the explicit variables
         if t_weight > self.max_complexity: 
             self.max_complexity = t_weight
             if t_weight < 998:
-                self.max_poly = t_weight // 10
-                self.max_log = (t_weight % 10) // 5
+                self.max_poly = total_poly
+                self.max_log = total_log
+                self.max_sqrt = total_sqrt
             
         if s_weight > self.max_space_weight: 
             self.max_space_weight = s_weight
 
     def visit_FunctionDef(self, node):
-        self.current_function_name = node.name 
-        self.recursive_calls_count = 0 
-        self.has_recursion_in_loop = False 
-        self.has_slicing = False           
+        self.current_function_name = node.name
+        self.recursive_calls_count = 0
+        self.has_recursion_in_loop = False
+        self.has_slicing = False
         self.has_division = False
         
         self.record_line(node, time_override="O(1)", space_override="O(1)") 
@@ -291,31 +304,37 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.current_function_name = None
 
     def visit_For(self, node):
-        self.loop_depth += 1      
+        self.loop_depth += 1
         self.record_line(node)    # FIX: Removed outdated arguments
-        self.current_depth += 1   
-        self.generic_visit(node)  
-        self.current_depth -= 1   
-        self.loop_depth -= 1      
+        self.current_depth += 1
+        self.generic_visit(node)
+        self.current_depth -= 1
+        self.loop_depth -= 1
 
     def visit_While(self, node):
         is_log = self._is_log_loop(node)
+        is_sqrt = self._is_sqrt_loop(node)
+        
         if is_log:
             self.log_loop_depth += 1
+        elif is_sqrt:
+            self.sqrt_loop_depth += 1
         else:
-            self.loop_depth += 1      
+            self.loop_depth += 1
             
-        self.record_line(node)   # FIX: Removed outdated arguments
+        self.record_line(node)
         
-        self.current_depth += 1   
+        self.current_depth += 1
         self.generic_visit(node)
         self.current_depth -= 1
         
         if is_log:
             self.log_loop_depth -= 1
+        elif is_sqrt:
+            self.sqrt_loop_depth -= 1
         else:
             self.loop_depth -= 1
-            
+
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name):
             f_id = node.func.id
@@ -377,11 +396,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.record_line(node, space_override=space_override)
         self.generic_visit(node)
 
-    def visit_AugAssign(self, node): 
+    def visit_AugAssign(self, node):
         self.record_line(node)
         self.generic_visit(node)
     
-    def visit_Return(self, node): 
+    def visit_Return(self, node):
         space_override = "O(1)" # Default return space
         
         if node.value:
@@ -396,9 +415,28 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.record_line(node, space_override=space_override)
         self.generic_visit(node)
     
-    def visit_Expr(self, node): 
+    def visit_Expr(self, node):
         self.record_line(node)
         self.generic_visit(node)
+
+    def _is_sqrt_loop(self, node):
+        if not isinstance(node, ast.While):
+            return False
+        
+        # Look for conditions like: while i * i <= n  OR  while i ** 2 <= n
+        test = node.test
+        if isinstance(test, ast.Compare):
+            if isinstance(test.left, ast.BinOp):
+                # Check for i * i
+                if isinstance(test.left.op, ast.Mult):
+                    if isinstance(test.left.left, ast.Name) and isinstance(test.left.right, ast.Name):
+                        if test.left.left.id == test.left.right.id:
+                            return True
+                # Check for i ** 2
+                elif isinstance(test.left.op, ast.Pow):
+                    if isinstance(test.left.right, ast.Constant) and test.left.right.value == 2:
+                        return True
+        return False
 
     def get_final_badge(self):
         for line in reversed(self.details):

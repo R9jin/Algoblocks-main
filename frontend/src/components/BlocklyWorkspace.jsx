@@ -134,6 +134,36 @@ const customBlocks = [
     "colour": "#4C97FF",
     "tooltip": "Advanced operators: Floor Division (//), Power (**), Bitwise Shifts (>>, <<), and Bitwise Logic (&, |)",
   },
+  {
+    "type": "type_cast_int",
+    "message0": "int %1",
+    "args0": [
+      { "type": "input_value", "name": "VALUE" }
+    ],
+    "output": "Number",
+    "colour": "#4C97FF", // Matches your Math category color
+    "tooltip": "Converts a value or string to an integer.",
+  },
+  {
+    "type": "math_min_max",
+    "message0": "%1 of %2 and %3",
+    "args0": [
+      {
+        "type": "field_dropdown",
+        "name": "OP",
+        "options": [
+          ["max", "MAX"],
+          ["min", "MIN"]
+        ]
+      },
+      { "type": "input_value", "name": "A", "check": "Number" },
+      { "type": "input_value", "name": "B", "check": "Number" }
+    ],
+    "inputsInline": true,
+    "output": "Number",
+    "colour": "#4C97FF", // Matches the Math category
+    "tooltip": "Returns the minimum or maximum of two numbers.",
+  },
 ];
 
 if (Blockly.common && Blockly.common.defineBlocksWithJsonArray) {
@@ -183,6 +213,8 @@ const toolbox = {
         { kind: "block", type: "math_arithmetic", inputs: { A: { shadow: { type: "math_number", fields: { NUM: 1 } } }, B: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
         { kind: "block", type: "math_advanced_operators" },
         { kind: "block", type: "math_assignment", inputs: { DELTA: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
+        { kind: "block", type: "type_cast_int" }, // <--- ADD IT HERE
+        { kind: "block", type: "math_min_max" }, // <--- ADD IT HERE
         { kind: "block", type: "math_single" },
         { kind: "block", type: "math_trig" },
         { kind: "block", type: "math_constant" },
@@ -244,27 +276,38 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
   const blocklyDiv = useRef(null);
   const workspace = useRef(null);
   const onChangeRef = useRef(onChange);
+  
+  // NEW: Add a flag to tell our listener when we are loading a template
+  const isLoading = useRef(false); 
 
   useImperativeHandle(ref, () => ({
     clear: () => {
-      if (workspace.current) workspace.current.clear();
+      if (workspace.current) {
+        isLoading.current = true;
+        workspace.current.clear();
+        isLoading.current = false;
+      }
     },
     loadTemplate: (json) => {
       if (workspace.current) {
-        Blockly.Events.disable(); 
+        // 1. Tell our change listener to ignore updates temporarily
+        isLoading.current = true; 
+        
+        // 2. Clear and load WITHOUT disabling Blockly.Events!
         workspace.current.clear();
         Blockly.serialization.workspaces.load(json, workspace.current);
-        Blockly.Events.enable(); 
         
-        // FIX: Wait 100ms to let Blockly fully initialize block variables & mutations
-        // Then manually trigger the onChange event to generate the code and analyze it.
+        // 3. Re-enable our listener
+        isLoading.current = false; 
+        
+        // 4. Generate the code once everything is loaded and properly wired up
         setTimeout(() => {
           const code = pythonGenerator.workspaceToCode(workspace.current);
           const currentJson = Blockly.serialization.workspaces.save(workspace.current);
           if (onChangeRef.current) onChangeRef.current(currentJson, code);
         }, 100);
 
-        return ""; // We no longer need to return the code synchronously
+        return "";
       }
       return "";
     },
@@ -314,31 +357,30 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         console.warn("Plugin init skipped:", e.message);
       }
 
-      pythonGenerator.init = function(workspace) {
-        this.variableDB_ = new Blockly.Names(this.RESERVED_WORDS_);
-        this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);
-        this.nameDB_.setVariableMap(workspace.getVariableMap());
-        this.definitions_ = Object.create(null);
-        this.functionNames_ = Object.create(null);
+      // Safely wrap the init function to preserve Blockly's internal tracking
+      if (!pythonGenerator.__originalInit) {
+        pythonGenerator.__originalInit = pythonGenerator.init;
+        pythonGenerator.init = function(workspace) {
+          // 1. Run the default initialization (tracks variables and functions properly)
+          pythonGenerator.__originalInit.call(this, workspace);
+          // 2. Remove the default global variable declarations (e.g., x = None)
+          if (this.definitions_['variables']) {
+            delete this.definitions_['variables'];
+          }
+        };
+      }
 
-        this.isInitialized = true;
-      };
-
-      pythonGenerator.finish = function(code) {
-        const definitions = Object.values(this.definitions_);
-        let finalCode = definitions.join('\n\n') + '\n\n' + code;
-        
-        // This Regex finds any line that starts with spaces/tabs, followed by 'global ', 
-        // and strips it out completely.
-        finalCode = finalCode.replace(/^[ \t]*global[ \t]+.*\n?/gm, '');
-        
-        return finalCode.trim();
-      };
-
-      pythonGenerator.forBlock['comment_block'] = function(block) {
-        const text = block.getFieldValue('TEXT');
-        return `\n# ${text}\n`;
-      };
+      // Safely wrap the finish function
+      if (!pythonGenerator.__originalFinish) {
+        pythonGenerator.__originalFinish = pythonGenerator.finish;
+        pythonGenerator.finish = function(code) {
+          // 1. Run the default finish to properly assemble the code
+          let finalCode = pythonGenerator.__originalFinish.call(this, code);
+          // 2. Strip out 'global ' statements
+          finalCode = finalCode.replace(/^[ \t]*global[ \t]+.*\n?/gm, '');
+          return finalCode.trim();
+        };
+      }
 
       pythonGenerator.forBlock['math_assignment'] = function(block) {
         const variable = pythonGenerator.getVariableName(block.getFieldValue('VAR'));
@@ -422,7 +464,12 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return [code, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
-pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
+      pythonGenerator.forBlock['type_cast_int'] = function(block) {
+        const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || '0';
+        return [`int(${value})`, pythonGenerator.ORDER_FUNCTION_CALL];
+      };
+
+      pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
         const operator = block.getFieldValue('OP');
         
         let opSymbol = '';
@@ -430,29 +477,29 @@ pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
         
         // 1. Determine the operator and its strict precedence level FIRST
         switch (operator) {
-          case 'FLOOR_DIV': 
-            opSymbol = '//'; 
-            order = pythonGenerator.ORDER_MULTIPLICATIVE; 
+          case 'FLOOR_DIV':
+            opSymbol = '//';
+            order = pythonGenerator.ORDER_MULTIPLICATIVE;
             break;
-          case 'POWER': 
-            opSymbol = '**'; 
-            order = pythonGenerator.ORDER_EXPONENTIATION; 
+          case 'POWER':
+            opSymbol = '**';
+            order = pythonGenerator.ORDER_EXPONENTIATION;
             break;
-          case 'RSHIFT': 
-            opSymbol = '>>'; 
-            order = pythonGenerator.ORDER_BITWISE_SHIFT; 
+          case 'RSHIFT':
+            opSymbol = '>>';
+            order = pythonGenerator.ORDER_BITWISE_SHIFT;
             break;
-          case 'LSHIFT': 
-            opSymbol = '<<'; 
-            order = pythonGenerator.ORDER_BITWISE_SHIFT; 
+          case 'LSHIFT':
+            opSymbol = '<<';
+            order = pythonGenerator.ORDER_BITWISE_SHIFT;
             break;
-          case 'BIT_AND': 
-            opSymbol = '&'; 
-            order = pythonGenerator.ORDER_BITWISE_AND; 
+          case 'BIT_AND':
+            opSymbol = '&';
+            order = pythonGenerator.ORDER_BITWISE_AND;
             break;
-          case 'BIT_OR': 
-            opSymbol = '|'; 
-            order = pythonGenerator.ORDER_BITWISE_OR; 
+          case 'BIT_OR':
+            opSymbol = '|';
+            order = pythonGenerator.ORDER_BITWISE_OR;
             break;
         }
         
@@ -463,10 +510,24 @@ pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
         return [`${a} ${opSymbol} ${b}`, order];
       };
 
+      pythonGenerator.forBlock['math_min_max'] = function(block) {
+        const op = block.getFieldValue('OP') === 'MAX' ? 'max' : 'min';
+        
+        // Pass ORDER_NONE because max() and min() are function calls that encapsulate their arguments
+        const a = pythonGenerator.valueToCode(block, 'A', pythonGenerator.ORDER_NONE) || '0';
+        const b = pythonGenerator.valueToCode(block, 'B', pythonGenerator.ORDER_NONE) || '0';
+        
+        const code = `${op}(${a}, ${b})`;
+        return [code, pythonGenerator.ORDER_FUNCTION_CALL];
+      };
+
       // ==========================================
       // OVERRIDE: Listen to ALL structural workspace events
       // ==========================================
       workspace.current.addChangeListener((event) => {
+        // NEW: If we are currently loading a template, ignore the event
+        if (isLoading.current) return;
+
         // Skip UI events like clicking, dragging, and scrolling to prevent lag
         if (event.isUiEvent) return;
 
