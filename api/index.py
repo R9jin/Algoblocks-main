@@ -136,7 +136,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if poly > 1 and log == 1: return f"O(n^{poly} log n)"
         return f"O(n^{poly} log^{log} n)"
 
-    def record_line(self, node, time_override=None, space_override=None, is_loop_header=False, is_log_loop=False):
+    def record_line(self, node, time_override=None, space_override=None):
         line_text = self.get_code_snippet(node)
 
         # 1. Base depth of loops
@@ -165,7 +165,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         override_poly = int(match.group(1))
                         override_log = 1 if "log n" in time_override else 0
 
-        # Combine loop depth and function overrides for the TRUE internal weight
+        # Combine loop depth and function overrides
         total_poly = current_poly + override_poly
         total_log = current_log + override_log
 
@@ -173,19 +173,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             time_str = time_override
             t_weight = 1000
         else:
-            # === THE LOCAL VS GLOBAL FIX ===
-            if is_loop_header:
-                # Force loop headers to ONLY show their strict local complexity
-                display_poly = 0 if is_log_loop else 1
-                display_log = 1 if is_log_loop else 0
-            else:
-                # Inner lines show O(1) or their specific function call override
-                display_poly = override_poly
-                display_log = override_log
-            
-            time_str = self._build_time_str(display_poly, display_log)
-            
-            # t_weight STILL uses the combined totals so your overall app badge calculates perfectly!
+            time_str = self._build_time_str(total_poly, total_log)
             t_weight = total_poly * 10 + total_log * 5
 
         space_str = space_override if space_override else "O(1)"
@@ -257,7 +245,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def visit_For(self, node):
         self.loop_depth += 1      
-        self.record_line(node, is_loop_header=True, is_log_loop=False)    # Explicitly O(n)
+        self.record_line(node)    
         self.current_depth += 1   
         self.generic_visit(node)  
         self.current_depth -= 1   
@@ -270,7 +258,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         else:
             self.loop_depth += 1      
             
-        self.record_line(node, is_loop_header=True, is_log_loop=is_log)   # Dynamically O(n) or O(log n)
+        self.record_line(node)
         
         self.current_depth += 1   
         self.generic_visit(node)
@@ -280,7 +268,13 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             self.log_loop_depth -= 1
         else:
             self.loop_depth -= 1
-            
+
+    def visit_If(self, node):
+        self.record_line(node)
+        self.current_depth += 1   
+        self.generic_visit(node)
+        self.current_depth -= 1
+
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name):
             f_id = node.func.id
