@@ -28,6 +28,7 @@
   font-size: 0.9rem;
 }
 
+/* Update the existing class to align the image and text */
 .btn-open-project {
   background: transparent;
   color: #5A1398;
@@ -35,6 +36,16 @@
   font-weight: bold;
   cursor: pointer;
   font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Adds space between the icon and the text */
+}
+
+/* Add this new class to control the size of your icon */
+.btn-icon-open {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 .btn-new-project {
@@ -52,13 +63,19 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid #5A1398;
+  border: none; /* <-- Changed from '1px solid #5A1398' to 'none' */
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #5A1398;
-  font-size: 1.2rem;
   cursor: pointer;
+  overflow: hidden; 
+  background-color: transparent; /* Changed to transparent so there's no background box */
+}
+
+.user-profile-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; 
 }
 
 .dashboard-body {

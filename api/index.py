@@ -109,11 +109,19 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if not isinstance(node, ast.While):
             return False
         for child in ast.walk(node):
-            if isinstance(child, ast.BinOp) and isinstance(child.op, (ast.Div, ast.FloorDiv)):
-                if isinstance(child.right, ast.Constant) and child.right.value == 2:
+            if isinstance(child, ast.BinOp):
+                # Standard division: x / 2 or x // 2
+                if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.right, ast.Constant) and child.right.value == 2:
                     return True
-            elif isinstance(child, ast.AugAssign) and isinstance(child.op, (ast.Div, ast.FloorDiv)):
-                if isinstance(child.value, ast.Constant) and child.value.value == 2:
+                # Bitwise right shift: x >> 1 (equivalent to floor division by 2)
+                if isinstance(child.op, ast.RShift) and isinstance(child.right, ast.Constant) and child.right.value == 1:
+                    return True
+            elif isinstance(child, ast.AugAssign):
+                # Aug assignments: x /= 2, x //= 2
+                if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.value, ast.Constant) and child.value.value == 2:
+                    return True
+                # Aug assignments: x >>= 1
+                if isinstance(child.op, ast.RShift) and isinstance(child.value, ast.Constant) and child.value.value == 1:
                     return True
         return False
 
@@ -157,47 +165,85 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         override_poly = int(match.group(1))
                         override_log = 1 if "log n" in time_override else 0
 
-        # Combine loop depth and function overrides
+        # Combine loop depth and function overrides for the internal weight
         total_poly = current_poly + override_poly
         total_log = current_log + override_log
+        
+        local_weight = 0
 
         if time_override and is_recurrence:
             time_str = time_override
             t_weight = 1000
+            local_weight = 1000
         else:
-            time_str = self._build_time_str(total_poly, total_log)
+            display_poly = override_poly
+            display_log = override_log
+            
+            # If it's a loop declaration itself, show its local O(n) or O(log n)
+            if not time_override:
+                if isinstance(node, ast.For):
+                    display_poly = 1
+                elif isinstance(node, ast.While):
+                    if self._is_log_loop(node):
+                        display_log = 1
+                    else:
+                        display_poly = 1
+
+            time_str = self._build_time_str(display_poly, display_log)
             t_weight = total_poly * 10 + total_log * 5
+            
+            # FIX: Calculate a local weight purely based on the display string
+            local_weight = display_poly * 10 + display_log * 5
 
         space_str = space_override if space_override else "O(1)"
         s_weight = 10 if "O(n)" in space_str else 0
         if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
 
-        # GROUPING mechanism: ONLY overwrite if the new operation is heavier
+        # GROUPING mechanism: ONLY overwrite if the new operation is STRICTLY heavier overall
+        # OR if it has the same total weight but a heavier local display complexity.
         if self.details and self.details[-1]["lineOfCode"] == line_text:
-            existing_weight = self.details[-1].get("weight", -1)
-            if t_weight >= existing_weight:
+            existing_t_weight = self.details[-1].get("weight", -1)
+            existing_local_weight = self.details[-1].get("local_weight", -1)
+            
+            if t_weight > existing_t_weight or (t_weight == existing_t_weight and local_weight > existing_local_weight):
                 self.details[-1]["complexity"] = time_str
                 self.details[-1]["color"] = self.get_color(time_str)
                 self.details[-1]["weight"] = t_weight
+                self.details[-1]["local_weight"] = local_weight
         else:
-            self.details.append({"lineOfCode": line_text, "complexity": time_str, "indent": self.current_depth, "color": self.get_color(time_str), "weight": t_weight})
+            self.details.append({
+                "lineOfCode": line_text, 
+                "complexity": time_str, 
+                "indent": self.current_depth, 
+                "color": self.get_color(time_str), 
+                "weight": t_weight,
+                "local_weight": local_weight
+            })
 
         if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
             existing_s_weight = self.space_details[-1].get("weight", -1)
-            if s_weight >= existing_s_weight:
+            if s_weight > existing_s_weight: # FIX: Changed from >= to >
                 self.space_details[-1]["complexity"] = space_str
                 self.space_details[-1]["color"] = self.get_color(space_str)
                 self.space_details[-1]["weight"] = s_weight
         else:
-            self.space_details.append({"lineOfCode": line_text, "complexity": space_str, "indent": self.current_depth, "color": self.get_color(space_str), "weight": s_weight})
+            self.space_details.append({
+                "lineOfCode": line_text, 
+                "complexity": space_str, 
+                "indent": self.current_depth, 
+                "color": self.get_color(space_str), 
+                "weight": s_weight
+            })
 
+        # Track max depth dynamically
         if t_weight > self.max_complexity: 
             self.max_complexity = t_weight
             if t_weight < 998:
                 self.max_poly = t_weight // 10
                 self.max_log = (t_weight % 10) // 5
             
-        if s_weight > self.max_space_weight: self.max_space_weight = s_weight
+        if s_weight > self.max_space_weight: 
+            self.max_space_weight = s_weight
 
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name 
@@ -237,7 +283,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def visit_For(self, node):
         self.loop_depth += 1      
-        self.record_line(node)    
+        self.record_line(node)    # FIX: Removed outdated arguments
         self.current_depth += 1   
         self.generic_visit(node)  
         self.current_depth -= 1   
@@ -250,7 +296,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         else:
             self.loop_depth += 1      
             
-        self.record_line(node)
+        self.record_line(node)   # FIX: Removed outdated arguments
         
         self.current_depth += 1   
         self.generic_visit(node)
@@ -260,13 +306,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             self.log_loop_depth -= 1
         else:
             self.loop_depth -= 1
-
-    def visit_If(self, node):
-        self.record_line(node)
-        self.current_depth += 1   
-        self.generic_visit(node)
-        self.current_depth -= 1
-
+            
     def visit_Call(self, node):
         if isinstance(node.func, ast.Name):
             f_id = node.func.id
@@ -297,8 +337,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_BinOp(self, node):
-        if isinstance(node.op, (ast.Div, ast.FloorDiv)):
+        # Treat Division, Floor Division, and Right Shift (>>) as "division" operations 
+        # so the analyzer knows when lists are being split in half.
+        if isinstance(node.op, (ast.Div, ast.FloorDiv, ast.RShift)):
             self.has_division = True
+            
         self.generic_visit(node)
 
     def visit_Assign(self, node): 

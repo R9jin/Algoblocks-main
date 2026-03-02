@@ -10,12 +10,12 @@
         "extraState": {
           "params": [
             {
-              "name": "list",
-              "id": "T=QRJQH~PG4!bG!r#:ji"
+              "name": "arr",
+              "id": "weXX..2.AUCf_hM2*=PN"
             },
             {
-              "name": "x",
-              "id": "T?2,EH{U/6iBbG86K$~-"
+              "name": "target",
+              "id": "GF]=m3no%!l18Aw~9Ua^"
             }
           ]
         },
@@ -28,7 +28,7 @@
           }
         },
         "fields": {
-          "NAME": "search2"
+          "NAME": "linear_search"
         },
         "inputs": {
           "STACK": {
@@ -52,7 +52,7 @@
                           "id": "wqEl~zy*m$YX?=b5nY17",
                           "fields": {
                             "VAR": {
-                              "id": "T=QRJQH~PG4!bG!r#:ji"
+                              "id": "weXX..2.AUCf_hM2*=PN"
                             }
                           }
                         }
@@ -309,10 +309,10 @@
                       "type": "procedures_callreturn",
                       "id": "l_l)80h_-@;vXOD)eGW%",
                       "extraState": {
-                        "name": "search2",
+                        "name": "linear_search",
                         "params": [
-                          "list",
-                          "x"
+                          "arr",
+                          "target"
                         ]
                       },
                       "inputs": {
@@ -461,8 +461,20 @@
       "id": "hs;b,^/%}oRCKx%I*v)y"
     },
     {
-      "name": "result",
+      "name": "i",
       "id": "4.!IWTFX37Wz4o0r5+3X"
+    },
+    {
+      "name": "target",
+      "id": "GF]=m3no%!l18Aw~9Ua^"
+    },
+    {
+      "name": "arr",
+      "id": "weXX..2.AUCf_hM2*=PN"
+    },
+    {
+      "name": "result",
+      "id": "5tI`_?tdaLBbDq~GuZ8$"
     }
   ],
   "backpack": []
