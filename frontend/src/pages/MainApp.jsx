@@ -7,6 +7,7 @@ import "../styles/MainApp.css";
 
 const SIDEBAR_TEMPLATES = [
   { name: "Linear Search", path: "search/linear_search", desc: "Sequentially checks each element until the target is found or the list is exhausted." },
+  { name: "Binary Search", path: "search/binary_search", desc: "Finds the position of a target value within a sorted array by repeatedly dividing the search interval in half." }, // <-- ADD THIS LINE
   { name: "Bubble Sort", path: "sort/bubble_sort", desc: "Repeatedly swaps adjacent elements if they are in the wrong order." },
   { name: "Selection Sort", path: "sort/selection_sort", desc: "Finds the minimum element from the unsorted part and places it at the beginning." },
   { name: "Insertion Sort", path: "sort/insertion_sort", desc: "Builds the final sorted array one element at a time by inserting elements into their correct position." },
@@ -111,9 +112,11 @@ export default function MainApp() {
       const response = await fetch(`/templates/${path}.json`);
       if (!response.ok) throw new Error("Template not found");
       const json = await response.json();
+      
       if (workspaceRef.current) {
-        const newCode = workspaceRef.current.loadTemplate(json);
-        handleBlocklyChange(json, newCode);
+        // FIX: Just tell the workspace to load. The setTimeout inside 
+        // BlocklyWorkspace will automatically trigger handleBlocklyChange for us!
+        workspaceRef.current.loadTemplate(json);
         setViewMode("workspace");
       }
     } catch (error) {

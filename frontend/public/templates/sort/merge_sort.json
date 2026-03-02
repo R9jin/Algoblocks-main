@@ -5,8 +5,8 @@
       {
         "type": "procedures_defnoreturn",
         "id": "mg~[dc4r`SEAO?6Z~5aS",
-        "x": 1124,
-        "y": 570,
+        "x": 1187,
+        "y": 86,
         "extraState": {
           "params": [
             {
@@ -1768,8 +1768,8 @@
       {
         "type": "variables_set",
         "id": "V:C2T^7*G~kL2z7-N1nA",
-        "x": 1122,
-        "y": 1157,
+        "x": 1187,
+        "y": 675,
         "fields": {
           "VAR": {
             "id": "(Qwo|-iibG{J:@E~q]I:"

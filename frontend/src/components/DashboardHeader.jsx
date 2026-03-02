@@ -14,7 +14,12 @@ export default function DashboardHeader() {
       </div>
       
       <div className="header-right">
-        <button className="btn-open-project">📁 Open Project</button>
+        {/* Updated Open Project Button */}
+        <button className="btn-open-project">
+          <img src="/assets/folder-icon.png" alt="Open Project" className="btn-icon-open" /> 
+          Open Project
+        </button>
+
         <button className="btn-new-project" onClick={() => navigate('/app')}>+ New Project</button>
         <div className="user-profile-icon">👤</div>
       </div>

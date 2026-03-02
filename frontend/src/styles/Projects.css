@@ -1,0 +1,16 @@
+/* Borrows page layout from Lessons.css implicitly */
+.btn-new-project-large { background: linear-gradient(135deg, #7F57F9, #E058FB); color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(90, 19, 152, 0.3); }
+.btn-new-project-large:hover { transform: translateY(-2px); }
+
+.projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.project-card { border: 1px solid #BCA1FC; background: white; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; }
+.project-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(90, 19, 152, 0.1); border-color: #7F57F9; }
+.project-icon-wrapper { background: #EBE4FF; width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
+.project-folder-icon { width: 24px; height: 24px; object-fit: contain; }
+.project-details h3 { margin: 0 0 5px 0; color: #3C2D76; font-size: 1.1rem; }
+.project-details p { margin: 0 0 20px 0; color: #888; font-size: 0.8rem; }
+.project-actions { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+.btn-open { background: #F4F0FF; color: #5A1398; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; flex: 1; margin-right: 10px; }
+.btn-open:hover { background: #5A1398; color: white; }
+.btn-delete { background: transparent; border: 1px solid #ff4d4f; color: #ff4d4f; border-radius: 6px; padding: 7px 12px; cursor: pointer; transition: 0.2s; }
+.btn-delete:hover { background: #ff4d4f; color: white; }
