@@ -8,7 +8,6 @@ import ast
 import re
 
 # --- VERCEL IMPORT FIX ---
-# This explicitly tells Python to look inside the /api directory for your custom modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from database import projects_collection
@@ -37,17 +36,21 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.current_depth = 0
         self.loop_depth = 0
         self.log_loop_depth = 0
-        self.sqrt_loop_depth = 0  # NEW: Track square root loops
+        self.sqrt_loop_depth = 0
         self.max_complexity = 0
         self.max_poly = 0
         self.max_log = 0
-        self.max_sqrt = 0         # NEW: Track max square root
+        self.max_sqrt = 0
         self.max_space_weight = 0
         self.custom_functions = {}
         self.custom_space = {}
         self.current_function_name = None
         self.recursive_calls_count = 0
         self.symbol_table = {}
+        
+        # Dead Code State Flags
+        self.reachable_funcs = set()
+        self.in_dead_code = False
         
         self.has_recursion_in_loop = False
         self.has_slicing = False
@@ -64,7 +67,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def bfs_first_pass(self, tree):
         queue = deque([(tree, None)]) 
-        self.call_graph = {}
+        self.call_graph = {'__main__': set()}
         
         while queue:
             current_node, current_func = queue.popleft()
@@ -79,9 +82,24 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 called_func = current_node.func.id
                 if current_func:
                     self.call_graph[current_func].add(called_func)
+                else:
+                    self.call_graph['__main__'].add(called_func)
 
             for child in ast.iter_child_nodes(current_node):
                 queue.append((child, current_func))
+                
+        # DEAD CODE DETECTION: Map all reachable nodes starting from main execution block
+        self.reachable_funcs = set()
+        reach_queue = deque(['__main__'])
+        visited = set(['__main__'])
+        
+        while reach_queue:
+            curr = reach_queue.popleft()
+            for neighbor in self.call_graph.get(curr, []):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    self.reachable_funcs.add(neighbor)
+                    reach_queue.append(neighbor)
                 
         for func_name, called_funcs in self.call_graph.items():
             if func_name in called_funcs:
@@ -109,11 +127,12 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return "Code Block"
 
     def get_color(self, complexity_str):
+        if "Dead Code" in complexity_str: return "#7f8c8d" # Grey visual indicator in UI
         if "T(n) =" in complexity_str or "n!" in complexity_str or "T(n-1) + T" in complexity_str: return "#8e44ad" 
         if "2^n" in complexity_str or "2T(" in complexity_str: return "#9b59b6" 
         if "n^2" in complexity_str or "n^3" in complexity_str: return "#e74c3c" 
         if "log" in complexity_str: return "#2980b9" 
-        if "√n" in complexity_str: return "#16a085" # NEW: Teal color for Square Root
+        if "√n" in complexity_str: return "#16a085" 
         if "O(n)" in complexity_str or "T(n" in complexity_str: return "#e67e22" 
         return "#27ae60" 
 
@@ -138,30 +157,39 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             return False
         for child in ast.walk(node):
             if isinstance(child, ast.BinOp):
-                # Standard division: x / 2 or x // 2
                 if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.right, ast.Constant) and child.right.value == 2:
                     return True
-                # Bitwise right shift: x >> 1 (equivalent to floor division by 2)
                 if isinstance(child.op, ast.RShift) and isinstance(child.right, ast.Constant) and child.right.value == 1:
                     return True
             elif isinstance(child, ast.AugAssign):
-                # Aug assignments: x /= 2, x //= 2
                 if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.value, ast.Constant) and child.value.value == 2:
                     return True
-                # Aug assignments: x >>= 1
                 if isinstance(child.op, ast.RShift) and isinstance(child.value, ast.Constant) and child.value.value == 1:
                     return True
+        return False
+        
+    def _is_sqrt_loop(self, node):
+        if not isinstance(node, ast.While):
+            return False
+        test = node.test
+        if isinstance(test, ast.Compare):
+            if isinstance(test.left, ast.BinOp):
+                if isinstance(test.left.op, ast.Mult):
+                    if isinstance(test.left.left, ast.Name) and isinstance(test.left.right, ast.Name):
+                        if test.left.left.id == test.left.right.id:
+                            return True
+                elif isinstance(test.left.op, ast.Pow):
+                    if isinstance(test.left.right, ast.Constant) and test.left.right.value == 2:
+                        return True
         return False
 
     def record_line(self, node, time_override=None, space_override=None):
         line_text = self.get_code_snippet(node)
 
-        # 1. Base depth of loops
         current_poly = self.loop_depth
         current_log = self.log_loop_depth
         current_sqrt = getattr(self, 'sqrt_loop_depth', 0)
         
-        # 2. Add complexity from function calls/overrides
         override_poly = 0
         override_log = 0
         override_sqrt = 0
@@ -186,17 +214,21 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         override_poly = int(match.group(1))
                         override_log = 1 if "log n" in time_override else 0
 
-        # Combine loop depth and function overrides
         total_poly = current_poly + override_poly
         total_log = current_log + override_log
         total_sqrt = current_sqrt + override_sqrt
         
-        local_weight = 0
+        # Dead Code check: Safely ignore them so they don't skew the complexity overall badge
+        is_dead = getattr(self, 'in_dead_code', False) or time_override == "Dead Code"
 
-        if time_override and is_recurrence:
+        if time_override and is_recurrence and not is_dead:
             time_str = time_override
             t_weight = 1000
             local_weight = 1000
+        elif is_dead:
+            time_str = "Dead Code"
+            t_weight = -1
+            local_weight = -1
         else:
             display_poly = override_poly
             display_log = override_log
@@ -213,7 +245,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     else:
                         display_poly = 1
 
-            # Sqrt sits between O(log n) [weight 5] and O(n) [weight 10], so we give it a weight of 7
             time_str = self._build_time_str(display_poly, display_log, display_sqrt)
             t_weight = total_poly * 10 + total_sqrt * 7 + total_log * 5
             local_weight = display_poly * 10 + display_sqrt * 7 + display_log * 5
@@ -221,6 +252,10 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         space_str = space_override if space_override else "O(1)"
         s_weight = 10 if "O(n)" in space_str else 0
         if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
+        
+        if is_dead or space_override == "Dead Code":
+            space_str = "Dead Code"
+            s_weight = -1
 
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             existing_t_weight = self.details[-1].get("weight", -1)
@@ -256,16 +291,35 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 "weight": s_weight
             })
 
-        # Track max depth dynamically using the explicit variables
-        if t_weight > self.max_complexity: 
-            self.max_complexity = t_weight
-            if t_weight < 998:
-                self.max_poly = total_poly
-                self.max_log = total_log
-                self.max_sqrt = total_sqrt
-            
-        if s_weight > self.max_space_weight: 
-            self.max_space_weight = s_weight
+        if not is_dead:
+            if t_weight > self.max_complexity: 
+                self.max_complexity = t_weight
+                if t_weight < 998:
+                    self.max_poly = total_poly
+                    self.max_log = total_log
+                    self.max_sqrt = total_sqrt
+                
+            if s_weight > self.max_space_weight: 
+                self.max_space_weight = s_weight
+
+    def generic_visit(self, node):
+        """ DEAD CODE DETECTION: Intercepts unreachable statements after returns/breaks """
+        for field, value in ast.iter_fields(node):
+            if isinstance(value, list):
+                hit_terminal = False
+                for item in value:
+                    if isinstance(item, ast.AST):
+                        if hit_terminal:
+                            prev_dead = getattr(self, 'in_dead_code', False)
+                            self.in_dead_code = True
+                            self.visit(item)
+                            self.in_dead_code = prev_dead
+                        else:
+                            self.visit(item)
+                            if isinstance(item, (ast.Return, ast.Break, ast.Continue)):
+                                hit_terminal = True
+            elif isinstance(value, ast.AST):
+                self.visit(value)
 
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name
@@ -274,16 +328,27 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.has_slicing = False
         self.has_division = False
         
-        self.record_line(node, time_override="O(1)", space_override="O(1)") 
+        is_dead = node.name not in self.reachable_funcs
+        time_override = "Dead Code" if is_dead else "O(1)"
+        space_override = "Dead Code" if is_dead else "O(1)"
+        
+        self.record_line(node, time_override=time_override, space_override=space_override) 
         
         prev_t, prev_s = self.max_complexity, self.max_space_weight
         prev_poly, prev_log = self.max_poly, self.max_log
+        prev_sqrt = getattr(self, 'max_sqrt', 0)
+        
         self.max_complexity, self.max_space_weight = 0, 0
-        self.max_poly, self.max_log = 0, 0
+        self.max_poly, self.max_log, self.max_sqrt = 0, 0, 0
+        
+        prev_dead = getattr(self, 'in_dead_code', False)
+        self.in_dead_code = is_dead or prev_dead
         
         self.current_depth += 1 
         self.generic_visit(node)
         self.current_depth -= 1
+        
+        self.in_dead_code = prev_dead
         
         if self.has_recursion_in_loop:
             relation = "T(n) = n * T(n-1) + O(1)"
@@ -292,20 +357,66 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         elif self.recursive_calls_count == 1:
             relation = "T(n) = T(n-1) + O(1)"
         else:
-            relation = self._build_time_str(self.max_poly, self.max_log)
+            relation = self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
             
         self.custom_functions[node.name] = relation
         self.custom_space[node.name] = "O(n)" if (self.recursive_calls_count > 0 or self.max_space_weight > 0) else "O(1)"
         
-        self.max_complexity = max(prev_t, self.max_complexity)
-        self.max_space_weight = max(prev_s, self.max_space_weight)
-        self.max_poly = max(prev_poly, self.max_poly)
-        self.max_log = max(prev_log, self.max_log)
+        if not is_dead:
+            self.max_complexity = max(prev_t, self.max_complexity)
+            self.max_space_weight = max(prev_s, self.max_space_weight)
+            self.max_poly = max(prev_poly, self.max_poly)
+            self.max_log = max(prev_log, self.max_log)
+            self.max_sqrt = max(prev_sqrt, getattr(self, 'max_sqrt', 0))
+        else:
+            self.max_complexity = prev_t
+            self.max_space_weight = prev_s
+            self.max_poly = prev_poly
+            self.max_log = prev_log
+            self.max_sqrt = prev_sqrt
+            
         self.current_function_name = None
+
+    def visit_If(self, node):
+        """ CFG CONSTRUCTION: Worst-Case Path Selection """
+        self.record_line(node)
+        
+        prev_max_comp = self.max_complexity
+        prev_max_poly = self.max_poly
+        prev_max_log = self.max_log
+        prev_max_sqrt = getattr(self, 'max_sqrt', 0)
+        
+        # Analyze IF branch independently
+        self.max_complexity, self.max_poly, self.max_log, self.max_sqrt = 0, 0, 0, 0
+        self.current_depth += 1
+        for child in node.body:
+            self.visit(child)
+        self.current_depth -= 1
+        if_comp, if_poly, if_log, if_sqrt = self.max_complexity, self.max_poly, self.max_log, self.max_sqrt
+        
+        # Analyze ELSE branch independently
+        self.max_complexity, self.max_poly, self.max_log, self.max_sqrt = 0, 0, 0, 0
+        self.current_depth += 1
+        for child in node.orelse:
+            self.visit(child)
+        self.current_depth -= 1
+        else_comp, else_poly, else_log, else_sqrt = self.max_complexity, self.max_poly, self.max_log, self.max_sqrt
+        
+        # Systematically select maximum weight to display true asymptotic worst-case
+        if if_comp >= else_comp:
+            self.max_complexity = max(prev_max_comp, if_comp)
+            self.max_poly = max(prev_max_poly, if_poly)
+            self.max_log = max(prev_max_log, if_log)
+            self.max_sqrt = max(prev_max_sqrt, if_sqrt)
+        else:
+            self.max_complexity = max(prev_max_comp, else_comp)
+            self.max_poly = max(prev_max_poly, else_poly)
+            self.max_log = max(prev_max_log, else_log)
+            self.max_sqrt = max(prev_max_sqrt, else_sqrt)
 
     def visit_For(self, node):
         self.loop_depth += 1
-        self.record_line(node)    # FIX: Removed outdated arguments
+        self.record_line(node)
         self.current_depth += 1
         self.generic_visit(node)
         self.current_depth -= 1
@@ -365,31 +476,20 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_BinOp(self, node):
-        # Treat Division, Floor Division, and Right Shift (>>) as "division" operations 
-        # so the analyzer knows when lists are being split in half.
         if isinstance(node.op, (ast.Div, ast.FloorDiv, ast.RShift)):
             self.has_division = True
-            
         self.generic_visit(node)
 
-    # Inside visit_Assign
     def visit_Assign(self, node): 
-        # Default space for variables (n, i, return values) is O(1)
         space_override = "O(1)"
-        
-        # Catch O(n) Auxiliary Space creations:
         if node.value:
-            # 1. List Multiplication: arr = [0] * n
             if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
                 if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
                     space_override = "O(n)"
-            # 2. List Comprehension: arr = [x for x in nums]
             elif isinstance(node.value, ast.ListComp):
                 space_override = "O(n)"
-            # 3. Array Slicing: left_half = arr[:mid]
             elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
                 space_override = "O(n)"
-            # 4. Copying an array: arr2 = arr.copy()
             elif isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == 'copy':
                 space_override = "O(n)"
             
@@ -401,8 +501,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)
     
     def visit_Return(self, node):
-        space_override = "O(1)" # Default return space
-        
+        space_override = "O(1)"
         if node.value:
             if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
                 if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
@@ -419,29 +518,10 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.record_line(node)
         self.generic_visit(node)
 
-    def _is_sqrt_loop(self, node):
-        if not isinstance(node, ast.While):
-            return False
-        
-        # Look for conditions like: while i * i <= n  OR  while i ** 2 <= n
-        test = node.test
-        if isinstance(test, ast.Compare):
-            if isinstance(test.left, ast.BinOp):
-                # Check for i * i
-                if isinstance(test.left.op, ast.Mult):
-                    if isinstance(test.left.left, ast.Name) and isinstance(test.left.right, ast.Name):
-                        if test.left.left.id == test.left.right.id:
-                            return True
-                # Check for i ** 2
-                elif isinstance(test.left.op, ast.Pow):
-                    if isinstance(test.left.right, ast.Constant) and test.left.right.value == 2:
-                        return True
-        return False
-
     def get_final_badge(self):
         for line in reversed(self.details):
             if "T(n) =" in line.get('complexity', ''): return line['complexity']
-        return self._build_time_str(self.max_poly, self.max_log)
+        return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
 
     def get_final_asymptotic_badge(self):
         for line in reversed(self.details):
@@ -450,7 +530,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             elif "2T(n/2)" in comp: return "O(n log n)"
             elif "T(n-1) + T(n-2)" in comp: return "O(2^n)"
             elif "T(n-1)" in comp: return "O(n)"
-        return self._build_time_str(self.max_poly, self.max_log)
+        return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
 
 @app.post("/api/analyze") 
 @app.post("/analyze") 
@@ -465,8 +545,8 @@ def analyze_complexity(payload: CodePayload):
             
         analyzer.details, analyzer.space_details = [], []
         analyzer.max_complexity, analyzer.max_space_weight = 0, 0
-        analyzer.max_poly, analyzer.max_log = 0, 0
-        analyzer.current_depth, analyzer.loop_depth, analyzer.log_loop_depth = 0, 0, 0
+        analyzer.max_poly, analyzer.max_log, analyzer.max_sqrt = 0, 0, 0
+        analyzer.current_depth, analyzer.loop_depth, analyzer.log_loop_depth, analyzer.sqrt_loop_depth = 0, 0, 0, 0
         analyzer.visit(tree)
         
         is_recursive = any("T(n) =" in line.get('complexity', '') for line in analyzer.details)
@@ -484,7 +564,7 @@ def analyze_complexity(payload: CodePayload):
                 "lineOfCode": line["lineOfCode"],
                 "complexity": asymp,
                 "indent": line.get("indent", 0),
-                "color": analyzer.get_color(asymp),
+                "color": line.get("color", analyzer.get_color(asymp)),
                 "weight": line.get("weight", 0)
             })
 
