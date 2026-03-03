@@ -64,6 +64,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             'append': {'time': 'O(1)', 'space': 'O(1)'},
             'copy': {'time': 'O(n)', 'space': 'O(n)'}
         }
+        self.aliases = {} # NEW: Tracks function aliasing
 
     def bfs_first_pass(self, tree):
         queue = deque([(tree, None)]) 
@@ -360,8 +361,18 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             relation = self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
             
         self.custom_functions[node.name] = relation
-        self.custom_space[node.name] = "O(n)" if (self.recursive_calls_count > 0 or self.max_space_weight > 0) else "O(1)"
         
+        # Edge Case: Logarithmic Space for Divide-and-Conquer
+        if self.recursive_calls_count > 0:
+            if self.has_division and not self.has_slicing and self.recursive_calls_count == 1:
+                self.custom_space[node.name] = "O(log n)" # e.g. Recursive Binary Search
+            else:
+                self.custom_space[node.name] = "O(n)" # Standard Recursion Stack or Slicing
+        elif self.max_space_weight > 0:
+            self.custom_space[node.name] = "O(n)"
+        else:
+            self.custom_space[node.name] = "O(1)"
+
         if not is_dead:
             self.max_complexity = max(prev_t, self.max_complexity)
             self.max_space_weight = max(prev_s, self.max_space_weight)
@@ -447,8 +458,26 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             self.loop_depth -= 1
 
     def visit_Call(self, node):
+        # Edge Case: Built-in Method Chaining (e.g., list.copy().sort())
+        chain_time, chain_space = None, None
+        chain_poly = 0
+        
+        for child in ast.walk(node):
+            if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
+                attr = child.func.attr
+                if attr in self.builtin_complexities:
+                    b = self.builtin_complexities[attr]
+                    if "n log n" in b['time']: chain_poly = max(chain_poly, 2)
+                    elif "n" in b['time']: chain_poly = max(chain_poly, 1)
+                    if "O(n)" in b['space']: chain_space = "O(n)"
+        
+        if chain_poly == 2: chain_time = "O(n log n)"
+        elif chain_poly == 1: chain_time = "O(n)"
+
         if isinstance(node.func, ast.Name):
-            f_id = node.func.id
+            # Resolve Alias if exists
+            f_id = self.aliases.get(node.func.id, node.func.id)
+            
             if f_id == self.current_function_name:
                 self.recursive_calls_count += 1
                 if self.loop_depth > 0 or self.log_loop_depth > 0: self.has_recursion_in_loop = True
@@ -460,15 +489,23 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 b = self.builtin_complexities[f_id]
                 self.record_line(node, time_override=b['time'], space_override=b['space'])
             elif f_id in self.custom_functions:
-                self.record_line(node, time_override=self.custom_functions[f_id], space_override=self.custom_space.get(f_id, "O(1)"))
+                call_comp = self.custom_functions[f_id]
+                if "T(n) = n * T(n-1)" in call_comp: call_comp = "O(n!)"
+                elif "2T(n/2)" in call_comp: call_comp = "O(n log n)"
+                elif "T(n-1) + T(n-2)" in call_comp: call_comp = "O(2^n)"
+                elif "T(n-1)" in call_comp: call_comp = "O(n)"
+                
+                self.record_line(node, time_override=call_comp, space_override=self.custom_space.get(f_id, "O(1)"))
             else:
                 self.record_line(node)
         elif isinstance(node.func, ast.Attribute):
             if node.func.attr in self.builtin_complexities:
-                b = self.builtin_complexities[node.func.attr]
-                self.record_line(node, time_override=b['time'], space_override=b['space'])
+                t = chain_time if chain_time else self.builtin_complexities[node.func.attr]['time']
+                s = chain_space if chain_space else self.builtin_complexities[node.func.attr]['space']
+                self.record_line(node, time_override=t, space_override=s)
             else:
-                self.record_line(node)
+                self.record_line(node, time_override=chain_time, space_override=chain_space)
+                
         self.generic_visit(node)
 
     def visit_Subscript(self, node):
@@ -482,18 +519,35 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def visit_Assign(self, node): 
         space_override = "O(1)"
+        time_override = None
+
+        # Edge Case: Function Aliasing (e.g., my_func = fibonacci)
+        if isinstance(node.value, ast.Name):
+            if node.value.id in self.custom_functions:
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        self.aliases[target.id] = node.value.id
+
         if node.value:
             if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
                 if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
                     space_override = "O(n)"
             elif isinstance(node.value, ast.ListComp):
-                space_override = "O(n)"
+                # Edge Case: Nested List Comprehensions
+                gen_count = len(node.value.generators)
+                if gen_count > 1:
+                    space_override = f"O(n^{gen_count})"
+                    time_override = f"O(n^{gen_count})"
+                else:
+                    space_override = "O(n)"
+                    time_override = "O(n)"
             elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
                 space_override = "O(n)"
+                time_override = "O(n)" # Slicing is an O(n) operation
             elif isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == 'copy':
                 space_override = "O(n)"
             
-        self.record_line(node, space_override=space_override)
+        self.record_line(node, time_override=time_override, space_override=space_override)
         self.generic_visit(node)
 
     def visit_AugAssign(self, node):
@@ -502,16 +556,24 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     
     def visit_Return(self, node):
         space_override = "O(1)"
+        time_override = None
         if node.value:
             if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
                 if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
                     space_override = "O(n)"
             elif isinstance(node.value, ast.ListComp):
-                space_override = "O(n)"
+                gen_count = len(node.value.generators)
+                if gen_count > 1:
+                    space_override = f"O(n^{gen_count})"
+                    time_override = f"O(n^{gen_count})"
+                else:
+                    space_override = "O(n)"
+                    time_override = "O(n)"
             elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
                 space_override = "O(n)"
+                time_override = "O(n)"
                 
-        self.record_line(node, space_override=space_override)
+        self.record_line(node, time_override=time_override, space_override=space_override)
         self.generic_visit(node)
     
     def visit_Expr(self, node):
@@ -520,18 +582,22 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def get_final_badge(self):
         for line in reversed(self.details):
-            if "T(n) =" in line.get('complexity', ''): return line['complexity']
+            comp = line.get('complexity', '')
+            # Catch raw recurrences OR our new evaluated closed-form external calls
+            if "T(n) =" in comp: return comp
+            if comp in ["O(n!)", "O(2^n)", "O(n log n)"]: return comp
         return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
 
     def get_final_asymptotic_badge(self):
         for line in reversed(self.details):
             comp = line.get('complexity', '')
-            if "T(n) = n * T(n-1)" in comp: return "O(n!)"
-            elif "2T(n/2)" in comp: return "O(n log n)"
-            elif "T(n-1) + T(n-2)" in comp: return "O(2^n)"
+            # Map both the raw recurrence and the closed-form string to the final badge
+            if "T(n) = n * T(n-1)" in comp or comp == "O(n!)": return "O(n!)"
+            elif "2T(n/2)" in comp or comp == "O(n log n)": return "O(n log n)"
+            elif "T(n-1) + T(n-2)" in comp or comp == "O(2^n)": return "O(2^n)"
             elif "T(n-1)" in comp: return "O(n)"
         return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
-
+    
 @app.post("/api/analyze") 
 @app.post("/analyze") 
 def analyze_complexity(payload: CodePayload):

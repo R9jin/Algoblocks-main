@@ -188,7 +188,6 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
         viewMode={viewMode}
         setViewMode={setViewMode}
         runCode={runCode}
-        setBottomPanel={setBottomPanel}
         handleSave={handleSave}
       />
 
