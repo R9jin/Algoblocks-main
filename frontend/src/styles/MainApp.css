@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap');
+
 .workspace-app-container {
   display: flex;
   flex-direction: column;
@@ -341,7 +344,7 @@
 
 .panel-close-btn {
   background: none;
-  color: white;
+  color: rgb(115, 115, 115);
   border: none;
   cursor: pointer;
   font-size: 1.1rem;
@@ -397,23 +400,24 @@
 
 .complexity-table {
   width: 100%;
-  max-width: 750px; /* Slightly wider to accommodate longer code lines */
+  max-width: 750px; 
   border-collapse: collapse;
-  font-size: 0.9rem;
-  background: #1C1236; /* Solid, deep background for high contrast */
+  font-size: 0.8rem; /* Decreased font size */
+  background: #e7e7e7; 
   border-radius: 8px;
   overflow: hidden; 
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Slight drop shadow */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); 
 }
 
 /* Distinct header styling */
 .complexity-table th { 
-  padding: 14px 20px; 
-  color: #EBE4FF; /* Brighter, crisper header text */
-  background: #2D1F52; /* Distinct background to separate from code */
+  padding: 10px 15px; /* Tighter padding */
+  color: #EBE4FF; 
+  background: #2D1F52; 
   text-align: left; 
   font-weight: 600;
   letter-spacing: 0.5px;
+  font-size: 0.8rem; /* Smaller header font */
 }
 .complexity-table th.right-align { text-align: right; }
 
@@ -439,19 +443,18 @@
 }
 
 .code-cell { 
-  padding: 10px 20px; 
-  font-family: 'Fira Code', 'Courier New', monospace; /* Strict monospace for code */
-  font-size: 0.9rem; 
+  padding: 8px 15px; /* Tighter padding for a more compact table */
+  font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace; 
+  font-size: 0.8rem; /* Decreased font size */
   line-height: 1.4;
 }
 
 .complexity-cell { 
   text-align: right; 
-  padding: 10px 20px; 
-  font-weight: bold; 
+  padding: 8px 15px; /* Tighter padding */
   white-space: nowrap; 
-  font-family: 'Fira Code', 'Courier New', monospace; /* Match font with the code */
-  font-size: 0.95rem; /* Make the O(N) badge slightly larger */
+  font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace; 
+  font-size: 0.85rem; /* Decreased font size but kept slightly larger than the code */
 }
 
 /* ========================= */
@@ -586,3 +589,76 @@
     font-size: 0.8rem;
   }
 }
+/* ========================= */
+/* Sidebar Toggle & Hidden State */
+/* ========================= */
+
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 1000;
+  background-color: #3A2A6B;
+  color: white;
+  border: none;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  width: 24px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: #7F57F9;
+}
+
+/* ========================= */
+/* Smooth Sidebar Transitions */
+/* ========================= */
+
+/* 1. Add smooth transitions to the panels */
+.templates-sidebar {
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              min-width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              opacity 0.2s ease;
+  overflow: hidden; /* Clips the content smoothly as it shrinks */
+}
+
+.workspace-main {
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.gutter {
+  transition: width 0.3s ease, opacity 0.2s ease, background-color 0.2s;
+}
+
+/* 2. Prevent content from squishing/wrapping while the sidebar is sliding closed */
+.sidebar-search, .sidebar-list {
+  min-width: 250px; 
+}
+
+/* 3. Animate to 0 width instead of display: none */
+.workspace-split.sidebar-hidden .templates-sidebar {
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+  border: none;
+}
+
+.workspace-split.sidebar-hidden .gutter {
+  width: 0 !important;
+  opacity: 0;
+  pointer-events: none; /* Prevents grabbing the invisible divider */
+}
+
+.workspace-split.sidebar-hidden .workspace-main {
+  width: 100% !important;
+}
+

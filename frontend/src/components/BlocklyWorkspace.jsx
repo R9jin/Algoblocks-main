@@ -134,6 +134,36 @@ const customBlocks = [
     "colour": "#4C97FF",
     "tooltip": "Advanced operators: Floor Division (//), Power (**), Bitwise Shifts (>>, <<), and Bitwise Logic (&, |)",
   },
+  {
+    "type": "type_cast_int",
+    "message0": "int %1",
+    "args0": [
+      { "type": "input_value", "name": "VALUE" }
+    ],
+    "output": "Number",
+    "colour": "#4C97FF", // Matches your Math category color
+    "tooltip": "Converts a value or string to an integer.",
+  },
+  {
+    "type": "math_min_max",
+    "message0": "%1 of %2 and %3",
+    "args0": [
+      {
+        "type": "field_dropdown",
+        "name": "OP",
+        "options": [
+          ["max", "MAX"],
+          ["min", "MIN"]
+        ]
+      },
+      { "type": "input_value", "name": "A", "check": "Number" },
+      { "type": "input_value", "name": "B", "check": "Number" }
+    ],
+    "inputsInline": true,
+    "output": "Number",
+    "colour": "#4C97FF", // Matches the Math category
+    "tooltip": "Returns the minimum or maximum of two numbers.",
+  },
 ];
 
 if (Blockly.common && Blockly.common.defineBlocksWithJsonArray) {
@@ -183,6 +213,8 @@ const toolbox = {
         { kind: "block", type: "math_arithmetic", inputs: { A: { shadow: { type: "math_number", fields: { NUM: 1 } } }, B: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
         { kind: "block", type: "math_advanced_operators" },
         { kind: "block", type: "math_assignment", inputs: { DELTA: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
+        { kind: "block", type: "type_cast_int" }, // <--- ADD IT HERE
+        { kind: "block", type: "math_min_max" }, // <--- ADD IT HERE
         { kind: "block", type: "math_single" },
         { kind: "block", type: "math_trig" },
         { kind: "block", type: "math_constant" },
@@ -244,27 +276,38 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
   const blocklyDiv = useRef(null);
   const workspace = useRef(null);
   const onChangeRef = useRef(onChange);
+  
+  // NEW: Add a flag to tell our listener when we are loading a template
+  const isLoading = useRef(false); 
 
   useImperativeHandle(ref, () => ({
     clear: () => {
-      if (workspace.current) workspace.current.clear();
+      if (workspace.current) {
+        isLoading.current = true;
+        workspace.current.clear();
+        isLoading.current = false;
+      }
     },
     loadTemplate: (json) => {
       if (workspace.current) {
-        Blockly.Events.disable(); 
+        // 1. Tell our change listener to ignore updates temporarily
+        isLoading.current = true; 
+        
+        // 2. Clear and load WITHOUT disabling Blockly.Events!
         workspace.current.clear();
         Blockly.serialization.workspaces.load(json, workspace.current);
-        Blockly.Events.enable(); 
         
-        // FIX: Wait 100ms to let Blockly fully initialize block variables & mutations
-        // Then manually trigger the onChange event to generate the code and analyze it.
+        // 3. Re-enable our listener
+        isLoading.current = false; 
+        
+        // 4. Generate the code once everything is loaded and properly wired up
         setTimeout(() => {
           const code = pythonGenerator.workspaceToCode(workspace.current);
           const currentJson = Blockly.serialization.workspaces.save(workspace.current);
           if (onChangeRef.current) onChangeRef.current(currentJson, code);
         }, 100);
 
-        return ""; // We no longer need to return the code synchronously
+        return "";
       }
       return "";
     },
@@ -280,8 +323,11 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  useEffect(() => {
+useEffect(() => {
     if (workspace.current) return;
+
+    // Define plugin variables here so we can access them in the cleanup function
+    let searchPlugin, minimapPlugin, modalPlugin, backpackPlugin, highlightPlugin;
 
     if (blocklyDiv.current) {
       if (Blockly.ShortcutRegistry.registry.getRegistry()['startSearch']) {
@@ -296,49 +342,63 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         renderer: "geras", 
         theme: pastelTheme, 
         grid: {
-          spacing: 25,      // The distance between the dots
-          length: 3,        // A length of 1 to 3 makes it look like a dot rather than a line
-          colour: '#6e6e6e',// A soft grey color that looks great on a white background
-          snap: true        // Optional: Set to true if you want blocks to "snap" to the dots
+          spacing: 25,
+          length: 3,
+          colour: '#6e6e6e',
+          snap: true
         }
       });
 
       try {
-        new WorkspaceSearch(workspace.current).init();
-        new PositionedMinimap(workspace.current).init();
-        new Modal(workspace.current).init();
-        new Backpack(workspace.current).init();
-        new ContentHighlight(workspace.current).init();
+        // Instantiate plugins and keep references to them
+        searchPlugin = new WorkspaceSearch(workspace.current);
+        searchPlugin.init();
+        
+        minimapPlugin = new PositionedMinimap(workspace.current);
+        minimapPlugin.init();
+        
+        modalPlugin = new Modal(workspace.current);
+        modalPlugin.init();
+        
+        backpackPlugin = new Backpack(workspace.current);
+        backpackPlugin.init();
+        
+        highlightPlugin = new ContentHighlight(workspace.current);
+        highlightPlugin.init();
+        
         workspace.current.addChangeListener(shadowBlockConversionChangeListener);
       } catch (e) {
         console.warn("Plugin init skipped:", e.message);
       }
 
-      pythonGenerator.init = function(workspace) {
-        this.variableDB_ = new Blockly.Names(this.RESERVED_WORDS_);
-        this.nameDB_ = new Blockly.Names(this.RESERVED_WORDS_);
-        this.nameDB_.setVariableMap(workspace.getVariableMap());
-        this.definitions_ = Object.create(null);
-        this.functionNames_ = Object.create(null);
+      // Safely wrap the init function to preserve Blockly's internal tracking
+      if (!pythonGenerator.__originalInit) {
+        pythonGenerator.__originalInit = pythonGenerator.init;
+        pythonGenerator.init = function(workspace) {
+          pythonGenerator.__originalInit.call(this, workspace);
+          if (this.definitions_['variables']) {
+            delete this.definitions_['variables'];
+          }
+        };
+      }
 
-        this.isInitialized = true;
-      };
+      if (!pythonGenerator.__originalFinish) {
+        pythonGenerator.__originalFinish = pythonGenerator.finish;
+        pythonGenerator.finish = function(code) {
+          let finalCode = pythonGenerator.__originalFinish.call(this, code);
+          
+          // 1. Remove global variable declarations
+          finalCode = finalCode.replace(/^[ \t]*global[ \t]+.*\n?/gm, '');
+          
+          // 2. Remove default docstring descriptions
+          finalCode = finalCode.replace(/^[ \t]*"""Describe this function\.\.\."""\n?/gm, '');
 
-      pythonGenerator.finish = function(code) {
-        const definitions = Object.values(this.definitions_);
-        let finalCode = definitions.join('\n\n') + '\n\n' + code;
-        
-        // This Regex finds any line that starts with spaces/tabs, followed by 'global ', 
-        // and strips it out completely.
-        finalCode = finalCode.replace(/^[ \t]*global[ \t]+.*\n?/gm, '');
-        
-        return finalCode.trim();
-      };
-
-      pythonGenerator.forBlock['comment_block'] = function(block) {
-        const text = block.getFieldValue('TEXT');
-        return `\n# ${text}\n`;
-      };
+          // 3. Remove default comment descriptions (# Describe this function...)
+          finalCode = finalCode.replace(/^[ \t]*# Describe this function\.\.\.\n?/gm, '');
+          
+          return finalCode.trim();
+        };
+      }
 
       pythonGenerator.forBlock['math_assignment'] = function(block) {
         const variable = pythonGenerator.getVariableName(block.getFieldValue('VAR'));
@@ -422,7 +482,12 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return [code, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
-pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
+      pythonGenerator.forBlock['type_cast_int'] = function(block) {
+        const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || '0';
+        return [`int(${value})`, pythonGenerator.ORDER_FUNCTION_CALL];
+      };
+
+      pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
         const operator = block.getFieldValue('OP');
         
         let opSymbol = '';
@@ -430,29 +495,29 @@ pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
         
         // 1. Determine the operator and its strict precedence level FIRST
         switch (operator) {
-          case 'FLOOR_DIV': 
-            opSymbol = '//'; 
-            order = pythonGenerator.ORDER_MULTIPLICATIVE; 
+          case 'FLOOR_DIV':
+            opSymbol = '//';
+            order = pythonGenerator.ORDER_MULTIPLICATIVE;
             break;
-          case 'POWER': 
-            opSymbol = '**'; 
-            order = pythonGenerator.ORDER_EXPONENTIATION; 
+          case 'POWER':
+            opSymbol = '**';
+            order = pythonGenerator.ORDER_EXPONENTIATION;
             break;
-          case 'RSHIFT': 
-            opSymbol = '>>'; 
-            order = pythonGenerator.ORDER_BITWISE_SHIFT; 
+          case 'RSHIFT':
+            opSymbol = '>>';
+            order = pythonGenerator.ORDER_BITWISE_SHIFT;
             break;
-          case 'LSHIFT': 
-            opSymbol = '<<'; 
-            order = pythonGenerator.ORDER_BITWISE_SHIFT; 
+          case 'LSHIFT':
+            opSymbol = '<<';
+            order = pythonGenerator.ORDER_BITWISE_SHIFT;
             break;
-          case 'BIT_AND': 
-            opSymbol = '&'; 
-            order = pythonGenerator.ORDER_BITWISE_AND; 
+          case 'BIT_AND':
+            opSymbol = '&';
+            order = pythonGenerator.ORDER_BITWISE_AND;
             break;
-          case 'BIT_OR': 
-            opSymbol = '|'; 
-            order = pythonGenerator.ORDER_BITWISE_OR; 
+          case 'BIT_OR':
+            opSymbol = '|';
+            order = pythonGenerator.ORDER_BITWISE_OR;
             break;
         }
         
@@ -463,15 +528,30 @@ pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
         return [`${a} ${opSymbol} ${b}`, order];
       };
 
-      // ==========================================
-      // OVERRIDE: Listen to ALL structural workspace events
-      // ==========================================
+      pythonGenerator.forBlock['math_min_max'] = function(block) {
+        const op = block.getFieldValue('OP') === 'MAX' ? 'max' : 'min';
+        
+        // Pass ORDER_NONE because max() and min() are function calls that encapsulate their arguments
+        const a = pythonGenerator.valueToCode(block, 'A', pythonGenerator.ORDER_NONE) || '0';
+        const b = pythonGenerator.valueToCode(block, 'B', pythonGenerator.ORDER_NONE) || '0';
+        
+        const code = `${op}(${a}, ${b})`;
+        return [code, pythonGenerator.ORDER_FUNCTION_CALL];
+      };
+
+      pythonGenerator.forBlock['comment_block'] = function(block) {
+        // Fetch the text typed into the block
+        const text = block.getFieldValue('TEXT') || '';
+        
+        // Return it formatted as a Python comment
+        return `# ${text}\n`;
+      };
+
       workspace.current.addChangeListener((event) => {
-        // Skip UI events like clicking, dragging, and scrolling to prevent lag
+        if (isLoading.current) return;
         if (event.isUiEvent) return;
 
         try {
-          // Whenever ANY non-UI change happens, save state and generate fresh code
           const json = Blockly.serialization.workspaces.save(workspace.current);
           const code = pythonGenerator.workspaceToCode(workspace.current);
           if (onChangeRef.current) onChangeRef.current(json, code);
@@ -479,7 +559,6 @@ pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
           console.warn("Blockly Workspace Update Error: ", e);
         }
       });
-      // ==========================================
       
       const observer = new ResizeObserver(() => {
         if (workspace.current) Blockly.svgResize(workspace.current);
@@ -489,15 +568,27 @@ pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
     }
 
     return () => {
+      // Gracefully dispose of all plugins so elements like the minimap don't duplicate
+      try {
+        if (searchPlugin && typeof searchPlugin.dispose === 'function') searchPlugin.dispose();
+        if (minimapPlugin && typeof minimapPlugin.dispose === 'function') minimapPlugin.dispose();
+        if (modalPlugin && typeof modalPlugin.dispose === 'function') modalPlugin.dispose();
+        if (backpackPlugin && typeof backpackPlugin.dispose === 'function') backpackPlugin.dispose();
+        if (highlightPlugin && typeof highlightPlugin.dispose === 'function') highlightPlugin.dispose();
+      } catch (e) {
+        console.warn("Plugin dispose skipped:", e.message);
+      }
+
       if (workspace.current) {
         workspace.current.dispose();
         workspace.current = null;    
       }
+      
       if (blocklyDiv.current?.resizeObserver) {
         blocklyDiv.current.resizeObserver.disconnect();
       }
     };
-  }, []); 
+  }, []);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
