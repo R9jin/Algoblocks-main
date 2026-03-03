@@ -39,7 +39,7 @@ export default function MainApp() {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   
   // --- DRAG TO RESIZE LOGIC ---
-  const [panelHeight, setPanelHeight] = useState(300);
+  const [panelHeight, setPanelHeight] = useState(450);
   const isDragging = useRef(false);
 
   useEffect(() => {
@@ -242,7 +242,7 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
               <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
             </div>
             
-            {/* UPDATED: Purple Syntax Highlighter matching your CSS */}
+            {/* UPDATED: Purple Syntax Highlighter matching your CSS with fixed text color */}
             <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#1C1236', overflow: 'auto' }}>
               <SyntaxHighlighter 
                 language="python" 
@@ -253,7 +253,8 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
                   padding: '20px',
                   fontSize: '0.95rem',
                   fontFamily: "'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
-                  background: '#1C1236', // Matches the deep purple from your MainApp.css
+                  background: '#1C1236', // Matches the deep purple
+                  color: '#EBE4FF',      // <-- NEW: Forces default text to be light/readable
                   minHeight: '100%'
                 }}
               >

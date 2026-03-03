@@ -382,12 +382,20 @@ useEffect(() => {
         };
       }
 
-      // Safely wrap the finish function
       if (!pythonGenerator.__originalFinish) {
         pythonGenerator.__originalFinish = pythonGenerator.finish;
         pythonGenerator.finish = function(code) {
           let finalCode = pythonGenerator.__originalFinish.call(this, code);
+          
+          // 1. Remove global variable declarations
           finalCode = finalCode.replace(/^[ \t]*global[ \t]+.*\n?/gm, '');
+          
+          // 2. Remove default docstring descriptions
+          finalCode = finalCode.replace(/^[ \t]*"""Describe this function\.\.\."""\n?/gm, '');
+
+          // 3. Remove default comment descriptions (# Describe this function...)
+          finalCode = finalCode.replace(/^[ \t]*# Describe this function\.\.\.\n?/gm, '');
+          
           return finalCode.trim();
         };
       }
