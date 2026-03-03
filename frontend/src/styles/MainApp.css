@@ -586,3 +586,118 @@
     font-size: 0.8rem;
   }
 }
+
+/* ========================= */
+/* Sidebar Toggle & Hidden State */
+/* ========================= */
+
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 1000;
+  background-color: #3A2A6B;
+  color: white;
+  border: none;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  width: 24px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: #7F57F9;
+}
+
+.workspace-split.sidebar-hidden .templates-sidebar {
+  display: none !important;
+}
+
+.workspace-split.sidebar-hidden .gutter {
+  display: none !important;
+}
+
+.workspace-split.sidebar-hidden .workspace-main {
+  width: 100% !important;
+}
+
+/* ========================= */
+/* Smooth Sidebar Transitions */
+/* ========================= */
+
+/* 1. Add smooth transitions to the panels */
+.templates-sidebar {
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              min-width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              opacity 0.2s ease;
+  overflow: hidden; /* Clips the content smoothly as it shrinks */
+}
+
+.workspace-main {
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.gutter {
+  transition: width 0.3s ease, opacity 0.2s ease, background-color 0.2s;
+}
+
+/* 2. Prevent content from squishing/wrapping while the sidebar is sliding closed */
+.sidebar-search, .sidebar-list {
+  min-width: 250px; 
+}
+
+/* ========================= */
+/* Sidebar Toggle & Hidden State */
+/* ========================= */
+
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 1000;
+  background-color: #3A2A6B;
+  color: white;
+  border: none;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  width: 24px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: #7F57F9;
+}
+
+/* 3. Animate to 0 width instead of display: none */
+.workspace-split.sidebar-hidden .templates-sidebar {
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+  border: none;
+}
+
+.workspace-split.sidebar-hidden .gutter {
+  width: 0 !important;
+  opacity: 0;
+  pointer-events: none; /* Prevents grabbing the invisible divider */
+}
+
+.workspace-split.sidebar-hidden .workspace-main {
+  width: 100% !important;
+}
