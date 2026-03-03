@@ -4,7 +4,6 @@ export default function WorkspaceHeader({
   viewMode, 
   setViewMode, 
   runCode, 
-  setBottomPanel, 
   handleSave 
 }) {
   const navigate = useNavigate();
@@ -39,9 +38,6 @@ export default function WorkspaceHeader({
       <div className="header-right">
         <button onClick={runCode} className="action-btn btn-run">
           <img src="/assets/play-icon.png" alt="Run" className="btn-icon" /> Run
-        </button>
-        <button onClick={() => setBottomPanel("complexity")} className="action-btn btn-analyze">
-          <img src="/assets/complexity-icon.png" alt="Analyze" className="btn-icon" /> Analyze
         </button>
         <button onClick={handleSave} className="action-btn btn-save">
           Sign in to save

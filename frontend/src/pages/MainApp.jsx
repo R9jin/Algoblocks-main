@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom"; // Removed useNavigate
+import { useLocation } from "react-router-dom";
 import Split from "react-split";
 import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
-import WorkspaceHeader from "../components/WorkspaceHeader.jsx"; // <-- 1. Import the header
+import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
 import "../styles/MainApp.css";
+
+// --- NEW IMPORTS FOR SYNTAX HIGHLIGHTING ---
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const SIDEBAR_TEMPLATES = [
   { name: "Linear Search", path: "search/linear_search", desc: "Sequentially checks each element until the target is found or the list is exhausted." },
-  { name: "Binary Search", path: "search/binary_search", desc: "Finds the position of a target value within a sorted array by repeatedly dividing the search interval in half." }, // <-- ADD THIS LINE
+  { name: "Binary Search", path: "search/binary_search", desc: "Finds the position of a target value within a sorted array by repeatedly dividing the search interval in half." }, 
   { name: "Bubble Sort", path: "sort/bubble_sort", desc: "Repeatedly swaps adjacent elements if they are in the wrong order." },
   { name: "Selection Sort", path: "sort/selection_sort", desc: "Finds the minimum element from the unsorted part and places it at the beginning." },
   { name: "Insertion Sort", path: "sort/insertion_sort", desc: "Builds the final sorted array one element at a time by inserting elements into their correct position." },
@@ -32,18 +36,16 @@ export default function MainApp() {
   const [viewMode, setViewMode] = useState("workspace"); 
   const [bottomPanel, setBottomPanel] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   
   // --- DRAG TO RESIZE LOGIC ---
-  const [panelHeight, setPanelHeight] = useState(300);
+  const [panelHeight, setPanelHeight] = useState(450);
   const isDragging = useRef(false);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isDragging.current) return;
-      // Calculate new height: total window height - mouse Y position - footer height (48px)
       const newHeight = window.innerHeight - e.clientY - 48;
-      
-      // Clamp the height between 150px and the top of the window
       if (newHeight >= 150 && newHeight <= window.innerHeight - 150) {
         setPanelHeight(newHeight);
       }
@@ -67,7 +69,7 @@ export default function MainApp() {
   }, []);
 
   const handleDragStart = (e) => {
-    e.preventDefault(); // Prevents accidental text selection while dragging
+    e.preventDefault(); 
     isDragging.current = true;
     document.body.style.cursor = "ns-resize";
     document.body.style.userSelect = "none";
@@ -114,8 +116,6 @@ export default function MainApp() {
       const json = await response.json();
       
       if (workspaceRef.current) {
-        // FIX: Just tell the workspace to load. The setTimeout inside 
-        // BlocklyWorkspace will automatically trigger handleBlocklyChange for us!
         workspaceRef.current.loadTemplate(json);
         setViewMode("workspace");
       }
@@ -184,18 +184,16 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
   return (
     <div className="workspace-app-container">
       
-      {/* 2. Replace the raw <header> block with the component and pass the props */}
       <WorkspaceHeader 
         viewMode={viewMode}
         setViewMode={setViewMode}
         runCode={runCode}
-        setBottomPanel={setBottomPanel}
         handleSave={handleSave}
       />
 
       {/* MAIN SPLIT VIEW */}
       <Split 
-        className="workspace-split" 
+        className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} 
         sizes={[20, 80]} 
         minSize={[250, 400]} 
         gutterSize={8}
@@ -228,13 +226,39 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
         {/* MAIN WORKSPACE AREA */}
         <main className="workspace-main">
           
+          {/* TOGGLE SIDEBAR BUTTON */}
+          <button 
+            className={`sidebar-toggle-btn ${!isSidebarVisible ? 'closed' : ''}`}
+            onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+            title={isSidebarVisible ? "Hide Templates" : "Show Templates"}
+          >
+            <span className="toggle-icon">❮</span>
+          </button>
+
           {/* Blocks or Python Editor */}
           <div className="editor-container">
             <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
               <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
             </div>
-            <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#0d0d0d', padding: '20px', overflow: 'auto' }}>
-              <pre className="python-code-pre">{generatedPython}</pre>
+            
+            {/* UPDATED: Purple Syntax Highlighter matching your CSS with fixed text color */}
+            <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#1C1236', overflow: 'auto' }}>
+              <SyntaxHighlighter 
+                language="python" 
+                style={shadesOfPurple}
+                showLineNumbers={true}
+                customStyle={{
+                  margin: 0,
+                  padding: '20px',
+                  fontSize: '0.95rem',
+                  fontFamily: "'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+                  background: '#1C1236', // Matches the deep purple
+                  color: '#EBE4FF',      // <-- NEW: Forces default text to be light/readable
+                  minHeight: '100%'
+                }}
+              >
+                {generatedPython}
+              </SyntaxHighlighter>
             </div>
           </div>
 
