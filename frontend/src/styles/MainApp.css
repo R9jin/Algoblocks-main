@@ -400,7 +400,7 @@
   max-width: 750px; /* Slightly wider to accommodate longer code lines */
   border-collapse: collapse;
   font-size: 0.9rem;
-  background: #1C1236; /* Solid, deep background for high contrast */
+  background: #e7e7e7; /* Solid, deep background for high contrast */
   border-radius: 8px;
   overflow: hidden; 
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Slight drop shadow */
@@ -586,7 +586,6 @@
     font-size: 0.8rem;
   }
 }
-
 /* ========================= */
 /* Sidebar Toggle & Hidden State */
 /* ========================= */
@@ -615,18 +614,6 @@
 
 .sidebar-toggle-btn:hover {
   background-color: #7F57F9;
-}
-
-.workspace-split.sidebar-hidden .templates-sidebar {
-  display: none !important;
-}
-
-.workspace-split.sidebar-hidden .gutter {
-  display: none !important;
-}
-
-.workspace-split.sidebar-hidden .workspace-main {
-  width: 100% !important;
 }
 
 /* ========================= */
@@ -652,36 +639,6 @@
 /* 2. Prevent content from squishing/wrapping while the sidebar is sliding closed */
 .sidebar-search, .sidebar-list {
   min-width: 250px; 
-}
-
-/* ========================= */
-/* Sidebar Toggle & Hidden State */
-/* ========================= */
-
-.sidebar-toggle-btn {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%);
-  z-index: 1000;
-  background-color: #3A2A6B;
-  color: white;
-  border: none;
-  border-top-right-radius: 8px;
-  border-bottom-right-radius: 8px;
-  width: 24px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.2);
-  transition: background-color 0.2s ease;
-  font-size: 14px;
-}
-
-.sidebar-toggle-btn:hover {
-  background-color: #7F57F9;
 }
 
 /* 3. Animate to 0 width instead of display: none */

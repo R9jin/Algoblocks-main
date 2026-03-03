@@ -323,8 +323,11 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  useEffect(() => {
+useEffect(() => {
     if (workspace.current) return;
+
+    // Define plugin variables here so we can access them in the cleanup function
+    let searchPlugin, minimapPlugin, modalPlugin, backpackPlugin, highlightPlugin;
 
     if (blocklyDiv.current) {
       if (Blockly.ShortcutRegistry.registry.getRegistry()['startSearch']) {
@@ -339,19 +342,30 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         renderer: "geras", 
         theme: pastelTheme, 
         grid: {
-          spacing: 25,      // The distance between the dots
-          length: 3,        // A length of 1 to 3 makes it look like a dot rather than a line
-          colour: '#6e6e6e',// A soft grey color that looks great on a white background
-          snap: true        // Optional: Set to true if you want blocks to "snap" to the dots
+          spacing: 25,
+          length: 3,
+          colour: '#6e6e6e',
+          snap: true
         }
       });
 
       try {
-        new WorkspaceSearch(workspace.current).init();
-        new PositionedMinimap(workspace.current).init();
-        new Modal(workspace.current).init();
-        new Backpack(workspace.current).init();
-        new ContentHighlight(workspace.current).init();
+        // Instantiate plugins and keep references to them
+        searchPlugin = new WorkspaceSearch(workspace.current);
+        searchPlugin.init();
+        
+        minimapPlugin = new PositionedMinimap(workspace.current);
+        minimapPlugin.init();
+        
+        modalPlugin = new Modal(workspace.current);
+        modalPlugin.init();
+        
+        backpackPlugin = new Backpack(workspace.current);
+        backpackPlugin.init();
+        
+        highlightPlugin = new ContentHighlight(workspace.current);
+        highlightPlugin.init();
+        
         workspace.current.addChangeListener(shadowBlockConversionChangeListener);
       } catch (e) {
         console.warn("Plugin init skipped:", e.message);
@@ -361,9 +375,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       if (!pythonGenerator.__originalInit) {
         pythonGenerator.__originalInit = pythonGenerator.init;
         pythonGenerator.init = function(workspace) {
-          // 1. Run the default initialization (tracks variables and functions properly)
           pythonGenerator.__originalInit.call(this, workspace);
-          // 2. Remove the default global variable declarations (e.g., x = None)
           if (this.definitions_['variables']) {
             delete this.definitions_['variables'];
           }
@@ -374,9 +386,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       if (!pythonGenerator.__originalFinish) {
         pythonGenerator.__originalFinish = pythonGenerator.finish;
         pythonGenerator.finish = function(code) {
-          // 1. Run the default finish to properly assemble the code
           let finalCode = pythonGenerator.__originalFinish.call(this, code);
-          // 2. Strip out 'global ' statements
           finalCode = finalCode.replace(/^[ \t]*global[ \t]+.*\n?/gm, '');
           return finalCode.trim();
         };
@@ -529,18 +539,11 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return `# ${text}\n`;
       };
 
-      // ==========================================
-      // OVERRIDE: Listen to ALL structural workspace events
-      // ==========================================
       workspace.current.addChangeListener((event) => {
-        // NEW: If we are currently loading a template, ignore the event
         if (isLoading.current) return;
-
-        // Skip UI events like clicking, dragging, and scrolling to prevent lag
         if (event.isUiEvent) return;
 
         try {
-          // Whenever ANY non-UI change happens, save state and generate fresh code
           const json = Blockly.serialization.workspaces.save(workspace.current);
           const code = pythonGenerator.workspaceToCode(workspace.current);
           if (onChangeRef.current) onChangeRef.current(json, code);
@@ -548,7 +551,6 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
           console.warn("Blockly Workspace Update Error: ", e);
         }
       });
-      // ==========================================
       
       const observer = new ResizeObserver(() => {
         if (workspace.current) Blockly.svgResize(workspace.current);
@@ -558,15 +560,27 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
     }
 
     return () => {
+      // Gracefully dispose of all plugins so elements like the minimap don't duplicate
+      try {
+        if (searchPlugin && typeof searchPlugin.dispose === 'function') searchPlugin.dispose();
+        if (minimapPlugin && typeof minimapPlugin.dispose === 'function') minimapPlugin.dispose();
+        if (modalPlugin && typeof modalPlugin.dispose === 'function') modalPlugin.dispose();
+        if (backpackPlugin && typeof backpackPlugin.dispose === 'function') backpackPlugin.dispose();
+        if (highlightPlugin && typeof highlightPlugin.dispose === 'function') highlightPlugin.dispose();
+      } catch (e) {
+        console.warn("Plugin dispose skipped:", e.message);
+      }
+
       if (workspace.current) {
         workspace.current.dispose();
         workspace.current = null;    
       }
+      
       if (blocklyDiv.current?.resizeObserver) {
         blocklyDiv.current.resizeObserver.disconnect();
       }
     };
-  }, []); 
+  }, []);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>

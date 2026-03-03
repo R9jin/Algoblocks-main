@@ -5,6 +5,10 @@ import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
 import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
 import "../styles/MainApp.css";
 
+// --- NEW IMPORTS FOR SYNTAX HIGHLIGHTING ---
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
 const SIDEBAR_TEMPLATES = [
   { name: "Linear Search", path: "search/linear_search", desc: "Sequentially checks each element until the target is found or the list is exhausted." },
   { name: "Binary Search", path: "search/binary_search", desc: "Finds the position of a target value within a sorted array by repeatedly dividing the search interval in half." }, 
@@ -237,8 +241,24 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
             <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
               <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
             </div>
-            <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#0d0d0d', padding: '20px', overflow: 'auto' }}>
-              <pre className="python-code-pre">{generatedPython}</pre>
+            
+            {/* UPDATED: Purple Syntax Highlighter matching your CSS */}
+            <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#1C1236', overflow: 'auto' }}>
+              <SyntaxHighlighter 
+                language="python" 
+                style={shadesOfPurple}
+                showLineNumbers={true}
+                customStyle={{
+                  margin: 0,
+                  padding: '20px',
+                  fontSize: '0.95rem',
+                  fontFamily: "'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+                  background: '#1C1236', // Matches the deep purple from your MainApp.css
+                  minHeight: '100%'
+                }}
+              >
+                {generatedPython}
+              </SyntaxHighlighter>
             </div>
           </div>
 
