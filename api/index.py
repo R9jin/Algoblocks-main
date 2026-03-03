@@ -334,102 +334,99 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         override_poly = int(match.group(1))
                         override_log = 1 if "log n" in time_override else 0
 
-                # Combine loop depths and overrides to get effective complexity for this line
-                total_poly = current_poly + override_poly
-                total_log = current_log + override_log
-                total_sqrt = current_sqrt + override_sqrt
-                
-                # Dead code check: lines flagged as unreachable
-                is_dead = getattr(self, 'in_dead_coe', False) or time_override == "Dead Code"
+        # -> FIX: Unindented the following block so it runs for every line
+        # Combine loop depths and overrides to get effective complexity for this line
+        total_poly = current_poly + override_poly
+        total_log = current_log + override_log
+        total_sqrt = current_sqrt + override_sqrt
+        
+        # -> FIX: Corrected typo 'in_dead_coe' to 'in_dead_code'
+        is_dead = getattr(self, 'in_dead_code', False) or time_override == "Dead Code"
 
-                # Determine the time complexity string and weight for sorting in visualization
-                if time_override and is_recurrence and not is_dead:
-                    time_str = time_override
-                    t_weight = 1000  # Recurrence gets max weight to highlight
-                    local_weight = 1000
-                elif is_dead:
-                    time_str = "Dead Code"
-                    t_weight = -1
-                    local_weight = -1
-                else:
-                    # Default handling based on node type and detected loops
-                    display_poly = override_poly
-                    display_log = override_log
-                    display_sqrt = override_sqrt
-                    
-                    if not time_override:
-                        if isinstance(node, ast.For):
-                            display_poly = 1  # For loops assumed linear unless nested
-                        elif isinstance(node, ast.While):
-                            if self._is_log_loop(node):
-                                display_log = 1
-                            elif self._is_sqrt_loop(node):
-                                display_sqrt = 1
-                            else:
-                                display_poly = 1  # Default linear if no special pattern detected
-                    
+        # Determine the time complexity string and weight for sorting in visualization
+        if time_override and is_recurrence and not is_dead:
+            time_str = time_override
+            t_weight = 1000  # Recurrence gets max weight to highlight
+            local_weight = 1000
+        elif is_dead:
+            time_str = "Dead Code"
+            t_weight = -1
+            local_weight = -1
+        else:
+            # Default handling based on node type and detected loops
+            display_poly = override_poly
+            display_log = override_log
+            display_sqrt = override_sqrt
+            
+            if not time_override:
+                if isinstance(node, ast.For):
+                    display_poly = 1  # For loops assumed linear unless nested
+                elif isinstance(node, ast.While):
+                    if self._is_log_loop(node):
+                        display_log = 1
+                    elif self._is_sqrt_loop(node):
+                        display_sqrt = 1
+                    else:
+                        display_poly = 1  # Default linear if no special pattern detected
+            
             # Build the readable complexity string (e.g., O(n log n))
             time_str = self._build_time_str(display_poly, display_log, display_sqrt)
             t_weight = total_poly * 10 + total_sqrt * 7 + total_log * 5
             local_weight = display_poly * 10 + display_sqrt * 7 + display_log * 5
 
-            # Determine space complexity
-            space_str = space_override if space_override else "O(1)"
-            s_weight = 10 if "O(n)" in space_str else 0
-            if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
-    
+        # Determine space complexity
+        space_str = space_override if space_override else "O(1)"
+        s_weight = 10 if "O(n)" in space_str else 0
+        if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
+
         if is_dead or space_override == "Dead Code":
-                space_str = "Dead Code"
-                s_weight = -1
+            space_str = "Dead Code"
+            s_weight = -1
+
+        if self.details and self.details[-1]["lineOfCode"] == line_text:
+            existing_t_weight = self.details[-1].get("weight", -1)
+            existing_local_weight = self.details[-1].get("local_weight", -1)
+            
+            if t_weight > existing_t_weight or (t_weight == existing_t_weight and local_weight > existing_local_weight):
+                self.details[-1]["complexity"] = time_str
+                self.details[-1]["color"] = self.get_color(time_str)
+                self.details[-1]["weight"] = t_weight
+                self.details[-1]["local_weight"] = local_weight
+        else:
+            self.details.append({
+                "lineOfCode": line_text, 
+                "complexity": time_str, 
+                "indent": self.current_depth, 
+                "color": self.get_color(time_str), 
+                "weight": t_weight,
+                "local_weight": local_weight
+            })
+
+        if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
+            existing_s_weight = self.space_details[-1].get("weight", -1)
+            if s_weight > existing_s_weight:
+                self.space_details[-1]["complexity"] = space_str
+                self.space_details[-1]["color"] = self.get_color(space_str)
+                self.space_details[-1]["weight"] = s_weight
+        else:
+            self.space_details.append({
+                "lineOfCode": line_text, 
+                "complexity": space_str, 
+                "indent": self.current_depth, 
+                "color": self.get_color(space_str), 
+                "weight": s_weight
+            })
+
+        if not is_dead:
+            if t_weight > self.max_complexity: 
+                self.max_complexity = t_weight
+                if t_weight < 998:
+                    self.max_poly = total_poly
+                    self.max_log = total_log
+                    self.max_sqrt = total_sqrt
                 
-                if is_dead or space_override == "Dead Code":
-                    space_str = "Dead Code"
-                    s_weight = -1
-
-                if self.details and self.details[-1]["lineOfCode"] == line_text:
-                    existing_t_weight = self.details[-1].get("weight", -1)
-                    existing_local_weight = self.details[-1].get("local_weight", -1)
-                    
-                    if t_weight > existing_t_weight or (t_weight == existing_t_weight and local_weight > existing_local_weight):
-                        self.details[-1]["complexity"] = time_str
-                        self.details[-1]["color"] = self.get_color(time_str)
-                        self.details[-1]["weight"] = t_weight
-                        self.details[-1]["local_weight"] = local_weight
-                else:
-                    self.details.append({
-                        "lineOfCode": line_text, 
-                        "complexity": time_str, 
-                        "indent": self.current_depth, 
-                        "color": self.get_color(time_str), 
-                        "weight": t_weight,
-                        "local_weight": local_weight
-                    })
-
-                if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
-                    existing_s_weight = self.space_details[-1].get("weight", -1)
-                    if s_weight > existing_s_weight:
-                        self.space_details[-1]["complexity"] = space_str
-                        self.space_details[-1]["color"] = self.get_color(space_str)
-                        self.space_details[-1]["weight"] = s_weight
-                else:
-                    self.space_details.append({
-                        "lineOfCode": line_text, 
-                        "complexity": space_str, 
-                        "indent": self.current_depth, 
-                        "color": self.get_color(space_str), 
-                        "weight": s_weight
-                    })
-
-                if not is_dead:
-                    if t_weight > self.max_complexity: 
-                        self.max_complexity = t_weight
-                        if t_weight < 998:
-                            self.max_poly = total_poly
-                            self.max_log = total_log
-                            self.max_sqrt = total_sqrt
-                        
-                    if s_weight > self.max_space_weight: 
-                        self.max_space_weight = s_weight
+            if s_weight > self.max_space_weight: 
+                self.max_space_weight = s_weight
 
 
     def generic_visit(self, node):
