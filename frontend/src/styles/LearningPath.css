@@ -369,30 +369,47 @@ line-height:1.5;
 
 /* REFERENCES */
 
-.lp-references-section{
-margin-top:20px;
-padding:15px;
-background:#F9FAFB;
-border:1px solid #E5E7EB;
-border-radius:10px;
+/* --- References Section --- */
+.lp-references-section {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f4f4f4;
+  border-radius: 6px;
+  border-width: 1px 1px 1px 4px;
+  border-style: solid;
+  border-color: #a78bfa;
 }
 
-.lp-references-title{
-color:#7F57F9;
-font-size:.9rem;
-font-weight:700;
+.lp-references-title {
+  color: #a78bfa;
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: block;
 }
 
-.lp-references-list{
-margin-top:8px;
-padding-left:18px;
-font-size:.85rem;
-color:#1a1a1a;
-line-height:1.5;
+.lp-references-list {
+  margin: 10px 0 0 20px;
+  padding: 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+  line-height: 1.5;
 }
 
-.lp-references-list li{
-margin-bottom:6px;
+.lp-references-list li {
+  margin-bottom: 6px;
+}
+
+/* Make the link interactive and distinct */
+.lp-reference-link {
+  color: #000000;
+  text-decoration: underline;
+  text-decoration-color: #555;
+  transition: color 0.2s ease-in-out, text-decoration-color 0.2s ease-in-out;
+}
+
+.lp-reference-link:hover {
+  color: #a78bfa;
+  text-decoration-color: #a78bfa;
 }
 
 /* FOOTER */

@@ -14,16 +14,17 @@ const LESSONS = [
         number: "TOPIC 1",
         title: "What is an Algorithm?",
         level: "beginner",
-        teaching: `Welcome to Algorithm and Complexity! Before we write code, we must understand the logical structure behind it. 
+        teaching: `Welcome to the world of algorithms! Before writing any code, programmers must master the logic behind it.
 
-An algorithm is defined as a precise, step-by-step procedure or set of rules designed to perform a specific task or solve a particular problem. It serves as the logical foundation of a program, but it is not the program itself. Think of it like a recipe for cooking spaghetti—it tells you exactly what steps to follow to achieve the desired result. Studying algorithms is essential because they solve computational problems efficiently, improve software performance, and form the backbone of Computer Science.
+An algorithm is essentially a set of step-by-step instructions for solving a problem or completing a task. You can think of an algorithm exactly like a recipe for preparing a meal—it lists the ingredients (inputs) and gives you exact steps to achieve the desired result (output). Algorithms are fundamental because they tell computers exactly what actions to take to complete a task.
 
-A good algorithm must possess the following properties:
-1. Input: Zero or more inputs are provided.
-2. Output: At least one output is produced.
-3. Definiteness: Each step is precisely and unambiguously defined.
-4. Finiteness: The algorithm must terminate after a finite number of steps.
-5. Effectiveness: All operations can be performed practically and in a finite time.`,
+For a sequence of instructions to truly be considered a formal algorithm, it must possess these five key characteristics:
+
+1. Input: It should have clearly defined inputs (or zero inputs).
+2. Output: It must produce at least one expected output.
+3. Definiteness (Clear and Unambiguous): Every step must be precisely defined, leaving no room for confusion.
+4. Finiteness: The algorithm must eventually end after a finite number of steps; it cannot run forever.
+5. Effectiveness: Each step must be basic enough that it can be carried out practically and within a finite amount of time.`,
         algorithmSteps: `The 5-Step Problem-Solving Process:
 
 Step 1: Understand the Problem
@@ -37,8 +38,9 @@ Step 4: Implement the Solution
 Step 5: Test and Evaluate
         -> Check for correctness, efficiency, and robustness.`,
         references: [
-          "Introduction to Algorithms, Fourth Edition, Thomas H. Cormen, et al. (2022)",
-          "Design and Analysis of Algorithms, 3rd Edition, Levitin, Anany"
+          { text: "Introduction to Algorithms, Fourth Edition, Thomas H. Cormen, et al.", url: "https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/" },
+          { text: "Simplilearn: What is An Algorithm? Definition, Working, and Types", url: "https://www.simplilearn.com/tutorials/data-structure-tutorial/what-is-an-algorithm" },
+          { text: "GeeksforGeeks: What is an Algorithm | Introduction to Algorithms", url: "https://www.geeksforgeeks.org/introduction-to-algorithms/" }
         ],
         task: "Familiarize yourself with the visual blocks. Connect a simple sequence of Output blocks to print 'Hello' and 'World'.",
         testCases: 1,
@@ -47,27 +49,29 @@ Step 5: Test and Evaluate
       {
         id: "l1-t2",
         number: "TOPIC 2",
-        title: "Algorithm Representation",
+        title: "Logic & Flow",
         level: "beginner",
-        teaching: `Once a solution to a problem is designed, the next crucial step is to represent the algorithm clearly. This helps programmers, designers, and stakeholders understand and communicate the logic before it is translated into code, allowing for early error detection and better collaboration.
+        teaching: `Now that we know what an algorithm is, how do we structure its logic? No matter how complex a computer program might seem, its flow is ultimately built on three fundamental concepts called control structures:
 
-Common Forms of Algorithm Representation:
-1. Natural Language (Plain English): Writing steps in everyday language. It is easy to understand quickly but can be vague or ambiguous.
-2. Pseudocode: An informal, structured, language-like notation used to describe an algorithm's steps without strict syntax. It is more formal than plain English and easy to convert into actual code, making it excellent for planning.
-3. Flowcharts: A graphical representation using standard symbols (like diamonds for decisions and rectangles for processes) to visually show the flow of control.
-4. Structured Charts: Breaking an algorithm into modular components and displaying them hierarchically (top-down design).
-5. Code: The final implementation in a programming language. It is not ideal as a first step because it mixes pure logic with language-specific syntax.`,
+1. Sequence: This is the most basic control structure. It simply means that programming instructions are executed line-by-line, in the exact order they are written. The code runs straight from top to bottom.
+2. Selection (Conditional): In programming, we often need to make decisions based on certain conditions. Selection lets the program choose different paths of execution, evaluating whether a condition is true or false (using keywords like 'if' and 'else').
+3. Iteration (Looping): Iteration refers to repeating a set of actions multiple times as long as a certain condition holds true. We use loops like 'for' or 'while' to efficiently execute repeated tasks.
+
+By mastering sequence, selection, and iteration, you hold the building blocks to solve almost any logical challenge!`,
         algorithmSteps: `Translating Pseudocode to Execution
-Problem: Given two numbers, find their sum.
+Problem: Check if a number is Even or Odd.
 
 START
-  Input A, B
-  Sum <- A + B
-  Output Sum
+  Input N
+  if (N modulo 2 == 0) then
+    Output "The number is Even" (Selection)
+  else
+    Output "The number is Odd" (Selection)
+  end if
 END`,
         references: [
-          "C++ Data Structures and Algorithm Design Principles, John Carey et al. (2019)",
-          "Algorithms: Design Techniques and Analysis, 2nd Edition. M. H. Alsuwaiyel (2021)"
+          { text: "Study.com: Basic Constructs in Programming", url: "https://study.com/academy/lesson/basic-constructs-in-programming-sequence-selection-iteration.html" },
+          { text: "GeeksforGeeks: Control Structures in Programming Languages", url: "https://www.geeksforgeeks.org/control-structures-in-programming-languages/" }
         ],
         task: "Use an If-Else block to check a condition. If the condition is true, output 'Yes', otherwise output 'No'.",
         testCases: 2,
@@ -85,13 +89,23 @@ END`,
         number: "TOPIC 1",
         title: "Linear Search",
         level: "beginner",
-        teaching: "Imagine looking for a specific book in a disorganized pile. You would check every single book one by one until you find it. That's exactly how Linear Search works! It is a 'Brute Force' algorithm, meaning it systematically enumerates and checks all possible candidates for whether they satisfy the problem. While it is simple and guaranteed to find the answer if it exists, it can be slow for very large lists.",
-        algorithmSteps: `1. Given an array A[0..n-1] and a target key.
-2. Start at index 0 and compare A[i] to the target key.
-3. If they match, return the current index i.
-4. Otherwise, move to the next element (i + 1).
-5. Continue this process until the value is found or the array ends.
-6. If the array ends without finding the key, return -1.`,
+        teaching: `Brute force (also called exhaustive search) is a straightforward problem-solving paradigm. Algorithms in this category systematically enumerate and check all possible candidate solutions until they find one that satisfies the problem. They rely on sheer computing power rather than clever shortcuts.
+
+Linear search (or sequential search) is a classic brute-force method used to find a value in an array or list. It simply checks each element one by one from the beginning until it finds the target. 
+
+While it is perfectly simple and guaranteed to find a solution if one exists, it is highly inefficient for massive datasets. In the worst-case scenario (if the item is at the very end or doesn't exist), the algorithm must scan all 'n' elements, giving it a time complexity of O(n). However, it requires virtually no extra memory, resulting in an excellent space complexity of O(1).`,
+        algorithmSteps: `Linear Search Procedure:
+
+1. Start at the first element (index i = 0) of the array A.
+2. Compare the current element A[i] with the target key.
+3. If they match, return the index i (Found!).
+4. If they do not match, move to the next element (i = i + 1).
+5. Repeat steps 2-4 until the end of the array is reached.
+6. If the array ends and the target is not found, return -1.`,
+        references: [
+          { text: "Khan Academy: Linear Search", url: "https://www.khanacademy.org/computing/computer-science/algorithms/intro-to-algorithms/a/linear-search" },
+          { text: "Programiz: Linear Search Algorithm", url: "https://www.programiz.com/dsa/linear-search" }
+        ],
         task: "Build a Linear Search using blocks: Use a Loop to iterate the array, Compare to check each element, and return the index if found.",
         testCases: 3,
         templatePath: "search/linear_search"
@@ -101,13 +115,27 @@ END`,
         number: "TOPIC 2",
         title: "Bubble Sort",
         level: "beginner",
-        teaching: "Have you ever noticed how larger bubbles rise to the surface of a glass of soda? Bubble sort works similarly! It is a simple comparison-based sorting algorithm that repeatedly steps through the list and swaps adjacent elements if they are in the wrong order. Because large values 'bubble up' to the end of the list on each pass, it gets its name.",
-        algorithmSteps: `1. Make multiple passes over the array.
-2. On each pass i, loop through the unsorted portion: compare A[j] and A[j+1].
-3. If A[j] > A[j+1], swap their positions.
-4. After the first full pass, the largest element has 'bubbled' to the last position.
-5. Repeat the process for the remaining elements.
-6. (Optional) Stop early if no swaps occur in a pass.`,
+        teaching: `Bubble sort is a simple, brute-force comparison-based sorting algorithm. It repeatedly steps through a list, compares adjacent elements, and swaps them if they are in the wrong order. 
+
+It gets its name because with each pass, the largest remaining value "bubbles up" to its correct position at the end of the list. Because it exhausts all possibilities without optimization, Bubble Sort is typically used as an educational stepping stone rather than in practical, real-world applications.
+
+Performance Analysis:
+• Worst/Average Case Time Complexity: O(n²). For an array of size n, it makes roughly n² comparisons, making it incredibly slow for large lists.
+• Best Case Time Complexity: O(n). If the list is already sorted, an optimized version can stop early.
+• Space Complexity: O(1). It sorts the array "in-place", requiring no additional memory arrays.`,
+        algorithmSteps: `Bubble Sort Procedure:
+
+1. Make multiple passes over the array from start to end.
+2. On each pass, iterate through the unsorted portion of the array.
+3. Compare adjacent elements A[j] and A[j+1].
+4. If A[j] > A[j+1], swap their positions.
+5. After one full pass, the largest element is locked in place at the end.
+6. Repeat the process for the remaining elements.
+7. (Optimization) If a full pass occurs with ZERO swaps, the array is sorted. Stop early!`,
+        references: [
+          { text: "GeeksforGeeks: Bubble Sort Algorithm", url: "https://www.geeksforgeeks.org/bubble-sort/" },
+          { text: "HackerEarth: Sorting Algorithms - Bubble Sort", url: "https://www.hackerearth.com/practice/algorithms/sorting/bubble-sort/tutorial/" }
+        ],
         task: "Build a Bubble Sort using nested loops and an if-condition to swap elements that are out of order.",
         testCases: 4,
         templatePath: "sort/bubble_sort"
@@ -124,18 +152,34 @@ END`,
         number: "TOPIC 1",
         title: "Recursive Algorithms",
         level: "intermediate",
-        teaching: "Recursion is a programming technique where a function calls itself to solve smaller instances of the same problem. Recursion simplifies problems that can be broken into smaller subproblems.\n\nA recursive algorithm usually contains two main parts:\n• Base Case: The condition that stops the recursion.\n• Recursive Case: The part where the function calls itself with a smaller input.",
-        algorithmSteps: `Recursive Definition (Factorial)
+        teaching: `In computer science, we often encounter problems that can be broken down into smaller, identical subproblems. Recursion is a programming technique where a function calls itself to solve these smaller instances.
 
-factorial(n):
-  if n <= 1 return 1
-  else return n × factorial(n-1)
+When analyzing the time complexity of recursive algorithms, we use "Recurrence Relations." A recurrence relation is a mathematical equation that expresses the running time of a problem in terms of its smaller inputs.
 
-Example Breakdown:
-5! = 5 × 4 × 3 × 2 × 1
-   = 5 × factorial(4)
-   = 5 × (4 × factorial(3)) ...`,
-        task: "Complete the recursive algorithm structure.",
+Every properly designed recursive algorithm MUST contain two distinct parts:
+1. Base Case: The condition where the recursion terminates. It specifies the result for the smallest, simplest input size without calling itself again. Without a base case, recursion leads to infinite loops and stack overflows!
+2. Recursive Step: The part where the function calls itself with a smaller input, moving closer to the base case.
+
+A classic example is finding the Factorial of a number (n!), which mathematically translates to n * (n-1)!.`,
+        algorithmSteps: `Recursive Procedure (Factorial Example):
+
+Function Factorial(n):
+  1. Check the Base Case:
+     If n == 0 or n == 1, return 1.
+  2. Execute the Recursive Step:
+     Return n multiplied by the result of Factorial(n - 1).
+  
+Example Execution Trace for Factorial(4):
+  Factorial(4) returns 4 * Factorial(3)
+  Factorial(3) returns 3 * Factorial(2)
+  Factorial(2) returns 2 * Factorial(1)
+  Factorial(1) returns 1 (Base Case reached!)
+  Result propagates back up: 1 * 2 * 3 * 4 = 24.`,
+        references: [
+          { text: "GeeksforGeeks: Introduction to Recursion", url: "https://www.geeksforgeeks.org/introduction-to-recursion-data-structure-and-algorithm-tutorials/" },
+          { text: "FreeCodeCamp: Understanding Recursion in Programming", url: "https://www.freecodecamp.org/news/understanding-recursion-in-programming/" }
+        ],
+        task: "Complete the recursive algorithm structure to calculate a factorial.",
         testCases: 2,
         templatePath: "recursive/recursive_factorial"
       }
@@ -149,19 +193,70 @@ Example Breakdown:
       {
         id: "l4-t1",
         number: "TOPIC 1",
-        title: "Merge Sort",
+        title: "Binary Search",
         level: "intermediate",
-        teaching: "Merge Sort is a highly efficient sorting algorithm that fully utilizes the Divide and Conquer strategy. It is a divide-and-conquer algorithm that divides a list into smaller parts, sorts them, and then merges them back together.",
-        algorithmSteps: `Steps:
-1. Divide the array into two halves.
-2. Recursively sort each half.
-3. Merge the sorted halves.
+        teaching: `Divide and Conquer is a highly efficient problem-solving paradigm where a large problem is broken down into smaller subproblems, solved recursively, and combined to form the final solution.
+
+Binary Search is a classic Divide and Conquer algorithm used exclusively on sorted arrays. Instead of checking every single element (like Linear Search does), Binary Search repeatedly divides the search space in half. 
+
+It follows the core paradigm steps:
+1. Divide: Find the middle element.
+2. Conquer: If the middle element is the target, you're done! Otherwise, if the target is smaller, search only the left half. If larger, search only the right half.
+3. Combine: No explicit combination is needed for searching.
+
+Because it halves the remaining elements with every single step, its worst-case time complexity is incredibly fast: O(log n).`,
+        algorithmSteps: `Binary Search Procedure:
+
+1. Set 'low' index to 0 and 'high' index to n-1.
+2. While 'low' is less than or equal to 'high':
+   a. Calculate the 'mid' index: (low + high) / 2.
+   b. Compare A[mid] with the target key.
+   c. If A[mid] == target, return 'mid' (Found!).
+   d. If target < A[mid], set 'high' to mid - 1 (Discard right half).
+   e. If target > A[mid], set 'low' to mid + 1 (Discard left half).
+3. If the loop ends naturally, the target is not in the array. Return -1.`,
+        references: [
+          { text: "Khan Academy: Binary Search", url: "https://www.khanacademy.org/computing/computer-science/algorithms/binary-search/a/binary-search" },
+          { text: "GeeksforGeeks: Binary Search Algorithm", url: "https://www.geeksforgeeks.org/binary-search/" }
+        ],
+        task: "Calculate the middle index, and iteratively search the left or right half based on whether the target is greater or smaller.",
+        testCases: 4,
+        templatePath: "search/binary_search"
+      },
+      {
+        id: "l4-t2",
+        number: "TOPIC 2",
+        title: "Merge Sort",
+        level: "advanced",
+        teaching: `Merge Sort is a stable, comparison-based sorting algorithm that fully utilizes the Divide and Conquer strategy. Rather than sorting a large list blindly, it systematically fragments the problem and builds it back up.
+
+Merge Sort guarantees a phenomenal time complexity of O(n log n) in its best, average, and worst cases, making it vastly superior to Bubble Sort for large datasets.
+
+How it applies Divide and Conquer:
+1. Divide: Split the array exactly into two halves down to single-element sub-arrays.
+2. Conquer: Recursively sort the two halves. (Note: An array of 1 element is already naturally sorted!).
+3. Combine: Meticulously merge the two sorted halves back together into a single sorted array.
+
+One trade-off is its space complexity: Merge Sort requires O(n) auxiliary memory to hold the arrays while merging them together.`,
+        algorithmSteps: `Merge Sort Procedure:
+
+Function MergeSort(Array):
+  1. If the Array has 1 or 0 elements, it is already sorted. Return the Array.
+  2. Divide: Find the midpoint and split the Array into LeftHalf and RightHalf.
+  3. Conquer: Recursively call MergeSort(LeftHalf) and MergeSort(RightHalf).
+  4. Combine: Call a Merge() function to compare elements from both halves one by one, 
+     placing the smaller element sequentially into a new sorted array.
+  5. Return the fully merged and sorted array.
 
 Example Execution: [8,3,5,2]
 Split -> [8,3] and [5,2]
 Split -> [8], [3], [5], [2]
 Merge -> [3,8] and [2,5]
 Merge -> [2,3,5,8]`,
+        references: [
+          { text: "GeeksforGeeks: Merge Sort Algorithm", url: "https://www.geeksforgeeks.org/merge-sort/" },
+          { text: "Programiz: Merge Sort", url: "https://www.programiz.com/dsa/merge-sort" }
+        ],
         task: "Implement the divide step by splitting the array in half, and the combine step to merge two sorted arrays into one.",
         testCases: 4,
         templatePath: "sort/merge_sort"
@@ -246,13 +341,11 @@ export default function LearningPath() {
                       {isExpanded && (
                         <div className="lp-topic-content">
                           
-                          {/* Rich Teaching Section */}
                           <div className="lp-teaching-section">
                             <strong className="lp-teaching-title">Module Lesson:</strong>
                             <p className="lp-topic-teaching">{topic.teaching}</p>
                           </div>
                           
-                          {/* Algorithm Steps Block */}
                           <div className="lp-algorithm-steps">
                             <strong className="lp-steps-title">Algorithm Procedure:</strong>
                             <div className="lp-code-block">
@@ -262,19 +355,27 @@ export default function LearningPath() {
                             </div>
                           </div>
 
-                          {/* Task Assignment */}
                           <div className="lp-topic-task">
                             <strong className="lp-task-title">Your Mission:</strong>
                             <p className="lp-task-desc">{topic.task}</p>
                           </div>
 
-                          {/* References Block */}
                           {topic.references && (
                             <div className="lp-references-section">
                               <strong className="lp-references-title">References:</strong>
                               <ul className="lp-references-list">
                                 {topic.references.map((ref, idx) => (
-                                  <li key={idx}>{ref}</li>
+                                  <li key={idx}>
+                                    {/* Using <a> tags to make the references clickable */}
+                                    <a 
+                                      href={ref.url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer" 
+                                      className="lp-reference-link"
+                                    >
+                                      {ref.text}
+                                    </a>
+                                  </li>
                                 ))}
                               </ul>
                             </div>
