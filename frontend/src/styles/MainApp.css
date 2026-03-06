@@ -324,7 +324,7 @@
 .resizer-dash {
   width: 40px;
   height: 2px;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(2, 1, 1, 0.5);
   border-radius: 2px;
 }
 
@@ -332,8 +332,7 @@
   display: flex;
   justify-content: space-between;
   padding: 10px 20px;
-  background: #2D1F52;
-  border-bottom: 1px solid #4830A0;
+  border-top: 1px solid #4830A0;
 }
 
 .panel-title {
@@ -662,3 +661,7 @@
   width: 100% !important;
 }
 
+.total-label{
+  color:#a78bfa; /* choose your color */
+  font-weight:600;
+}
