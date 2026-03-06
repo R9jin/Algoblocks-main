@@ -1,0 +1,120 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { LuLayoutDashboard, LuFolder, LuLogOut } from "react-icons/lu";
+
+export default function UserHeader({
+  user = { name: "Test User", email: "test@example.com" },
+  onLogoutClick 
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+  const navigate = useNavigate();
+
+  const initials = useMemo(() => {
+    const parts = (user?.name || "User").trim().split(/\s+/);
+    const a = parts[0]?.[0] || "U";
+    const b = parts.length > 1 ? parts[parts.length - 1][0] : "";
+    return (a + b).toUpperCase();
+  }, [user?.name]);
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target)) setOpen(false);
+    };
+    const onEsc = (e) => e.key === "Escape" && setOpen(false);
+
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, []);
+
+  const onSignOut = () => {
+    setOpen(false);
+    if (onLogoutClick) {
+      onLogoutClick(); 
+    } else {
+      navigate("/signin");
+    }
+  };
+
+  return (
+    <nav className="landing-nav">
+      <div className="logo-container">
+        <img
+          src="/assets/algoblocks_logo.png"
+          alt="AlgoBlocks Logo"
+          className="logo-img"
+        />
+        <h1 className="logo-text">ALGOBLOCKS</h1>
+      </div>
+
+      <div className="nav-links">
+        <div className="user-menu" ref={menuRef}>
+          <button
+            type="button"
+            className="user-menu-btn"
+            onClick={() => setOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={open}
+          >
+            <span className="user-avatar" aria-hidden="true">{initials}</span>
+          </button>
+
+          {open && (
+            <div className="user-dropdown" role="menu">
+              <div className="user-dropdown-head">
+                <div className="dropdown-avatar" aria-hidden="true">
+                  {initials}
+                </div>
+                <div className="user-name">{user?.name || "User"}</div>
+                <div className="user-email">{user?.email || ""}</div>
+              </div>
+
+              <button
+                type="button"
+                className="user-dd-item"
+                onClick={() => {
+                  setOpen(false);
+                  navigate("/dashboard");
+                }}
+                role="menuitem"
+              >
+                <LuLayoutDashboard size={18} aria-hidden="true" />
+                Go to Dashboard
+              </button>
+
+              <button
+                type="button"
+                className="user-dd-item"
+                onClick={() => {
+                  setOpen(false);
+                  navigate("/projects");
+                }}
+                role="menuitem"
+              >
+                <LuFolder size={18} aria-hidden="true" />
+                Projects
+              </button>
+
+              <div className="user-dd-divider" />
+
+              <button
+                type="button"
+                className="user-dd-item danger"
+                onClick={onSignOut}
+                role="menuitem"
+              >
+                <LuLogOut size={18} aria-hidden="true" />
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}

@@ -10,7 +10,7 @@ export default function DashboardHeader() {
           <img src="/assets/algoblocks_logo.png" alt="Logo" className="logo-img" />
           <h1 className="logo-text" style={{color: '#3C2D76'}}>ALGOBLOCKS</h1>
         </div>
-        <Link to="/" className="back-home">&gt; Back to Home</Link>
+        <Link to="/home" className="back-home">&gt; Back to Home</Link>
       </div>
       
       <div className="header-right">
