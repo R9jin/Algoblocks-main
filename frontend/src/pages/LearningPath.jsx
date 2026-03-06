@@ -1,205 +1,168 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { shadesOfPurple } from "react-syntax-highlighter/dist/esm/styles/prism";
 import DashboardHeader from "../components/DashboardHeader";
 import "../styles/LearningPath.css";
 
 const LESSONS = [
-{
-  id: "l1",
-  number: "LESSON 1",
-  title: "Algorithm Foundations",
-  topics: [
+  {
+    id: "l1",
+    number: "LESSON 1",
+    title: "Introduction to Algorithms",
+    topics: [
+      {
+        id: "l1-t1",
+        number: "TOPIC 1",
+        title: "What is an Algorithm?",
+        level: "beginner",
+        teaching: `Welcome to Algorithm and Complexity! Before we write code, we must understand the logical structure behind it. 
 
-{
-id: "l1-t1",
-number: "TOPIC 1",
-title: "Introduction to Algorithms",
-level: "beginner",
-description: "Understanding what algorithms are and why they are important in computer science.",
-content: `
-Introduction to Algorithms
+An algorithm is defined as a precise, step-by-step procedure or set of rules designed to perform a specific task or solve a particular problem[cite: 1]. It serves as the logical foundation of a program, but it is not the program itself[cite: 1]. Think of it like a recipe for cooking spaghetti—it tells you exactly what steps to follow to achieve the desired result[cite: 1]. Studying algorithms is essential because they solve computational problems efficiently, improve software performance, and form the backbone of Computer Science[cite: 1].
 
-An algorithm is a step-by-step procedure used to solve a problem or accomplish a specific task. In computer science, algorithms describe the sequence of operations that transform input into output.
+A good algorithm must possess the following properties:
+1. Input: Zero or more inputs are provided[cite: 1].
+2. Output: At least one output is produced[cite: 1].
+3. Definiteness: Each step is precisely and unambiguously defined[cite: 1].
+4. Finiteness: The algorithm must terminate after a finite number of steps[cite: 1].
+5. Effectiveness: All operations can be performed practically and in a finite time[cite: 1].`,
+        algorithmSteps: `#!/bin/bash
+# ---------------------------------------------------------
+# The 5-Step Problem-Solving Process in Computer Science
+# Logic-only version (no echo)
+# ---------------------------------------------------------
 
-Algorithms are the foundation of all software systems. Every program relies on algorithms to process data and produce results.
+# Step 1: Understand the Problem
+# Identify inputs, expected outputs, constraints.
 
-Characteristics of a Good Algorithm
+# Step 2: Analyze the Problem
+# Break the problem into smaller components.
 
-1. Input – accepts zero or more inputs
-2. Output – produces at least one output
-3. Definiteness – steps are clear and unambiguous
-4. Finiteness – the algorithm eventually stops
-5. Effectiveness – steps can actually be executed
+# Step 3: Design the Algorithm
+# Create a step-by-step plan (pseudocode or flowchart).
 
-Example
+# Step 4: Implement the Solution
+# Convert your logic into an actual programming language.
 
-Problem: Find the largest number in a list
+# Step 5: Test and Evaluate
+# Check for correctness, efficiency, and robustness.`,
+        references: [
+          "Introduction to Algorithms, Fourth Edition, Thomas H. Cormen, et al. (2022)",
+          "Design and Analysis of Algorithms, 3rd Edition, Levitin, Anany"
+        ],
+        task: "Familiarize yourself with the visual blocks. Connect a simple sequence of Output blocks to print 'Hello' and 'World'.",
+        testCases: 1,
+        templatePath: "intro/what_is_algo"
+      },
+      {
+        id: "l1-t2",
+        number: "TOPIC 2",
+        title: "Algorithm Representation",
+        level: "beginner",
+        teaching: `Once a solution to a problem is designed, the next crucial step is to represent the algorithm clearly[cite: 1]. This helps programmers, designers, and stakeholders understand and communicate the logic before it is translated into code, allowing for early error detection and better collaboration[cite: 1].
 
-Steps:
-1. Assume the first number is the largest
-2. Compare it with the next number
-3. If the next number is larger, update the largest
-4. Repeat until the list ends
-5. Output the largest number
-`,
-task: "Identify the correct sequence of steps in a simple algorithm.",
-testCases: 3,
-templatePath: "intro/what_is_algo"
-},
+Common Forms of Algorithm Representation[cite: 1]:
+1. Natural Language (Plain English): Writing steps in everyday language. It is easy to understand quickly but can be vague or ambiguous.
+2. Pseudocode: An informal, structured, language-like notation used to describe an algorithm's steps without strict syntax. It is more formal than plain English and easy to convert into actual code, making it excellent for planning.
+3. Flowcharts: A graphical representation using standard symbols (like diamonds for decisions and rectangles for processes) to visually show the flow of control.
+4. Structured Charts: Breaking an algorithm into modular components and displaying them hierarchically (top-down design).
+5. Code: The final implementation in a programming language. It is not ideal as a first step because it mixes pure logic with language-specific syntax.`,
+        algorithmSteps: `#!/bin/bash
+# ---------------------------------------------------------
+# Translating Pseudocode to a Bash Script Execution
+# Problem: Given two numbers, find their sum.
+# ---------------------------------------------------------
 
-{
-id: "l1-t2",
-number: "TOPIC 2",
-title: "Linear Search",
-level: "beginner",
-description: "A basic searching algorithm that checks elements sequentially.",
-content: `
-Linear Search
-
-Linear Search examines each element of a list one by one until the desired value is found.
-
-How it works
-
-1. Start at the first element
-2. Compare it with the target
-3. If equal → return index
-4. Otherwise move to the next element
-5. Repeat until found or list ends
-
-Example
-
-Array: [4,7,2,9,5]
-Target: 9
-
-Compare 4 → no  
-Compare 7 → no  
-Compare 2 → no  
-Compare 9 → found
-
-Index = 3
-
-Time Complexity
-
-Best Case: O(1)
-Worst Case: O(n)
-`,
-task: "Build a block algorithm that searches for a number in an array.",
-testCases: 3,
-templatePath: "search/linear_search"
-},
-
-{
-id: "l1-t3",
-number: "TOPIC 3",
-title: "Binary Search",
-level: "intermediate",
-description: "An efficient searching algorithm that works on sorted arrays.",
-content: `
-Binary Search works by repeatedly dividing a sorted array in half.
-
-Steps
-
-1. Find the middle element
-2. If target equals middle → found
-3. If target < middle → search left half
-4. If target > middle → search right half
-5. Repeat
-
-Time Complexity
-
-Best Case: O(1)
-Worst Case: O(log n)
-
-Binary search is significantly faster than linear search for large datasets.
-`,
-task: "Complete the block sequence for binary search.",
-testCases: 3,
-templatePath: "search/binary_search"
+START() {
+  # Input A, B
+  read -p "Enter first number (A): " A
+  read -p "Enter second number (B): " B
+  
+  # Sum <- A + B
+  Sum=$((A + B))
+  
+  # Output Sum
+  echo "The Output Sum is: $Sum"
 }
 
-]
-},
-
-{
-id: "l2",
-number: "LESSON 2",
-title: "Sorting Algorithms",
-topics: [
-
-{
-id: "l2-t1",
-number: "TOPIC 1",
-title: "Bubble Sort",
-level: "beginner",
-description: "A simple sorting algorithm that swaps adjacent elements.",
-content: `
-Bubble Sort repeatedly compares adjacent elements and swaps them if they are in the wrong order.
-
-Example
-
-[5,3,8,2]
-
-Pass 1
-5 3 swap
-5 8 ok
-8 2 swap
-
-Result
-[3,5,2,8]
-
-Time Complexity
-
-Worst Case: O(n²)
-`,
-task: "Create a bubble sort algorithm using block operations.",
-testCases: 3,
-templatePath: "sort/bubble_sort"
-},
-
-{
-id: "l2-t2",
-number: "TOPIC 2",
-title: "Selection Sort",
-level: "beginner",
-description: "Repeatedly selects the smallest element.",
-content: `
-Selection Sort divides the list into sorted and unsorted sections.
-
-Each step:
-Find the smallest value
-Swap it with the first unsorted position
-
-Time Complexity
-
-O(n²)
-`,
-task: "Arrange blocks to implement selection sort.",
-testCases: 3,
-templatePath: "sort/selection_sort"
-},
-
-{
-id: "l2-t3",
-number: "TOPIC 3",
-title: "Insertion Sort",
-level: "beginner",
-description: "Builds the sorted list one element at a time.",
-content: `
-Insertion Sort works similar to sorting cards in your hand.
-
-Each element is inserted into its correct position in the sorted portion.
-
-Best Case: O(n)
-Worst Case: O(n²)
-`,
-task: "Construct an insertion sort algorithm using blocks.",
-testCases: 3,
-templatePath: "sort/insertion_sort"
-}
-
-]
-}
-
+# Execute the Algorithm
+START
+# END`,
+        references: [
+          "C++ Data Structures and Algorithm Design Principles, John Carey et al. (2019)",
+          "Algorithms: Design Techniques and Analysis, 2nd Edition. M. H. Alsuwaiyel (2021)"
+        ],
+        task: "Use an If-Else block to check a condition. If the condition is true, output 'Yes', otherwise output 'No'.",
+        testCases: 2,
+        templatePath: "intro/logic_flow"
+      }
+    ]
+  },
+  {
+    id: "l2",
+    number: "LESSON 2",
+    title: "Brute Force Algorithms",
+    topics: [
+      {
+        id: "l2-t1",
+        number: "TOPIC 1",
+        title: "Linear Search",
+        level: "beginner",
+        teaching: "Imagine looking for a specific book in a disorganized pile. You would check every single book one by one until you find it. That's exactly how Linear Search works! It is a 'Brute Force' algorithm, meaning it systematically enumerates and checks all possible candidates for whether they satisfy the problem. While it is simple and guaranteed to find the answer if it exists, it can be slow for very large lists.",
+        algorithmSteps: `#!/bin/bash\n# Linear Search Implementation\n\narray=(10 20 30 40 50)\ntarget=30\n\nfor i in "\${!array[@]}"; do\n  if [[ "\${array[$i]}" == "$target" ]]; then\n    echo "Found at index $i"\n    exit 0\n  fi\ndone\n\necho "Not found"`,
+        task: "Build a Linear Search using blocks: Use a Loop to iterate the array, Compare to check each element, and return the index if found.",
+        testCases: 3,
+        templatePath: "search/linear_search"
+      },
+      {
+        id: "l2-t2",
+        number: "TOPIC 2",
+        title: "Bubble Sort",
+        level: "beginner",
+        teaching: "Have you ever noticed how larger bubbles rise to the surface of a glass of soda? Bubble sort works similarly! It is a simple comparison-based sorting algorithm that repeatedly steps through the list and swaps adjacent elements if they are in the wrong order. Because large values 'bubble up' to the end of the list on each pass, it gets its name.",
+        algorithmSteps: `#!/bin/bash\n# Bubble Sort Logic\n\n# 1. Make multiple passes over the array.\n# 2. On each pass i, loop through the unsorted portion.\n# 3. Compare A[j] and A[j+1].\n# 4. If A[j] > A[j+1], swap their positions.\n# 5. Repeat until sorted.`,
+        task: "Build a Bubble Sort using nested loops and an if-condition to swap elements that are out of order.",
+        testCases: 4,
+        templatePath: "sort/bubble_sort"
+      }
+    ]
+  },
+  {
+    id: "l3",
+    number: "LESSON 3",
+    title: "Recursion & Recurrence",
+    topics: [
+      {
+        id: "l3-t1",
+        number: "TOPIC 1",
+        title: "Recursive Algorithms",
+        level: "intermediate",
+        teaching: "Recursion is a programming technique where a function calls itself to solve smaller instances of the same problem. Recursion simplifies problems that can be broken into smaller subproblems.\n\nA recursive algorithm usually contains two main parts:\n• Base Case: The condition that stops the recursion.\n• Recursive Case: The part where the function calls itself with a smaller input.",
+        algorithmSteps: `#!/bin/bash\n# Recursive Factorial\n\nfactorial() {\n  if [[ $1 -le 1 ]]; then\n    echo 1\n  else\n    prev=$(factorial $(($1 - 1)))\n    echo $(($1 * prev))\n  fi\n}\n\nfactorial 5`,
+        task: "Complete the recursive algorithm structure.",
+        testCases: 2,
+        templatePath: "recursive/recursive_factorial"
+      }
+    ]
+  },
+  {
+    id: "l4",
+    number: "LESSON 4",
+    title: "Divide and Conquer",
+    topics: [
+      {
+        id: "l4-t1",
+        number: "TOPIC 1",
+        title: "Merge Sort",
+        level: "intermediate",
+        teaching: "Merge Sort is a highly efficient sorting algorithm that fully utilizes the Divide and Conquer strategy. It is a divide-and-conquer algorithm that divides a list into smaller parts, sorts them, and then merges them back together.",
+        algorithmSteps: `#!/bin/bash\n# Merge Sort Execution\n\n# 1. Divide: Split the array into two halves.\n# 2. Conquer: Recursively sort each half.\n# 3. Combine: Merge the sorted halves.\n\n# Split -> [8,3] and [5,2]\n# Split -> [8], [3], [5], [2]\n# Merge -> [3,8] and [2,5]\n# Merge -> [2,3,5,8]`,
+        task: "Implement the divide step by splitting the array in half, and the combine step to merge two sorted arrays into one.",
+        testCases: 4,
+        templatePath: "sort/merge_sort"
+      }
+    ]
+  }
 ];
 
 export default function LearningPath() {
@@ -218,7 +181,6 @@ export default function LearningPath() {
     <div className="learning-path-page">
       <DashboardHeader />
 
-      {/* Main Content */}
       <main className="lp-main">
         <div style={{ marginBottom: "25px" }}>
           <Link to="/dashboard" className="lp-back-link">
@@ -227,7 +189,6 @@ export default function LearningPath() {
           </Link>
         </div>
 
-        {/* Hero Banner */}
         <div className="lp-hero">
           <div className="lp-hero-icon">
             <img src="/assets/learning-icon.png" alt="Learning" />
@@ -238,12 +199,10 @@ export default function LearningPath() {
           </div>
         </div>
 
-        {/* Info Box */}
         <div className="lp-info-box">
-          Each topic has a built-in activity where you build the algorithm using visual blocks. Click on a topic to start.
+          Read the module teachings, study the algorithm scripts, and complete the interactive tasks to advance!
         </div>
 
-        {/* Lesson List */}
         <div className="lp-lessons">
           {LESSONS.map((lesson) => (
             <div key={lesson.id} className="lp-lesson-card">
@@ -277,30 +236,42 @@ export default function LearningPath() {
                         <div className="lp-topic-badge">{topic.level}</div>
                       </div>
 
-                      {/* Expanded Content */}
                       {isExpanded && (
                         <div className="lp-topic-content">
-                          <p className="lp-topic-desc">{topic.description}</p>
-                          {topic.content && (
-                          <div className="lp-topic-lesson">
-                          <div className="lp-lesson-content">
-                            {topic.content.split("\n").map((line, i) => {
-                              if (line.trim().length === 0) return <br key={i} />
-
-                              if (line.length < 40 && !line.includes(":") && !line.includes(".")) {
-                                return <h4 key={i} className="lp-content-header">{line}</h4>
-                              }
-
-                              return <p key={i}>{line}</p>
-                            })}
+                          {/* Rich Teaching Section */}
+                          <div className="lp-teaching-section">
+                            <strong style={{fontSize: '1.1rem' }}>Module Lesson:</strong>
+                            <p className="lp-topic-teaching" style={{ whiteSpace: "pre-wrap", lineHeight: '1.6', marginTop: '10px' }}>
+                              {topic.teaching}
+                            </p>
                           </div>
-                        </div>
-                      )}
-                          <div className="lp-topic-task">
-                            <strong>Task</strong>
-                            <p>{topic.task}</p>
+                          
+                          <div className="lp-algorithm-steps" style={{ margin: '25px 0' }}>
+                            <strong style={{ fontSize: '1.1rem', display: 'block', marginBottom: '10px' }}>Algorithm Execution Script:</strong>
+                            <SyntaxHighlighter language="bash" style={shadesOfPurple} wrapLines={true} showLineNumbers={true}>
+                              {topic.algorithmSteps}
+                            </SyntaxHighlighter>
                           </div>
-                          <div className="lp-topic-footer">
+
+                          {/* Task Assignment */}
+                          <div className="lp-topic-task" style={{ marginBottom: '15px' }}>
+                            <strong style={{fontSize: '1.1rem' }}>Your Mission:</strong>
+                            <p style={{marginTop: '8px' }}>{topic.task}</p>
+                          </div>
+
+                          {/* References Block */}
+                          {topic.references && (
+                            <div className="lp-references-section" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#e4e4e4', borderRadius: '6px', borderLeft: '4px solid #a78bfa' }}>
+                              <strong style={{ color: '#a78bfa', fontSize: '0.95rem' }}>References:</strong>
+                              <ul style={{ margin: '10px 0 0 20px', padding: 0, fontSize: '0.85rem', color: '#9ca3af', lineHeight: '1.5' }}>
+                                {topic.references.map((ref, idx) => (
+                                  <li key={idx} style={{ marginBottom: '6px' }}>{ref}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          <div className="lp-topic-footer" style={{ marginTop: '25px' }}>
                             <span className="lp-test-cases">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7F57F9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="16" y2="14"></line><line x1="8" y1="18" x2="12" y2="18"></line></svg>
                               {topic.testCases} test cases

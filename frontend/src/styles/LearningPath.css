@@ -176,17 +176,17 @@ border-color:#C9B6FF;
 box-shadow:0 4px 12px rgba(127,87,249,0.12);
 }
 
-.lp-topic-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  cursor: pointer;
-  user-select: none;
+.lp-topic-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:16px 20px;
+  cursor:pointer;
+  transition:background .2s;
 }
 
-.lp-topic-row:hover {
-  background-color: #F0EAFC;
+.lp-topic-row:hover{
+  background:#F7F3FF;
 }
 
 .lp-topic-row-left {
@@ -222,20 +222,35 @@ box-shadow:0 4px 12px rgba(127,87,249,0.12);
   font-weight: 600;
 }
 
-.lp-topic-badge {
-  background-color: #A3E4D7;
-  color: #1E8449;
-  font-size: 0.7rem;
-  font-weight: bold;
-  padding: 3px 10px;
-  border-radius: 12px;
-  text-transform: lowercase;
+.lp-topic-badge{
+  font-size:0.65rem;
+  font-weight:700;
+  padding:4px 10px;
+  border-radius:20px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  background:#DCFCE7;
+  color:#15803D;
+}
+
+.lp-topic-badge.intermediate{
+  background:#FEF9C3;
+  color:#A16207;
+}
+
+.lp-topic-badge.advanced{
+  background:#FEE2E2;
+  color:#B91C1C;
 }
 
 /* Expanded Content */
-.lp-topic-content {
-  padding: 0 20px 20px 50px;
-  border-top: 1px solid transparent;
+.lp-topic-content{
+  padding:25px 25px 25px 55px;
+  border-top:1px solid #EEE8FF;
+  background:#ffffff;
+  display:flex;
+  flex-direction:column;
+  gap:22px;
 }
 
 .lp-topic-desc {
@@ -245,29 +260,29 @@ box-shadow:0 4px 12px rgba(127,87,249,0.12);
 }
 
 .lp-topic-task{
-background:#FFF9F0;
-border:1px solid #FFE0B3;
-padding:16px;
-border-radius:10px;
-margin-bottom:20px;
-}
-
-.lp-topic-task strong{
-color:#C27C00;
-font-size:.85rem;
+  background:#FFF8E8;
+  border:1px solid #FFDDA6;
+  border-left:5px solid #F5A623;
+  padding:16px;
+  border-radius:10px;
 }
 
 .lp-topic-task p {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #555;
-  line-height: 1.5;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: #1a1a1a; /* dark text */
 }
 
-.lp-topic-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.lp-topic-task strong {
+  font-size: 0.9rem;
+  color: #4b2e00; /* darker emphasis */
+}
+
+.lp-topic-footer{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding-top:10px;
 }
 
 .lp-test-cases {
@@ -279,20 +294,20 @@ font-size:.85rem;
 }
 
 .lp-start-btn{
-background:linear-gradient(135deg,#7F57F9,#A278FF);
-color:white;
-border:none;
-padding:10px 22px;
-border-radius:8px;
-font-weight:600;
-cursor:pointer;
-transition:.2s;
-box-shadow:0 3px 8px rgba(127,87,249,.25);
+  background:linear-gradient(135deg,#7F57F9,#9F7AEA);
+  border:none;
+  padding:10px 22px;
+  border-radius:8px;
+  color:white;
+  font-weight:600;
+  font-size:0.85rem;
+  cursor:pointer;
+  transition:all .2s;
 }
 
 .lp-start-btn:hover{
-transform:translateY(-1px);
-box-shadow:0 6px 14px rgba(127,87,249,.35);
+  transform:translateY(-1px);
+  box-shadow:0 8px 18px rgba(127,87,249,.35);
 }
 
 .lp-topic-lesson{
@@ -338,4 +353,115 @@ font-size:.9rem;
 line-height:1.65;
 margin-bottom:8px;
 color:#444;
+}
+
+.lp-teaching-section{
+  background:#F7F4FF;
+  border:1px solid #E6DEFF;
+  border-radius:10px;
+  padding:18px;
+}
+
+.lp-teaching-section strong{
+  display:block;
+  font-size:1rem;
+  color:#3C2D76;
+  margin-bottom:10px;
+}
+
+.lp-topic-teaching {
+  white-space: pre-wrap;
+  line-height: 1.65;
+  font-size: 0.9rem;
+  color: #1a1a1a; /* dark text */
+}
+
+.lp-algorithm-section{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.lp-algorithm-section strong{
+  font-size:1rem;
+  color:#3C2D76;
+}
+
+.lp-references-section{
+  background:#F9FAFB;
+  border:1px solid #E5E7EB;
+  border-radius:10px;
+  padding:15px;
+}
+
+.lp-references-section strong{
+  color:#7F57F9;
+  font-size:0.85rem;
+}
+
+.lp-references-section ul{
+  margin-top:8px;
+  padding-left:18px;
+}
+
+.lp-references-section li {
+  font-size: 0.82rem;
+  color: #1a1a1a; /* dark text */
+}
+
+/* VSCode-style code block for algorithm steps */
+.lp-algorithm-steps {
+  background-color: #f5f5f5; /* light background */
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  padding: 16px;
+  overflow-x: auto;
+  font-family: "Fira Code", monospace;
+  font-size: 0.9rem;
+  color: #1e1e1e;
+  line-height: 1.5;
+}
+
+.lp-algorithm-steps pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* References Block */
+.lp-references-custom {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #2a2a2a;
+  border-radius: 6px;
+  border-left: 4px solid #a78bfa;
+}
+
+.lp-references-custom strong {
+  color: #a78bfa;
+  font-size: 0.95rem;
+}
+
+.lp-references-custom ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+  line-height: 1.5;
+}
+
+.lp-references-custom li {
+  margin-bottom: 6px;
+}
+
+/* Teaching Section adjustments */
+.lp-teaching-section strong {
+  font-size: 1.1rem;
+}
+
+.lp-topic-teaching {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  margin-top: 10px;
+  color: #1a1a1a; /* dark text */
 }
