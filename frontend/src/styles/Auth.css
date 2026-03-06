@@ -55,6 +55,24 @@
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+.auth-input-wrap {
+  position: relative;
+}
+
+.auth-input-wrap input {
+  padding-left: 2.5rem;
+}
+
+.auth-input-icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #5A1398;
+  font-size: 1rem;
+  pointer-events: none;
+}
+
 .form-group input:focus {
   outline: none;
   border-color: #E058FB;
@@ -84,6 +102,68 @@
 .auth-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(224, 88, 251, 0.5);
+}
+
+.social-auth {
+  margin-top: 1rem;
+}
+
+.social-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #6D5AA7;
+  font-size: 0.85rem;
+  margin: 0.6rem 0 0.9rem;
+}
+
+.social-divider::before,
+.social-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #D4C9EF;
+}
+
+.social-divider span {
+  padding: 0 0.75rem;
+}
+
+.social-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+}
+
+.social-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  border: 1px solid #BCA5EE;
+  background: #FFFFFF;
+  color: #342365;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.social-btn:hover {
+  border-color: #7F57F9;
+  background-color: #F7F1FF;
+}
+
+.social-icon {
+  font-size: 1rem;
+}
+
+.auth-title-with-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 /* Links */
@@ -152,6 +232,10 @@
   .auth-button {
     font-size: 0.95rem;
     padding: 0.65rem;
+  }
+
+  .social-buttons {
+    grid-template-columns: 1fr;
   }
 
   .auth-links a {

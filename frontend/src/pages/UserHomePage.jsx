@@ -1,0 +1,154 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import "../styles/UserHomePage.css"; 
+import UserHeader from "../components/UserHeader";
+import Footer from "../components/Footer";
+
+import { LuPuzzle, LuChartBar, LuCirclePlay, LuFolder, LuLayoutDashboard, LuBookOpen } from "react-icons/lu";
+import { IoArrowForward } from "react-icons/io5";
+
+export default function UserHomePage({ user = { name: "Test User", email: "test@example.com" } }) {
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const navigate = useNavigate();
+
+  const confirmLogout = () => {
+    setShowLogoutModal(false);
+    navigate("/signin");
+  };
+
+  return (
+    <div className="landing-container user-homepage">
+      <UserHeader user={user} onLogoutClick={() => setShowLogoutModal(true)} />
+
+      <main className="landing-main">
+        {/* Hero Section */}
+        <section className="hero home-hero">
+          <div className="home-hero-copy">
+            <p className="welcome-text">Welcome Back, {user.name}!</p>
+            
+            <h1 className="slogan-text">
+              Think in <span className="accent">Steps</span>.<br />
+              <span className="accent">Analyze</span> in Depth.
+            </h1>
+
+            <p className="hero-subtitle">
+              Continue where you left off, open a saved project, or start a new workspace
+              with line-by-line time and space complexity feedback.
+            </p>
+
+            <div className="hero-buttons">
+              <Link to="/app" className="btn-primary">
+                Continue to Playground
+                <IoArrowForward className="btn-icon-inline" aria-hidden="true" />
+              </Link>
+
+              <button className="btn-secondary" type="button">
+                <LuCirclePlay className="btn-icon-inline" aria-hidden="true" />
+                Watch Demo
+              </button>
+            </div>
+          </div>
+          
+          <div className="home-hero-media" aria-hidden="true">
+            <img
+              src="/assets/programming-code-editor-illustration-design-vector-removebg-preview.png"
+              alt="Programming code editor illustration"
+              className="home-hero-image"
+            />
+          </div>
+        </section>
+
+        {/* Feature Cards Section */}
+        <section className="feature-cards">
+          <h2>Your Learning Hub</h2>
+          <p className="section-subtitle">
+            Quick actions to practice, review projects, and improve your algorithm solutions.
+          </p>
+
+          <div className="cards-grid">
+            <div className="card">
+              <div className="card-icon">
+                <span className="card-icon-badge">
+                  <LuFolder size={24} color="#7F57F9" aria-hidden="true" />
+                </span>
+              </div>
+              <h3>Open Saved Projects</h3>
+              <p>
+                Resume previous sessions and refine your logic with line-by-line complexity insights.
+              </p>
+            </div>
+
+            <div className="card">
+              <div className="card-icon">
+                <span className="card-icon-badge">
+                  <LuBookOpen size={24} color="#7F57F9" aria-hidden="true" />
+                </span>
+              </div>
+              <h3>Learning Mode</h3>
+              <p>
+                Practice guided tasks with structured hints to strengthen your step-by-step understanding.
+              </p>
+            </div>
+
+            <div className="card">
+              <div className="card-icon">
+                <span className="card-icon-badge">
+                  <LuChartBar size={24} color="#7F57F9" aria-hidden="true" />
+                </span>
+              </div>
+              <h3>Performance Feedback</h3>
+              <p>
+                See how edits change Big-O and identify where inefficiencies appear in your solution.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Everything You Need Section */}
+        <section className="features-list">
+          <div className="features-content">
+            <h2>Everything You Need, in One Place</h2>
+            <ul>
+              <li>Continue learning with saved sessions and templates</li>
+              <li>Line-by-line time and space complexity feedback</li>
+              <li>Python code output for review and submission</li>
+              <li>Access dashboard, history, and settings anytime</li>
+            </ul>
+          </div>
+
+          <div className="code-snippet">
+            <pre>
+              <code>
+                    {`# Example output with feedback
+                    def bubble_sort(arr):
+                        n = len(arr)              # O(1)
+                        for i in range(n):        # O(n)
+                            for j in range(0, n-i-1):   # O(n)
+                                if arr[j] > arr[j+1]:   # O(1)
+                                    arr[j], arr[j+1] = arr[j+1], arr[j]  # O(1)
+
+                    # Overall Time: O(n^2)   Space: O(1)`}
+              </code>
+            </pre>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+
+      {/* THE LOGOUT POPUP MODAL */}
+      {showLogoutModal && (
+        <div className="logout-modal-overlay">
+          <div className="logout-modal">
+            <h2>Logout Confirmation</h2>
+            <p>Are you sure you want to logout?</p>
+            <div className="logout-modal-actions">
+              <button className="logout-btn" onClick={confirmLogout}>Confirm</button>
+              <button className="logout-btn" onClick={() => setShowLogoutModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

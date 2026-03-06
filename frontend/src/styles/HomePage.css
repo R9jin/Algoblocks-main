@@ -2,7 +2,8 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
       background: linear-gradient(135deg, #1F1443 0%, #4A0784 100%);
       color: #F5F5F5;
     }
@@ -34,7 +35,7 @@
   }
 
   .logo-img {
-    width: 50px;   /* smaller */
+    width: 50px; 
     height: 50px;
     object-fit: contain;
   }
@@ -83,7 +84,6 @@
   
   .landing-main {
     flex: 1;
-    overflow-y: auto;
     padding: 2rem;
     max-width: 1200px;
     margin: 0 auto;
@@ -100,8 +100,8 @@
     
   .slogan-text {
     color: white;
-    font-size: 4rem; /* optional */
-    font-weight: bold; /* optional */
+    font-size: 4rem;
+    font-weight: bold; 
   }
 
   .accent {
@@ -110,8 +110,35 @@
   
   .hero {
     text-align: left; 
-    margin-bottom: 4rem;
+    margin-bottom: 10rem;
     max-width: 800px; 
+  }
+
+  .home-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2.5rem;
+    max-width: 1200px;
+  }
+
+  .home-hero-copy {
+    flex: 1;
+    min-width: 280px;
+    max-width: 650px;
+  }
+
+  .home-hero-media {
+    flex: 1;
+    min-width: 280px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .home-hero-image {
+    width: min(560px, 100%);
+    height: auto;
+    filter: drop-shadow(0 26px 34px rgba(0, 0, 0, 0.32));
   }
 
   .hero-subtitle {
@@ -128,6 +155,9 @@
   }
   
   .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
     background: linear-gradient(135deg, #7F57F9, #E058FB);
     color: #F5F5F5;
     padding: 0.75rem 2rem;
@@ -147,6 +177,9 @@
   }
   
   .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
     background: transparent;
     color: #F5F5F5;
     padding: 0.75rem 2rem;
@@ -161,6 +194,11 @@
   .btn-secondary:hover {
     background-color: #7F57F9;
     border-color: #7F57F9;
+  }
+
+  .btn-icon-inline {
+    font-size: 1.1rem;
+    flex-shrink: 0;
   }
   
   .feature-cards {
@@ -203,9 +241,18 @@
   }
   
   .card-icon {
-    font-size: 2.5rem;
     margin-bottom: 1rem;
     filter: drop-shadow(0 0 8px #E058FB);
+  }
+
+  .card-icon-badge {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #E7D9FF;
   }
   
   .card h3 {
@@ -227,6 +274,7 @@
     flex-wrap: wrap;
     margin-bottom: 2rem;
   }
+
   
   .features-content {
     flex: 1;
@@ -283,22 +331,20 @@
     color: #F5F5F5;
   }
   
-  .landing-footer {
-    text-align: center;
-    padding: 1.5rem;
-    background-color: #1F1443;
-    color: #C994FF;
-    border-top: 1px solid #4830A0;
-  }
-  
-/* ========================= */
 /* Responsive Enhancements */
-/* ========================= */
 
 /* Large tablets */
 @media (max-width: 1024px) {
   .landing-main {
     padding: 1.5rem;
+  }
+
+  .home-hero {
+    gap: 2rem;
+  }
+
+  .home-hero-image {
+    width: min(480px, 100%);
   }
 
   .slogan-text {
@@ -313,7 +359,6 @@
 /* Tablets */
 @media (max-width: 768px) {
 
-  /* Navbar stacks properly */
   .landing-nav {
     flex-direction: column;
     gap: 1rem;
@@ -330,6 +375,25 @@
   .hero {
     text-align: center;
     margin-bottom: 3rem;
+  }
+
+  .home-hero {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .home-hero-copy {
+    max-width: 100%;
+  }
+
+  .home-hero-media {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .home-hero-image {
+    max-width: 420px;
   }
 
   .hero-buttons {
@@ -374,6 +438,10 @@
   .slogan-text {
     font-size: 2rem;
     line-height: 1.2;
+  }
+
+  .home-hero-image {
+    max-width: 320px;
   }
 
   .btn-primary,
