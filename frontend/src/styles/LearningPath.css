@@ -162,14 +162,18 @@
   color: #1a1a1a;
 }
 
-/* Topics Accordion */
-.lp-topic-container {
-  background-color: #F8F9FB;
-  border: 1px solid #D9D2E9;
-  border-radius: 8px;
-  margin-left: 43px; /* Align with text, bypassing icon */
-  overflow: hidden;
-  transition: all 0.3s ease;
+.lp-topic-container{
+background:#FAF9FF;
+border:1px solid #E6DEFF;
+border-radius:10px;
+margin-left:43px;
+overflow:hidden;
+transition:all .25s ease;
+}
+
+.lp-topic-container.expanded{
+border-color:#C9B6FF;
+box-shadow:0 4px 12px rgba(127,87,249,0.12);
 }
 
 .lp-topic-row {
@@ -240,19 +244,17 @@
   margin-bottom: 15px;
 }
 
-.lp-topic-task {
-  background: white;
-  border: 1px solid #D9D2E9;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+.lp-topic-task{
+background:#FFF9F0;
+border:1px solid #FFE0B3;
+padding:16px;
+border-radius:10px;
+margin-bottom:20px;
 }
 
-.lp-topic-task strong {
-  display: block;
-  font-size: 0.85rem;
-  color: #1a1a1a;
-  margin-bottom: 5px;
+.lp-topic-task strong{
+color:#C27C00;
+font-size:.85rem;
 }
 
 .lp-topic-task p {
@@ -276,17 +278,64 @@
   gap: 5px;
 }
 
-.lp-start-btn {
-  background-color: #7F57F9;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s;
+.lp-start-btn{
+background:linear-gradient(135deg,#7F57F9,#A278FF);
+color:white;
+border:none;
+padding:10px 22px;
+border-radius:8px;
+font-weight:600;
+cursor:pointer;
+transition:.2s;
+box-shadow:0 3px 8px rgba(127,87,249,.25);
 }
 
-.lp-start-btn:hover {
-  background-color: #5A1398;
+.lp-start-btn:hover{
+transform:translateY(-1px);
+box-shadow:0 6px 14px rgba(127,87,249,.35);
+}
+
+.lp-topic-lesson{
+background:white;
+border:1px solid #E2DAF7;
+border-radius:8px;
+padding:15px;
+margin-bottom:20px;
+}
+
+.lp-topic-full{
+white-space:pre-wrap;
+font-size:0.82rem;
+line-height:1.6;
+color:#444;
+font-family:'Outfit',sans-serif;
+}
+
+.lp-lesson-card{
+background:white;
+border:1px solid #E4DBFF;
+border-radius:12px;
+padding:25px;
+box-shadow:0 4px 12px rgba(0,0,0,0.04);
+transition:all .2s;
+}
+
+.lp-lesson-card:hover{
+transform:translateY(-2px);
+box-shadow:0 8px 20px rgba(0,0,0,0.08);
+}
+
+.lp-content-header{
+font-size:1rem;
+font-weight:700;
+margin-top:15px;
+margin-bottom:6px;
+color:#3C2D76;
+}
+
+.lp-lesson-content p{
+font-size:.9rem;
+line-height:1.65;
+margin-bottom:8px;
+color:#444;
 }

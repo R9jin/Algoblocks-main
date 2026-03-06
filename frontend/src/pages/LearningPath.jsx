@@ -1,104 +1,205 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import DashboardHeader from "../components/DashboardHeader"; // <-- 1. Import the header
+import DashboardHeader from "../components/DashboardHeader";
 import "../styles/LearningPath.css";
 
 const LESSONS = [
-  {
-    id: "l0",
-    number: "LESSON 1",
-    title: "Introduction to Algorithms",
-    topics: [
-      {
-        id: "l0-t1",
-        number: "TOPIC 1",
-        title: "What is an Algorithm?",
-        level: "beginner",
-        description: "An algorithm is simply a step-by-step set of instructions used to solve a specific problem or complete a task.",
-        task: "Familiarize yourself with the visual blocks. Connect a simple sequence of Output blocks to print 'Hello' and 'World' to understand how instructions run in order.",
-        testCases: 1,
-        templatePath: "intro/what_is_algo"
-      },
-      {
-        id: "l0-t2",
-        number: "TOPIC 2",
-        title: "Logic & Flow",
-        level: "beginner",
-        description: "Discover how algorithms make decisions using conditions and repeat actions using loops.",
-        task: "Use an If-Else block to check a condition. If the condition is true, output 'Yes', otherwise output 'No'.",
-        testCases: 2,
-        templatePath: "intro/logic_flow"
-      }
-    ]
-  },
-  {
-    id: "l1",
-    number: "LESSON 2",
-    title: "Linear Search",
-    topics: [
-      {
-        id: "l1-t1",
-        number: "TOPIC 1",
-        title: "Introduction to Linear Search",
-        level: "beginner",
-        description: "Learn the simplest search algorithm. It checks every item in a list one by one until it finds the target.",
-        task: "Build a Linear Search using blocks: 1. Use a Loop to iterate the array 2. Use Compare to check each element 3. Use Return when found 4. Use Return -1 at the end",
-        testCases: 3,
-        templatePath: "search/linear_search"
-      }
-    ]
-  },
-  {
-    id: "l2",
-    number: "LESSON 3",
-    title: "Bubble Sort",
-    topics: [
-      {
-        id: "l2-t1",
-        number: "TOPIC 1",
-        title: "Bubble Sort Basics",
-        level: "beginner",
-        description: "Understand how to sort a list by repeatedly swapping adjacent elements that are out of order.",
-        task: "Build a Bubble Sort using nested loops and an if-condition to swap elements that are out of order.",
-        testCases: 4,
-        templatePath: "sort/bubble_sort"
-      }
-    ]
-  },
-  {
-    id: "l3",
-    number: "LESSON 4",
-    title: "Selection Sort",
-    topics: [
-      {
-        id: "l3-t1",
-        number: "TOPIC 1",
-        title: "Selection Sort Strategy",
-        level: "beginner",
-        description: "Find the minimum element from the unsorted portion and place it at the beginning.",
-        task: "Implement Selection Sort by tracking the minimum index in the unsorted portion of the array.",
-        testCases: 3,
-        templatePath: "sort/selection_sort"
-      }
-    ]
-  },
-  {
-    id: "l4",
-    number: "LESSON 5",
-    title: "Insertion Sort",
-    topics: [
-      {
-        id: "l4-t1",
-        number: "TOPIC 1",
-        title: "Insertion Sort Technique",
-        level: "beginner",
-        description: "Build a sorted array one element at a time, just like sorting playing cards in your hands.",
-        task: "Use a while loop to shift elements to the right to make room for the current item being sorted.",
-        testCases: 3,
-        templatePath: "sort/insertion_sort"
-      }
-    ]
-  }
+{
+  id: "l1",
+  number: "LESSON 1",
+  title: "Algorithm Foundations",
+  topics: [
+
+{
+id: "l1-t1",
+number: "TOPIC 1",
+title: "Introduction to Algorithms",
+level: "beginner",
+description: "Understanding what algorithms are and why they are important in computer science.",
+content: `
+Introduction to Algorithms
+
+An algorithm is a step-by-step procedure used to solve a problem or accomplish a specific task. In computer science, algorithms describe the sequence of operations that transform input into output.
+
+Algorithms are the foundation of all software systems. Every program relies on algorithms to process data and produce results.
+
+Characteristics of a Good Algorithm
+
+1. Input – accepts zero or more inputs
+2. Output – produces at least one output
+3. Definiteness – steps are clear and unambiguous
+4. Finiteness – the algorithm eventually stops
+5. Effectiveness – steps can actually be executed
+
+Example
+
+Problem: Find the largest number in a list
+
+Steps:
+1. Assume the first number is the largest
+2. Compare it with the next number
+3. If the next number is larger, update the largest
+4. Repeat until the list ends
+5. Output the largest number
+`,
+task: "Identify the correct sequence of steps in a simple algorithm.",
+testCases: 3,
+templatePath: "intro/what_is_algo"
+},
+
+{
+id: "l1-t2",
+number: "TOPIC 2",
+title: "Linear Search",
+level: "beginner",
+description: "A basic searching algorithm that checks elements sequentially.",
+content: `
+Linear Search
+
+Linear Search examines each element of a list one by one until the desired value is found.
+
+How it works
+
+1. Start at the first element
+2. Compare it with the target
+3. If equal → return index
+4. Otherwise move to the next element
+5. Repeat until found or list ends
+
+Example
+
+Array: [4,7,2,9,5]
+Target: 9
+
+Compare 4 → no  
+Compare 7 → no  
+Compare 2 → no  
+Compare 9 → found
+
+Index = 3
+
+Time Complexity
+
+Best Case: O(1)
+Worst Case: O(n)
+`,
+task: "Build a block algorithm that searches for a number in an array.",
+testCases: 3,
+templatePath: "search/linear_search"
+},
+
+{
+id: "l1-t3",
+number: "TOPIC 3",
+title: "Binary Search",
+level: "intermediate",
+description: "An efficient searching algorithm that works on sorted arrays.",
+content: `
+Binary Search works by repeatedly dividing a sorted array in half.
+
+Steps
+
+1. Find the middle element
+2. If target equals middle → found
+3. If target < middle → search left half
+4. If target > middle → search right half
+5. Repeat
+
+Time Complexity
+
+Best Case: O(1)
+Worst Case: O(log n)
+
+Binary search is significantly faster than linear search for large datasets.
+`,
+task: "Complete the block sequence for binary search.",
+testCases: 3,
+templatePath: "search/binary_search"
+}
+
+]
+},
+
+{
+id: "l2",
+number: "LESSON 2",
+title: "Sorting Algorithms",
+topics: [
+
+{
+id: "l2-t1",
+number: "TOPIC 1",
+title: "Bubble Sort",
+level: "beginner",
+description: "A simple sorting algorithm that swaps adjacent elements.",
+content: `
+Bubble Sort repeatedly compares adjacent elements and swaps them if they are in the wrong order.
+
+Example
+
+[5,3,8,2]
+
+Pass 1
+5 3 swap
+5 8 ok
+8 2 swap
+
+Result
+[3,5,2,8]
+
+Time Complexity
+
+Worst Case: O(n²)
+`,
+task: "Create a bubble sort algorithm using block operations.",
+testCases: 3,
+templatePath: "sort/bubble_sort"
+},
+
+{
+id: "l2-t2",
+number: "TOPIC 2",
+title: "Selection Sort",
+level: "beginner",
+description: "Repeatedly selects the smallest element.",
+content: `
+Selection Sort divides the list into sorted and unsorted sections.
+
+Each step:
+Find the smallest value
+Swap it with the first unsorted position
+
+Time Complexity
+
+O(n²)
+`,
+task: "Arrange blocks to implement selection sort.",
+testCases: 3,
+templatePath: "sort/selection_sort"
+},
+
+{
+id: "l2-t3",
+number: "TOPIC 3",
+title: "Insertion Sort",
+level: "beginner",
+description: "Builds the sorted list one element at a time.",
+content: `
+Insertion Sort works similar to sorting cards in your hand.
+
+Each element is inserted into its correct position in the sorted portion.
+
+Best Case: O(n)
+Worst Case: O(n²)
+`,
+task: "Construct an insertion sort algorithm using blocks.",
+testCases: 3,
+templatePath: "sort/insertion_sort"
+}
+
+]
+}
+
 ];
 
 export default function LearningPath() {
@@ -115,12 +216,10 @@ export default function LearningPath() {
 
   return (
     <div className="learning-path-page">
-      {/* 2. Replaced the manual header with your reusable component */}
       <DashboardHeader />
 
       {/* Main Content */}
       <main className="lp-main">
-        {/* 3. Moved the 'Back' link here so you don't lose it */}
         <div style={{ marginBottom: "25px" }}>
           <Link to="/dashboard" className="lp-back-link">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '6px'}}><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -182,6 +281,21 @@ export default function LearningPath() {
                       {isExpanded && (
                         <div className="lp-topic-content">
                           <p className="lp-topic-desc">{topic.description}</p>
+                          {topic.content && (
+                          <div className="lp-topic-lesson">
+                          <div className="lp-lesson-content">
+                            {topic.content.split("\n").map((line, i) => {
+                              if (line.trim().length === 0) return <br key={i} />
+
+                              if (line.length < 40 && !line.includes(":") && !line.includes(".")) {
+                                return <h4 key={i} className="lp-content-header">{line}</h4>
+                              }
+
+                              return <p key={i}>{line}</p>
+                            })}
+                          </div>
+                        </div>
+                      )}
                           <div className="lp-topic-task">
                             <strong>Task</strong>
                             <p>{topic.task}</p>
