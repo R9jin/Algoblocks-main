@@ -1,29 +1,48 @@
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import "../styles/HomePage.css";
+import { LuPuzzle, LuChartBar, LuCirclePlay } from "react-icons/lu";
+import { FaPython } from "react-icons/fa";
+import { IoArrowForward } from "react-icons/io5";
+import Footer from "../components/Footer";
  
 export default function LandingPage() {
   return (
     <div className="landing-container">
       
-      {/* Replaced the raw <nav> with our new component */}
+      {/* Reusing the same header component for consistency */}
       <Header />
 
       <main className="landing-main">
         {/* Hero Section */}
-        <section className="hero">
-          <h1 className="slogan-text">
-            Think in <span className="accent">Steps</span>.<br />
-            <span className="accent">Analyze</span> in Depth.
-          </h1>
-          <p className="hero-subtitle">
-            Build algorithms with interactive blocks and<br />
-            get line-by-line feedback on time and space<br />
-            performance in real-time.
-          </p>
-          <div className="hero-buttons">
-            <Link to="/app" className="btn-primary">Launch Playground</Link>
-            <button className="btn-secondary">Watch Demo</button>
+        <section className="hero home-hero">
+          <div className="home-hero-copy">
+            <h1 className="slogan-text">
+              Think in <span className="accent">Steps</span>.<br />
+              <span className="accent">Analyze</span> in Depth.
+            </h1>
+            <p className="hero-subtitle">
+              Build algorithms with interactive blocks and<br />
+              get line-by-line feedback on time and space<br />
+              performance in real-time.
+            </p>
+            <div className="hero-buttons">
+              <Link to="/app" className="btn-primary">
+                Launch Playground
+                <IoArrowForward className="btn-icon-inline" aria-hidden="true" />
+              </Link>
+              <button className="btn-secondary">
+                <LuCirclePlay className="btn-icon-inline" aria-hidden="true" />
+                Watch Demo
+              </button>
+            </div>
+          </div>
+          <div className="home-hero-media" aria-hidden="true">
+            <img
+              src="/assets/programming-code-editor-illustration-design-vector-removebg-preview.png"
+              alt=""
+              className="home-hero-image"
+            />
           </div>
         </section>
 
@@ -35,17 +54,29 @@ export default function LandingPage() {
           </p>
           <div className="cards-grid">
             <div className="card">
-              <div className="card-icon">🧩</div>
+              <div className="card-icon">
+                <span className="card-icon-badge">
+                  <LuPuzzle size={24} color="#7F57F9" aria-hidden="true" />
+                </span>
+              </div>
               <h3>Block-Based Logic</h3>
               <p>Construct complex algorithms using our intuitive drag-and-drop interface. Perfect for beginners and advanced visual learners.</p>
             </div>
             <div className="card">
-              <div className="card-icon">📊</div>
+              <div className="card-icon">
+                <span className="card-icon-badge">
+                  <LuChartBar size={24} color="#7F57F9" aria-hidden="true" />
+                </span>
+              </div>
               <h3>Line-by-Line Feedback</h3>
               <p>Get instant time and space complexity metrics for every block you place. Understand the why behind the performance.</p>
             </div>
             <div className="card">
-              <div className="card-icon">🐍</div>
+              <div className="card-icon">
+                <span className="card-icon-badge">
+                  <FaPython size={24} color="#7F57F9" aria-hidden="true" />
+                </span>
+              </div>
               <h3>Python Conversion</h3>
               <p>Automatically convert your visual blocks into clean, production-ready Python source code with a single toggle.</p>
             </div>
@@ -79,8 +110,7 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="landing-footer">
-      </footer>
+      <Footer />
     </div>
   );
 }

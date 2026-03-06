@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { FiMail, FiCheckCircle } from "react-icons/fi";
 import "../styles/Auth.css";
 
 export default function ForgotPassword() {
@@ -16,7 +17,10 @@ export default function ForgotPassword() {
     return (
       <div className="auth-container">
         <div className="auth-card">
-          <h2>Check Your Email</h2>
+          <h2 className="auth-title-with-icon">
+            <FiCheckCircle aria-hidden="true" />
+            Check Your Email
+          </h2>
           <p>We've sent a password reset link to {email}.</p>
           <Link to="/signin" className="auth-link">Back to Sign In</Link>
         </div>
@@ -32,12 +36,16 @@ export default function ForgotPassword() {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <div className="auth-input-wrap">
+              <FiMail className="auth-input-icon" aria-hidden="true" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email address"
+                required
+              />
+            </div>
           </div>
           <button type="submit" className="auth-button">Send Reset Link</button>
         </form>
