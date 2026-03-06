@@ -286,18 +286,24 @@ export default function LearningPath() {
   const handleStartActivity = (topic) => {
     let generatedTests = [];
     
+    // 1. Generate the random tests first
     if (topic.generator && topic.testCount) {
       generatedTests = topic.generator(topic.testCount);
     }
 
+    // 2. Destructure the topic to separate the function from the data
+    const { generator, ...safeTopicData } = topic;
+
+    // 3. Attach the generated tests to the safe, cloneable data
     const activityDataWithTests = {
-      ...topic,
+      ...safeTopicData,
       testCasesList: generatedTests
     };
 
+    // 4. Navigate using ONLY the safe, static data
     navigate("/activity", { 
       state: { 
-        templatePath: topic.templatePath, 
+        templatePath: safeTopicData.templatePath, 
         activityData: activityDataWithTests 
       } 
     });
