@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import BlocklyWorkspace from "../components/BlocklyWorkspace";
-import WorkspaceHeader from "../components/WorkspaceHeader";
-import "../styles/MainApp.css";
+import "../styles/ActivityApp.css";
+
+// Syntax Highlighting Imports
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const ActivityApp = () => {
   const location = useLocation();
@@ -11,28 +14,127 @@ const ActivityApp = () => {
   const activityData = location.state?.activityData || null;
   const initialTemplate = location.state?.templatePath || "";
 
-  const [generatedPython, setGeneratedPython] = useState("");
-  // Start with a blank console output
+  // --- NEW: Add a ref to control the Blockly Workspace ---
+  const workspaceRef = useRef(null);
+
+  const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
   const [consoleOutput, setConsoleOutput] = useState(""); 
-  // State to trigger the Console Pop-Up
-  const [isConsoleOpen, setIsConsoleOpen] = useState(false); 
+  const [viewMode, setViewMode] = useState("workspace");
+  const [passedTests, setPassedTests] = useState(0);
+
+  // Transferred MainApp State & Drag Logic
+  const [bottomPanel, setBottomPanel] = useState(null); 
+  const [activeTab, setActiveTab] = useState("time_asymptotic");
+  const [analysisResult, setAnalysisResult] = useState({ 
+    lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false
+  });
+
+  const [panelHeight, setPanelHeight] = useState(300);
+  const isDragging = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging.current) return;
+      const newHeight = window.innerHeight - e.clientY - 48; 
+      if (newHeight >= 150 && newHeight <= window.innerHeight - 150) {
+        setPanelHeight(newHeight);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging.current) {
+        isDragging.current = false;
+        document.body.style.cursor = "default";
+        document.body.style.userSelect = "auto";
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
+  const handleDragStart = (e) => {
+    e.preventDefault(); 
+    isDragging.current = true;
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+  };
 
   useEffect(() => {
     if (!activityData) navigate("/learning-path");
   }, [activityData, navigate]);
 
-  if (!activityData) return null;
+  // --- NEW: Function to Fetch and Load the JSON Template ---
+  const loadActivityTemplate = async (path) => {
+    try {
+      // Smart path resolution: if it starts with 'activities/', pull from the root activities folder, 
+      // otherwise fallback to the normal templates folder.
+      const fetchUrl = path.startsWith("activities/") 
+        ? `/${path}.json` 
+        : `/templates/${path}.json`;
+        
+      const response = await fetch(fetchUrl);
+      if (!response.ok) throw new Error(`Template not found at ${fetchUrl}`);
+      
+      const json = await response.json();
+      
+      if (workspaceRef.current) {
+        workspaceRef.current.loadTemplate(json);
+      }
+    } catch (error) {
+      console.error("Failed to load activity template:", error);
+    }
+  };
 
-  const handleWorkspaceChange = (pythonCode) => {
+  // --- NEW: Trigger the load when the component mounts ---
+  useEffect(() => {
+    if (initialTemplate) {
+      // Small timeout ensures Blockly is fully injected into the DOM before loading
+      setTimeout(() => {
+        loadActivityTemplate(initialTemplate);
+      }, 300);
+    }
+  }, [initialTemplate]);
+
+
+  const handleWorkspaceChange = async (json, pythonCode) => {
     setGeneratedPython(pythonCode);
+    
+    try {
+      const response = await fetch('/api/analyze', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: pythonCode })
+      });
+      const data = await response.json();
+      if (data.status === "success") {
+        setAnalysisResult({ 
+          total: data.total, 
+          total_recurrence: data.total_recurrence || data.total,
+          lines: data.lines,
+          recurrence_lines: data.recurrence_lines || [],
+          space_total: data.space_total || "O(1)",
+          space_lines: data.space_lines || [],
+          is_recursive: data.is_recursive || false
+        });
+        setActiveTab(prev => (prev === 'time_recurrence' && !data.is_recursive) ? 'time_asymptotic' : prev);
+      }
+    } catch (error) {
+      console.error("Analysis Error:", error);
+    }
   };
 
   const runTestCases = async () => {
     if (!activityData.testCasesList) return;
     
-    // Open the pop-up when tests start running
-    setIsConsoleOpen(true);
+    setBottomPanel("console");
     setConsoleOutput("> Running Tests...\n");
+    setPassedTests(0); 
   
     let testHarness = `\n\n# --- System Test Cases ---\nprint("\\n--- Running Test Cases ---")\n`;
     testHarness += `passed = 0\ntotal = ${activityData.testCasesList.length}\n`;
@@ -60,87 +162,223 @@ except Exception as e:
         body: JSON.stringify({ code: codeToRun }),
       });
       const data = await response.json();
-      setConsoleOutput(data.status === "success" ? data.output : "> Error: " + data.output);
+      
+      const outputText = data.status === "success" ? data.output : "> Error: " + data.output;
+      setConsoleOutput(outputText);
+
+      const match = outputText.match(/Result: (\d+)\//);
+      if (match) {
+        setPassedTests(parseInt(match[1]));
+      }
+
     } catch {
       setConsoleOutput("> Connection Error while running tests.");
     }
   };
 
+  const totalTests = activityData?.testCasesList?.length || 0;
+
+  if (!activityData) return null;
+
   return (
-    <div className="main-app-container">
-      <WorkspaceHeader />
-      <div className="workspace-layout">
+    <div className="activity-app-container">
+      
+      <header className="activity-topbar">
+        <div className="activity-back-btn" onClick={() => navigate('/learning-path')}>
+          <span>›</span> Back to Dashboard
+        </div>
         
-        {/* Activity Panel */}
-        <aside className="templates-sidebar activity-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#fff' }}>
-          <div className="activity-header" style={{ marginBottom: '15px', borderBottom: '2px solid #EBE4FF', paddingBottom: '10px' }}>
-            <h3 style={{ margin: '0 0 5px 0', color: '#3A2A6B' }}>{activityData.title || activityData.topic}</h3>
-            <span style={{ fontSize: '0.8rem', backgroundColor: '#7F57F9', color: 'white', padding: '3px 8px', borderRadius: '12px' }}>
-              {activityData.level}
-            </span>
+        <div className="activity-toggle-group">
+          <button 
+            className={`activity-toggle-btn ${viewMode === 'workspace' ? 'active' : ''}`} 
+            onClick={() => setViewMode('workspace')}
+          >
+            Workspace
+          </button>
+          <button 
+            className={`activity-toggle-btn ${viewMode === 'python' ? 'active' : ''}`} 
+            onClick={() => setViewMode('python')}
+          >
+            Python Code
+          </button>
+        </div>
+        
+        <div className="activity-actions">
+          <button className="activity-action-btn run-btn" onClick={runTestCases}>
+            ▶ Run Tests
+          </button>
+        </div>
+      </header>
+
+      <div className="activity-main-layout">
+        
+        <aside className="activity-left-panel">
+          <div className="activity-panel-header">
+            <h2>
+              <img src="/assets/learning-icon.png" alt="Icon" style={{ width: '24px' }}/>
+              {activityData.title}
+            </h2>
           </div>
           
-          <div className="activity-instructions" style={{ flex: 1, overflowY: 'auto', fontSize: '0.9rem', color: '#444' }}>
-            <strong>Your Mission:</strong>
-            <p>{activityData.task || "Complete the algorithm to pass the test cases."}</p>
+          <div className="activity-panel-content">
+            <h3 className="activity-section-title">
+              <img src="/assets/book-icon.png" alt="Theory" style={{ width: '18px' }}/> THEORY
+            </h3>
+            <div className="activity-card">
+              <p>{activityData.teaching}</p>
+              <span className="activity-card-subtitle">KEY CONCEPTS:</span>
+              <pre>{activityData.algorithmSteps}</pre>
+            </div>
+
+            <h3 className="activity-section-title">TASK</h3>
+            <div className="activity-card">
+              {activityData.task}
+            </div>
+          </div>
+        </aside>
+
+        <main className="workspace-main" style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+          
+          <div className="editor-container" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
+              {/* --- NEW: Pass the workspaceRef here --- */}
+              <BlocklyWorkspace 
+                ref={workspaceRef} 
+                onChange={handleWorkspaceChange} 
+                templatePath={initialTemplate} 
+                />
+            </div>
             
-            <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#F5EFFF', borderRadius: '8px', border: '1px solid #BCA1FC' }}>
-              <strong>Test Cases to Pass:</strong>
-              <ul style={{ paddingLeft: '20px', margin: '10px 0 0 0' }}>
-                {activityData.testCasesList?.map((tc, i) => (
-                  <li key={i} style={{fontFamily: 'monospace', margin: '5px 0'}}>{tc.call} ➔ {tc.expected}</li>
-                ))}
-              </ul>
+            <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#1C1236', overflow: 'auto' }}>
+              <SyntaxHighlighter 
+                language="python" 
+                style={shadesOfPurple}
+                showLineNumbers={true}
+                customStyle={{
+                  margin: 0, padding: '20px', fontSize: '0.95rem',
+                  fontFamily: "'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+                  background: '#1C1236', color: '#EBE4FF', minHeight: '100%'
+                }}
+              >
+                {generatedPython}
+              </SyntaxHighlighter>
             </div>
           </div>
 
-          <button 
-            onClick={runTestCases}
-            style={{ marginTop: '15px', padding: '12px', backgroundColor: '#27ae60', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-          >
-            Submit & Run Tests
-          </button>
-          
-          <button 
-            onClick={() => {
-              if (window.confirm("Are you sure you want to exit? Your progress will not be saved.")) {
-                navigate("/learning-path");
-              }
-            }}
-            style={{ marginTop: '10px', padding: '10px', backgroundColor: 'transparent', color: '#e74c3c', border: '1px solid #e74c3c', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
-          >
-            Exit Activity
-          </button>
-        </aside>
-
-        <main className="workspace-main" style={{ position: 'relative' }}>
-          <div className="blockly-container">
-            <BlocklyWorkspace onWorkspaceChange={handleWorkspaceChange} templatePath={initialTemplate} />
-          </div>
-
-          {/* Figma-style Console Pop-Up */}
-          {isConsoleOpen && (
-            <div className="console-popup" style={{
-              position: 'absolute', bottom: '20px', right: '20px', left: '20px',
-              backgroundColor: '#1E1E1E', color: '#00FF00', borderRadius: '8px',
-              boxShadow: '0 -4px 15px rgba(0,0,0,0.5)', zIndex: 1000,
-              display: 'flex', flexDirection: 'column', maxHeight: '40%'
-            }}>
-              <div style={{ padding: '10px 15px', backgroundColor: '#333', borderTopLeftRadius: '8px', borderTopRightRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong style={{ color: '#FFF' }}>Console Output</strong>
-                <button 
-                  onClick={() => setIsConsoleOpen(false)} 
-                  style={{ background: 'transparent', border: 'none', color: '#FFF', cursor: 'pointer', fontSize: '1.2rem' }}
-                >
-                  ✖
-                </button>
+          {bottomPanel && (
+            <div className="bottom-hover-panel" style={{ height: `${panelHeight}px` }}>
+              <div className="panel-resizer" onMouseDown={handleDragStart}>
+                <div className="resizer-dash"></div>
               </div>
-              <div style={{ padding: '15px', overflowY: 'auto', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                {consoleOutput}
+              
+              <div className="panel-header">
+                <span className="panel-title">{bottomPanel === 'console' ? 'Console Output' : 'Complexity Analysis'}</span>
+                <button onClick={() => setBottomPanel(null)} className="panel-close-btn">✕</button>
+              </div>
+              
+              <div className="panel-body">
+                {bottomPanel === 'console' ? (
+                  <pre className="console-output">{consoleOutput}</pre>
+                ) : (
+                  <div className="complexity-content">
+                    <div className="complexity-tabs">
+                      <button
+                        onClick={() => setActiveTab("time")}
+                        className={`tab-btn ${activeTab === 'time' ? 'active' : ''}`}>
+                        Time Complexity
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("space")}
+                        className={`tab-btn ${activeTab === 'space' ? 'active' : ''}`}>
+                        Space Complexity
+                      </button>
+                      <span className="total-badge">
+                        <span className="total-label">Total:</span>{" "}
+                        {activeTab === "space" ? analysisResult.space_total : analysisResult.total}
+                      </span>
+                    </div>
+                    
+                    <div className="complexity-table-wrapper">
+                      <table className="complexity-table">
+                        <thead>
+                          <tr>
+                            <th>Line of Code</th>
+                            <th className="right-align">Complexity</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(activeTab === 'time' ? analysisResult.lines : analysisResult.space_lines).map((row, i) => (
+                            <tr key={i}>
+                              <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
+                                {row.lineOfCode}
+                              </td>
+                              <td className="complexity-cell" style={{ color: row.color || 'white' }}>{row.complexity}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
+
+          <footer className="workspace-footer">
+            <div className="footer-left">
+              <button 
+                className={`footer-tab ${bottomPanel === 'console' ? 'active' : ''}`}
+                onClick={() => setBottomPanel(bottomPanel === 'console' ? null : 'console')}
+              >
+                <img src="/assets/console-icon.png" alt="Console" className="tab-icon" /> Console
+              </button>
+              <button 
+                className={`footer-tab ${bottomPanel === 'complexity' ? 'active' : ''}`}
+                onClick={() => setBottomPanel(bottomPanel === 'complexity' ? null : 'complexity')}
+              >
+                <img src="/assets/complexity-icon.png" alt="Complexity" className="tab-icon" /> Complexity
+              </button>
+            </div>
+            
+            <div className="footer-right">
+               <button className="footer-action-icon" onClick={() => {
+                 if (window.confirm("Are you sure you want to restart this activity? Your progress will be lost.")) {
+                   window.location.reload();
+                 }
+               }} title="Restart Activity">
+                 <img src="/assets/recursive-icon.png" alt="Restart" />
+               </button>
+            </div>
+          </footer>
+
         </main>
+
+        <aside className="activity-right-panel">
+          <div className="activity-panel-header">
+            <h3>Test Cases</h3>
+            <span className="test-cases-counter">{passedTests}/{totalTests} passed</span>
+          </div>
+          
+          <div className="activity-panel-content">
+            {activityData.testCasesList?.map((tc, i) => {
+              const isPassing = consoleOutput.includes(`Test ${i + 1} Passed`);
+              
+              return (
+                <div key={i} className={`test-case-card ${isPassing ? 'passing' : ''}`}>
+                  <div className="test-case-header">
+                    <div className="test-case-indicator"></div>
+                    <strong className="test-case-title">Test {i + 1}</strong>
+                  </div>
+                  <div className="test-case-details">
+                    <div><strong>Call:</strong> <span className="test-case-code">{tc.call}</span></div>
+                    <div><strong>Expected:</strong> <span className="test-case-code">{tc.expected}</span></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
+
       </div>
     </div>
   );
