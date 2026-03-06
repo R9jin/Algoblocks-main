@@ -280,12 +280,22 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
                 ) : (
                   <div className="complexity-content">
                     <div className="complexity-tabs">
-                      <button onClick={() => setActiveTab("time_asymptotic")} className={`tab-btn ${activeTab === 'time_asymptotic' ? 'active' : ''}`}>Asymptotic Analysis</button>
-                      {analysisResult.is_recursive && (
-                        <button onClick={() => setActiveTab("time_recurrence")} className={`tab-btn ${activeTab === 'time_recurrence' ? 'active' : ''}`}>Recurrence Relation</button>
-                      )}
-                      <button onClick={() => setActiveTab("space")} className={`tab-btn ${activeTab === 'space' ? 'active' : ''}`}>Space</button>
-                      <span className="total-badge">Total: {activeTab === 'space' ? analysisResult.space_total : activeTab === 'time_recurrence' ? analysisResult.total_recurrence : analysisResult.total}</span>
+                      <button
+                        onClick={() => setActiveTab("time")}
+                        className={`tab-btn ${activeTab === 'time' ? 'active' : ''}`}>
+                        Time Complexity
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("space")}
+                        className={`tab-btn ${activeTab === 'space' ? 'active' : ''}`}>
+                        Space Complexity
+                      </button>
+                      <span className="total-badge">
+                        <span className="total-label">Total:</span>{" "}
+                        {activeTab === "space"
+                          ? analysisResult.space_total
+                          : analysisResult.total}
+                      </span>
                     </div>
                     
                     {/* CENTERED & COMPACT TABLE WRAPPER */}
@@ -298,9 +308,14 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
                           </tr>
                         </thead>
                         <tbody>
-                          {(activeTab === 'time_asymptotic' ? analysisResult.lines : activeTab === 'time_recurrence' ? analysisResult.recurrence_lines : analysisResult.space_lines).map((row, i) => (
+                          {(activeTab === 'time' ? analysisResult.lines
+                            : activeTab === 'time_recurrence' ? analysisResult.recurrence_lines
+                            : analysisResult.space_lines
+                          ).map((row, i) => (
                             <tr key={i}>
-                              <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>{row.lineOfCode}</td>
+                              <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
+                                {row.lineOfCode}
+                              </td>
                               <td className="complexity-cell" style={{ color: row.color || 'white' }}>{row.complexity}</td>
                             </tr>
                           ))}

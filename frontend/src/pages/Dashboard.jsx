@@ -99,79 +99,65 @@ export default function Dashboard() {
 
           <h1 className="section-title">Pre-made Templates</h1>
 
-          <div className="template-category">
-            <h3 className="category-label">SORTING ALGORITHMS</h3>
-            <div className="template-grid">
+          <div className="algorithm-library-grid">
+
+            {/* Sorting Column */}
+            <div className="algorithm-column">
+              <h3 className="column-title">SORTING</h3>
               {TEMPLATES.sorting.map((temp) => (
-                /* Removed onClick from the card itself */
-                <div key={temp.name} className="template-card">
+                <div key={temp.name} className="algorithm-card">
                   <div className="card-header">
                     <img src={temp.icon} alt={temp.name} className="card-icon-img" />
                     <h4>{temp.name}</h4>
                   </div>
-                  
                   <div className="card-hover-content">
                     <p className="template-card-desc">{temp.desc}</p>
-                    <button 
-                      className="try-template-btn"
-                      onClick={() => handleTemplateClick(temp)}
-                    >
+                    <button className="try-template-btn" onClick={() => handleTemplateClick(temp)}>
                       Test Template →
                     </button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
 
-          <div className="template-category">
-            <h3 className="category-label">SEARCHING ALGORITHMS</h3>
-            <div className="template-grid">
+            {/* Searching Column */}
+            <div className="algorithm-column">
+              <h3 className="column-title">SEARCHING</h3>
               {TEMPLATES.searching.map((temp) => (
-                /* Removed onClick from the card itself */
-                <div key={temp.name} className="template-card">
+                <div key={temp.name} className="algorithm-card">
                   <div className="card-header">
                     <img src={temp.icon} alt={temp.name} className="card-icon-img" />
                     <h4>{temp.name}</h4>
                   </div>
-                  
                   <div className="card-hover-content">
                     <p className="template-card-desc">{temp.desc}</p>
-                    <button 
-                      className="try-template-btn"
-                      onClick={() => handleTemplateClick(temp)}
-                    >
+                    <button className="try-template-btn" onClick={() => handleTemplateClick(temp)}>
                       Test Template →
                     </button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
 
-          <div className="template-category">
-            <h3 className="category-label">RECURSIVE ALGORITHMS</h3>
-            <div className="template-grid">
+            {/* Recursive Column */}
+            <div className="algorithm-column">
+              <h3 className="column-title">RECURSIVE</h3>
               {TEMPLATES.recursive.map((temp) => (
-                /* Removed onClick from the card itself */
-                <div key={temp.name} className="template-card">
+                <div key={temp.name} className="algorithm-card">
                   <div className="card-header">
                     <img src={temp.icon} alt={temp.name} className="card-icon-img" />
                     <h4>{temp.name}</h4>
                   </div>
-                  
                   <div className="card-hover-content">
                     <p className="template-card-desc">{temp.desc}</p>
-                    <button 
-                      className="try-template-btn"
-                      onClick={() => handleTemplateClick(temp)}
-                    >
-                      Test Template
+                    <button className="try-template-btn" onClick={() => handleTemplateClick(temp)}>
+                      Test Template →
                     </button>
                   </div>
                 </div>
               ))}
             </div>
+
           </div>
 
         </main>
