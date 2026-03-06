@@ -74,7 +74,7 @@ END`,
           { text: "GeeksforGeeks: Control Structures in Programming Languages", url: "https://www.geeksforgeeks.org/control-structures-in-programming-languages/" }
         ],
         task: "Use an If-Else block to check a condition. If the condition is true, output 'Yes', otherwise output 'No'.",
-        testCases: 2,
+        testCount: 3,
         templatePath: "intro/logic_flow"
       }
     ]
@@ -137,7 +137,7 @@ Performance Analysis:
           { text: "HackerEarth: Sorting Algorithms - Bubble Sort", url: "https://www.hackerearth.com/practice/algorithms/sorting/bubble-sort/tutorial/" }
         ],
         task: "Build a Bubble Sort using nested loops and an if-condition to swap elements that are out of order.",
-        testCases: 4,
+        testCount: 3,
         templatePath: "sort/bubble_sort"
       }
     ]
@@ -180,7 +180,7 @@ Example Execution Trace for Factorial(4):
           { text: "FreeCodeCamp: Understanding Recursion in Programming", url: "https://www.freecodecamp.org/news/understanding-recursion-in-programming/" }
         ],
         task: "Complete the recursive algorithm structure to calculate a factorial.",
-        testCases: 2,
+        testCount: 3,
         templatePath: "recursive/recursive_factorial"
       }
     ]
@@ -258,12 +258,14 @@ Merge -> [2,3,5,8]`,
           { text: "Programiz: Merge Sort", url: "https://www.programiz.com/dsa/merge-sort" }
         ],
         task: "Implement the divide step by splitting the array in half, and the combine step to merge two sorted arrays into one.",
-        testCases: 4,
+        testCount: 3,
         templatePath: "sort/merge_sort"
       }
     ]
   }
 ];
+
+
 
 export default function LearningPath() {
   const navigate = useNavigate();
@@ -274,8 +276,97 @@ export default function LearningPath() {
   };
 
   const handleStartActivity = (templatePath) => {
-    navigate("/app", { state: { templatePath } });
+    navigate("/activity", { 
+      state: { 
+        templatePath: topic.templatePath, 
+        activityData: activityDataWithTests 
+      } 
+    });
   };
+
+  // --- Test Case Generators ---
+
+// Generator for Factorial
+const generateFactorialTest = (testCount) => {
+  const tests = [];
+  // Use a Set to ensure we don't test the same number twice
+  const usedNumbers = new Set();
+  
+  while (tests.length < testCount) {
+    const n = Math.floor(Math.random() * 7) + 1; // Random number 1-7
+    if (!usedNumbers.has(n)) {
+      usedNumbers.add(n);
+      let expected = 1;
+      for (let i = 1; i <= n; i++) expected *= i;
+      tests.push({ call: `factorial(${n})`, expected: `${expected}` });
+    }
+  }
+  return tests;
+};
+
+// Generator for Fibonacci
+const generateFibonacciTest = (testCount) => {
+  const tests = [];
+  const usedNumbers = new Set();
+  const fib = (x) => (x <= 1 ? x : fib(x - 1) + fib(x - 2));
+
+  while (tests.length < testCount) {
+    const n = Math.floor(Math.random() * 10) + 1; // Random number 1-10
+    if (!usedNumbers.has(n)) {
+      usedNumbers.add(n);
+      tests.push({ call: `fibonacci(${n})`, expected: `${fib(n)}` });
+    }
+  }
+  return tests;
+};
+
+// Generator for Sorting Algorithms (Bubble, Insertion, Merge, Selection)
+const generateSortTest = (testCount) => {
+  const tests = [];
+  for (let i = 0; i < testCount; i++) {
+    const len = Math.floor(Math.random() * 6) + 3; // Array length 3 to 8
+    const arr = Array.from({ length: len }, () => Math.floor(Math.random() * 50));
+    const sortedArr = [...arr].sort((a, b) => a - b);
+    
+    tests.push({ 
+      call: `sort_array([${arr.join(", ")}])`, 
+      expected: `[${sortedArr.join(", ")}]` 
+    });
+  }
+  return tests;
+};
+
+// Generator for Search Algorithms (Linear, Binary)
+const generateSearchTest = (testCount) => {
+  const tests = [];
+  for (let i = 0; i < testCount; i++) {
+    const len = Math.floor(Math.random() * 6) + 4; // Array length 4 to 9
+    const arr = Array.from({ length: len }, () => Math.floor(Math.random() * 50)).sort((a, b) => a - b);
+    
+    // Force the first test to find an item, and the second test to NOT find an item (Edge case testing)
+    let exists = Math.random() > 0.3;
+    if (i === 0) exists = true;
+    if (i === 1) exists = false;
+
+    let target;
+    let expected;
+
+    if (exists) {
+      const randomIndex = Math.floor(Math.random() * len);
+      target = arr[randomIndex];
+      expected = randomIndex;
+    } else {
+      target = 999; // Missing element
+      expected = -1; 
+    }
+
+    tests.push({ 
+      call: `search([${arr.join(", ")}], ${target})`, 
+      expected: `${expected}` 
+    });
+  }
+  return tests;
+};
 
   return (
     <div className="learning-path-page">
