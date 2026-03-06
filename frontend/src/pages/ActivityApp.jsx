@@ -8,19 +8,17 @@ const ActivityApp = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Get the activity data passed from LearningPath
   const activityData = location.state?.activityData || null;
   const initialTemplate = location.state?.templatePath || "";
 
   const [generatedPython, setGeneratedPython] = useState("");
-  const [consoleOutput, setConsoleOutput] = useState("> Ready to run activity tests...\n");
-  const [bottomPanel, setBottomPanel] = useState("console"); // "console" or "python"
+  // Start with a blank console output
+  const [consoleOutput, setConsoleOutput] = useState(""); 
+  // State to trigger the Console Pop-Up
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false); 
 
-  // Redirect back if accessed without activity data
   useEffect(() => {
-    if (!activityData) {
-      navigate("/learning-path");
-    }
+    if (!activityData) navigate("/learning-path");
   }, [activityData, navigate]);
 
   if (!activityData) return null;
@@ -32,8 +30,9 @@ const ActivityApp = () => {
   const runTestCases = async () => {
     if (!activityData.testCasesList) return;
     
+    // Open the pop-up when tests start running
+    setIsConsoleOpen(true);
     setConsoleOutput("> Running Tests...\n");
-    setBottomPanel("console");
   
     let testHarness = `\n\n# --- System Test Cases ---\nprint("\\n--- Running Test Cases ---")\n`;
     testHarness += `passed = 0\ntotal = ${activityData.testCasesList.length}\n`;
@@ -67,19 +66,12 @@ except Exception as e:
     }
   };
 
-  const handleExit = () => {
-    // Confirm exit to prevent accidental loss of progress
-    if (window.confirm("Are you sure you want to exit? Your progress will not be saved.")) {
-      navigate("/learning-path");
-    }
-  };
-
   return (
     <div className="main-app-container">
       <WorkspaceHeader />
       <div className="workspace-layout">
         
-        {/* Activity Sidebar */}
+        {/* Activity Panel */}
         <aside className="templates-sidebar activity-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#fff' }}>
           <div className="activity-header" style={{ marginBottom: '15px', borderBottom: '2px solid #EBE4FF', paddingBottom: '10px' }}>
             <h3 style={{ margin: '0 0 5px 0', color: '#3A2A6B' }}>{activityData.title || activityData.topic}</h3>
@@ -104,52 +96,50 @@ except Exception as e:
 
           <button 
             onClick={runTestCases}
-            style={{ marginTop: '15px', padding: '12px', backgroundColor: '#27ae60', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', gap: '8px' }}
+            style={{ marginTop: '15px', padding: '12px', backgroundColor: '#27ae60', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
           >
             Submit & Run Tests
           </button>
           
           <button 
-            onClick={handleExit}
+            onClick={() => {
+              if (window.confirm("Are you sure you want to exit? Your progress will not be saved.")) {
+                navigate("/learning-path");
+              }
+            }}
             style={{ marginTop: '10px', padding: '10px', backgroundColor: 'transparent', color: '#e74c3c', border: '1px solid #e74c3c', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
           >
             Exit Activity
           </button>
         </aside>
 
-        {/* Workspace and Console Area */}
-        <main className="workspace-main">
+        <main className="workspace-main" style={{ position: 'relative' }}>
           <div className="blockly-container">
-            <BlocklyWorkspace 
-              onWorkspaceChange={handleWorkspaceChange} 
-              templatePath={initialTemplate} 
-            />
+            <BlocklyWorkspace onWorkspaceChange={handleWorkspaceChange} templatePath={initialTemplate} />
           </div>
 
-          {/* Bottom Panel (Console / Python Code) */}
-          <div className="bottom-panel">
-            <div className="bottom-panel-header">
-              <button 
-                className={`panel-tab ${bottomPanel === "console" ? "active" : ""}`}
-                onClick={() => setBottomPanel("console")}
-              >
-                Console
-              </button>
-              <button 
-                className={`panel-tab ${bottomPanel === "python" ? "active" : ""}`}
-                onClick={() => setBottomPanel("python")}
-              >
-                Python Code
-              </button>
+          {/* Figma-style Console Pop-Up */}
+          {isConsoleOpen && (
+            <div className="console-popup" style={{
+              position: 'absolute', bottom: '20px', right: '20px', left: '20px',
+              backgroundColor: '#1E1E1E', color: '#00FF00', borderRadius: '8px',
+              boxShadow: '0 -4px 15px rgba(0,0,0,0.5)', zIndex: 1000,
+              display: 'flex', flexDirection: 'column', maxHeight: '40%'
+            }}>
+              <div style={{ padding: '10px 15px', backgroundColor: '#333', borderTopLeftRadius: '8px', borderTopRightRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong style={{ color: '#FFF' }}>Console Output</strong>
+                <button 
+                  onClick={() => setIsConsoleOpen(false)} 
+                  style={{ background: 'transparent', border: 'none', color: '#FFF', cursor: 'pointer', fontSize: '1.2rem' }}
+                >
+                  ✖
+                </button>
+              </div>
+              <div style={{ padding: '15px', overflowY: 'auto', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                {consoleOutput}
+              </div>
             </div>
-            <div className="bottom-panel-content">
-              {bottomPanel === "console" ? (
-                <pre className="console-output">{consoleOutput}</pre>
-              ) : (
-                <pre className="python-output">{generatedPython}</pre>
-              )}
-            </div>
-          </div>
+          )}
         </main>
       </div>
     </div>
