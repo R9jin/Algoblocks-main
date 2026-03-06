@@ -108,7 +108,8 @@ While it is perfectly simple and guaranteed to find a solution if one exists, it
         ],
         task: "Build a Linear Search using blocks: Use a Loop to iterate the array, Compare to check each element, and return the index if found.",
         testCases: 3,
-        templatePath: "search/linear_search"
+        templatePath: "activities/linear_search_act",
+        generator: generateSearchTest
       },
       {
         id: "l2-t2",
@@ -138,7 +139,7 @@ Performance Analysis:
         ],
         task: "Build a Bubble Sort using nested loops and an if-condition to swap elements that are out of order.",
         testCount: 3,
-        templatePath: "sort/bubble_sort"
+        templatePath: "activities/bubble_sort_act"
       }
     ]
   },

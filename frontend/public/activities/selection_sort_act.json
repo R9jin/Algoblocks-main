@@ -7,6 +7,8 @@
         "id": "TN(3VM[_odyuD@7%mjk=",
         "x": 13,
         "y": -112,
+        "deletable": false,
+        "editable": false,
         "extraState": {
           "params": [
             {
