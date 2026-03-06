@@ -24,7 +24,7 @@ A good algorithm must possess the following properties:
 3. Definiteness: Each step is precisely and unambiguously defined.
 4. Finiteness: The algorithm must terminate after a finite number of steps.
 5. Effectiveness: All operations can be performed practically and in a finite time.`,
-        algorithmSteps: `The 5-Step Problem-Solving Process in Computer Science:
+        algorithmSteps: `The 5-Step Problem-Solving Process:
 
 Step 1: Understand the Problem
         -> Identify knowns, unknowns, and edge cases.
@@ -128,8 +128,8 @@ END`,
         algorithmSteps: `Recursive Definition (Factorial)
 
 factorial(n):
-if n <= 1 return 1
-else return n × factorial(n-1)
+  if n <= 1 return 1
+  else return n × factorial(n-1)
 
 Example Breakdown:
 5! = 5 × 4 × 3 × 2 × 1
@@ -189,7 +189,9 @@ export default function LearningPath() {
       <main className="lp-main">
         <div className="lp-back-container">
           <Link to="/dashboard" className="lp-back-link">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="lp-back-icon"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="lp-back-icon">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
             Back to Dashboard
           </Link>
         </div>
@@ -244,15 +246,15 @@ export default function LearningPath() {
                       {isExpanded && (
                         <div className="lp-topic-content">
                           
+                          {/* Rich Teaching Section */}
                           <div className="lp-teaching-section">
-                            <strong>Module Lesson:</strong>
-                            <p className="lp-topic-teaching">
-                              {topic.teaching}
-                            </p>
+                            <strong className="lp-teaching-title">Module Lesson:</strong>
+                            <p className="lp-topic-teaching">{topic.teaching}</p>
                           </div>
                           
+                          {/* Algorithm Steps Block */}
                           <div className="lp-algorithm-steps">
-                            <strong>Algorithm Procedure:</strong>
+                            <strong className="lp-steps-title">Algorithm Procedure:</strong>
                             <div className="lp-code-block">
                               <pre>
                                 <code>{topic.algorithmSteps}</code>
@@ -260,15 +262,17 @@ export default function LearningPath() {
                             </div>
                           </div>
 
+                          {/* Task Assignment */}
                           <div className="lp-topic-task">
-                            <strong>Your Mission:</strong>
-                            <p>{topic.task}</p>
+                            <strong className="lp-task-title">Your Mission:</strong>
+                            <p className="lp-task-desc">{topic.task}</p>
                           </div>
 
+                          {/* References Block */}
                           {topic.references && (
                             <div className="lp-references-section">
-                              <strong>References:</strong>
-                              <ul>
+                              <strong className="lp-references-title">References:</strong>
+                              <ul className="lp-references-list">
                                 {topic.references.map((ref, idx) => (
                                   <li key={idx}>{ref}</li>
                                 ))}
