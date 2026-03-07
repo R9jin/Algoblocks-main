@@ -1,15 +1,26 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "../styles/UserHomePage.css"; 
-import UserHeader from "../components/UserHeader";
 import Footer from "../components/Footer";
+import UserHeader from "../components/UserHeader";
+import "../styles/UserHomePage.css";
 
-import { LuPuzzle, LuChartBar, LuCirclePlay, LuFolder, LuLayoutDashboard, LuBookOpen } from "react-icons/lu";
 import { IoArrowForward } from "react-icons/io5";
+import { LuBookOpen, LuChartBar, LuCirclePlay, LuFolder } from "react-icons/lu";
 
-export default function UserHomePage({ user = { name: "Test User", email: "test@example.com" } }) {
+export default function UserHomePage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [user, setUser] = useState(null); // Remove hardcoded props
   const navigate = useNavigate();
+
+  // Load the user from the database session on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      navigate("/signin"); // Protect the route
+    }
+  }, [navigate]);
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
@@ -19,7 +30,6 @@ export default function UserHomePage({ user = { name: "Test User", email: "test@
   return (
     <div className="landing-container user-homepage">
       <UserHeader user={user} onLogoutClick={() => setShowLogoutModal(true)} />
-
       <main className="landing-main">
         {/* Hero Section */}
         <section className="hero home-hero">

@@ -25,8 +25,10 @@ export default function SignIn() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Login success:", data);
-        // If successful, navigate to the home page
+        
+        // Save database user to localStorage
+        localStorage.setItem("user", JSON.stringify({ email: data.email, name: data.name }));
+        
         navigate("/home");
       } else {
         // If backend returns a 401 error, show an alert
