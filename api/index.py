@@ -150,6 +150,9 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         # Initialize the call graph with a special __main__ node representing the top-level code
         self.call_graph = {'__main__': set()}
         
+        # FIX: Initialize reachable_funcs here so we can populate it with top-level functions
+        self.reachable_funcs = set()
+        
         # Perform BFS traversal to map function definitions and function calls
         while queue:
             current_node, current_func = queue.popleft()  # Dequeue next AST node and current function context
@@ -157,6 +160,10 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             # If the node is a function definition, add it to the symbol table
             if isinstance(current_node, ast.FunctionDef):
                 self.symbol_table[current_node.name] = current_node  # Map function name to its AST node
+                
+                # FIX: In activity mode, consider all user-defined functions as entry points
+                self.reachable_funcs.add(current_node.name) 
+                
                 current_func = current_node.name  # Update current function context
                 if current_func not in self.call_graph:
                     self.call_graph[current_func] = set()  # Initialize set of functions it calls
@@ -176,10 +183,15 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         # -----------------------------
         # DEAD CODE DETECTION
         # -----------------------------
-        # Identify which functions are actually reachable from __main__
-        self.reachable_funcs = set()
+        # Identify which functions are actually reachable. 
+        # FIX: Removed the `self.reachable_funcs = set()` reset here.
+        
         reach_queue = deque(['__main__'])  # Start BFS from main execution block
-        visited = set(['__main__'])
+        # FIX: Add all currently reachable functions (top-level ones) to the queue for traversal
+        reach_queue.extend(list(self.reachable_funcs)) 
+        
+        # FIX: Ensure visited set accounts for the functions we just added
+        visited = set(['__main__']).union(self.reachable_funcs)
         
         while reach_queue:
             curr = reach_queue.popleft()

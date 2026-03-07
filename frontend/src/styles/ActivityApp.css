@@ -182,7 +182,10 @@
   font-size: 0.8rem;
 }
 
-/* Test Cases UI */
+/* ========================= */
+/* Test Cases UI (Dropdowns) */
+/* ========================= */
+
 .test-cases-counter {
   font-size: 0.8rem;
   color: #888;
@@ -190,23 +193,45 @@
 }
 
 .test-case-card {
-  border: 1px solid #5A1398;
+  border: 1px solid #EBE4FF;
   border-radius: 8px;
-  padding: 15px;
   margin-bottom: 15px;
   background-color: #FBF9FF;
   transition: all 0.3s ease;
+  overflow: hidden; /* Keeps the dropdown tidy */
 }
 
+/* Success State */
 .test-case-card.passing {
   border-color: #27AE60;
   background-color: #E4F4E4;
 }
 
+/* Fail/Error State */
+.test-case-card.failing {
+  border-color: #e74c3c;
+  background-color: #FCE4E4;
+}
+
+/* Clickable Header */
 .test-case-header {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  justify-content: space-between;
+  padding: 15px;
+  cursor: pointer;
+  user-select: none;
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.test-case-header:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.test-case-header-left {
+  display: flex;
+  align-items: center;
 }
 
 .test-case-indicator {
@@ -219,9 +244,14 @@
   transition: all 0.3s ease;
 }
 
-.test-case-card.passing .test-case-indicator {
+.test-case-indicator.passing {
   border-color: #27AE60;
   background-color: #27AE60;
+}
+
+.test-case-indicator.failing {
+  border-color: #e74c3c;
+  background-color: #e74c3c;
 }
 
 .test-case-title {
@@ -230,17 +260,70 @@
   font-weight: bold;
 }
 
-.test-case-card.passing .test-case-title {
-  color: #27AE60;
+.test-case-card.passing .test-case-title { color: #27AE60; }
+.test-case-card.failing .test-case-title { color: #e74c3c; }
+
+/* Chevron Rotation */
+.test-case-chevron {
+  color: #A38CC1;
+  font-size: 0.8rem;
+  transition: transform 0.3s ease;
 }
 
+.test-case-card.passing .test-case-chevron { color: #27AE60; }
+.test-case-card.failing .test-case-chevron { color: #e74c3c; }
+
+.test-case-chevron.open {
+  transform: rotate(90deg);
+}
+
+/* Expanded Content */
 .test-case-details {
+  padding: 0 15px 15px 15px;
   font-size: 0.85rem;
   color: #555;
+  animation: slideDown 0.3s ease-out;
 }
 
-.test-case-details div { margin-bottom: 4px; }
-.test-case-code { font-family: monospace; color: #333; }
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.test-case-row {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.test-case-label {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.test-case-code {
+  font-family: 'Fira Code', 'JetBrains Mono', monospace;
+  color: #3A2A6B;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  word-break: break-all;
+  font-size: 0.8rem;
+}
+
+.test-case-status-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
 /* --- IDENTICAL STYLES TRANSFERRED FROM MAINAPP.CSS --- */
 
