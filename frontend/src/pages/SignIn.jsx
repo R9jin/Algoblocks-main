@@ -15,7 +15,7 @@ export default function SignIn() {
     
     try {
       // Send a POST request to your FastAPI backend
-      const response = await fetch("http://127.0.0.1:8000/api/login", {
+      const response = await fetch("/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
