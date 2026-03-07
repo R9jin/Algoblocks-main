@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import BlocklyWorkspace from "../components/BlocklyWorkspace";
 import "../styles/ActivityApp.css";
 
-// Syntax Highlighting Imports
+import Split from "react-split";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
@@ -14,7 +14,6 @@ const ActivityApp = () => {
   const activityData = location.state?.activityData || null;
   const initialTemplate = location.state?.templatePath || "";
 
-  // --- NEW: Add a ref to control the Blockly Workspace ---
   const workspaceRef = useRef(null);
 
   const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
@@ -22,7 +21,9 @@ const ActivityApp = () => {
   const [viewMode, setViewMode] = useState("workspace");
   const [passedTests, setPassedTests] = useState(0);
 
-  // Transferred MainApp State & Drag Logic
+  // --- NEW: State for Left Panel Visibility ---
+  const [isLeftPanelVisible, setIsLeftPanelVisible] = useState(true);
+
   const [bottomPanel, setBottomPanel] = useState(null); 
   const [activeTab, setActiveTab] = useState("time_asymptotic");
   const [analysisResult, setAnalysisResult] = useState({ 
@@ -69,11 +70,8 @@ const ActivityApp = () => {
     if (!activityData) navigate("/learning-path");
   }, [activityData, navigate]);
 
-  // --- NEW: Function to Fetch and Load the JSON Template ---
   const loadActivityTemplate = async (path) => {
     try {
-      // Smart path resolution: if it starts with 'activities/', pull from the root activities folder, 
-      // otherwise fallback to the normal templates folder.
       const fetchUrl = path.startsWith("activities/") 
         ? `/${path}.json` 
         : `/templates/${path}.json`;
@@ -91,16 +89,13 @@ const ActivityApp = () => {
     }
   };
 
-  // --- NEW: Trigger the load when the component mounts ---
   useEffect(() => {
     if (initialTemplate) {
-      // Small timeout ensures Blockly is fully injected into the DOM before loading
       setTimeout(() => {
         loadActivityTemplate(initialTemplate);
       }, 300);
     }
   }, [initialTemplate]);
-
 
   const handleWorkspaceChange = async (json, pythonCode) => {
     setGeneratedPython(pythonCode);
@@ -205,12 +200,18 @@ except Exception as e:
         
         <div className="activity-actions">
           <button className="activity-action-btn run-btn" onClick={runTestCases}>
-            ▶ Run Tests
+            <img src="/assets/play-icon.png" alt="Run"/> Run
           </button>
         </div>
       </header>
 
-      <div className="activity-main-layout">
+      {/* --- UPDATED: Dynamic classes and minSize for the Split --- */}
+      <Split 
+        className={`activity-main-layout ${!isLeftPanelVisible ? 'left-hidden' : ''}`}
+        sizes={[25, 50, 25]}
+        minSize={[isLeftPanelVisible ? 250 : 0, 400, 250]} /* Drop left panel minSize to 0 when hidden */
+        gutterSize={8}
+      >
         
         <aside className="activity-left-panel">
           <div className="activity-panel-header">
@@ -237,16 +238,20 @@ except Exception as e:
           </div>
         </aside>
 
-        <main className="workspace-main" style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+        <main className="workspace-main activity-center-panel">
           
+          {/* --- NEW: The Toggle Button --- */}
+          <button 
+            className={`sidebar-toggle-btn ${!isLeftPanelVisible ? 'closed' : ''}`}
+            onClick={() => setIsLeftPanelVisible(!isLeftPanelVisible)}
+            title={isLeftPanelVisible ? "Hide Instructions" : "Show Instructions"}
+          >
+            <span className="toggle-icon">{isLeftPanelVisible ? '❮' : '❯'}</span>
+          </button>
+
           <div className="editor-container" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
             <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
-              {/* --- NEW: Pass the workspaceRef here --- */}
-              <BlocklyWorkspace 
-                ref={workspaceRef} 
-                onChange={handleWorkspaceChange} 
-                templatePath={initialTemplate} 
-                />
+              <BlocklyWorkspace ref={workspaceRef} onChange={handleWorkspaceChange} templatePath={initialTemplate} />
             </div>
             
             <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#1C1236', overflow: 'auto' }}>
@@ -379,7 +384,7 @@ except Exception as e:
           </div>
         </aside>
 
-      </div>
+      </Split>
     </div>
   );
 };

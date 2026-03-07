@@ -87,6 +87,7 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  width: 100%;
 }
 
 /* Side Panels */
@@ -95,17 +96,24 @@
   background-color: #FFF;
   display: flex;
   flex-direction: column;
-  width: 320px;
-  flex-shrink: 0;
+  height: 100%;
 }
 
 .activity-left-panel {
-  border-right: 1px solid #E0E0E0;
   overflow-y: auto;
 }
 
 .activity-right-panel {
   border-left: 1px solid #E0E0E0;
+}
+
+/* Center Panel */
+.activity-center-panel {
+  display: flex;
+  flex-direction: column;
+  background-color: #EBEBEB;
+  position: relative;
+  height: 100%;
 }
 
 .activity-panel-header {
@@ -455,4 +463,80 @@
   white-space: nowrap; 
   font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace; 
   font-size: 0.85rem;
+}
+
+.gutter {
+  background-color: #e0e0e0;
+  cursor: col-resize;
+  transition: background-color 0.2s;
+  height: 100%;
+}
+
+.gutter:hover {
+  background-color: #BCA1FC;
+}
+
+/* ========================= */
+/* Sidebar Toggle & Animations */
+/* ========================= */
+
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 1000;
+  background-color: #3A2A6B;
+  color: white;
+  border: none;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  width: 24px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: #7F57F9;
+}
+
+/* Smooth Transitions */
+.activity-left-panel {
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              min-width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              opacity 0.2s ease;
+}
+
+.activity-center-panel {
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.gutter {
+  transition: width 0.3s ease, opacity 0.2s ease, background-color 0.2s;
+}
+
+/* Prevent inner contents from squishing aggressively */
+.activity-panel-header, .activity-panel-content {
+  min-width: 250px; 
+}
+
+/* Logic when left panel is toggled "Hidden" */
+.activity-main-layout.left-hidden .activity-left-panel {
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+  border: none;
+}
+
+/* Hide the first draggable bar (between left and center panels) */
+.activity-main-layout.left-hidden .gutter:nth-child(2) {
+  width: 0 !important;
+  opacity: 0;
+  pointer-events: none;
 }
