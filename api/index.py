@@ -73,6 +73,12 @@ class SignUpRequest(BaseModel):
     email: str
     password: str
 
+# 1. Add this new model for the incoming request
+class ProgressRequest(BaseModel):
+    email: str
+    lesson_id: str
+    score: int
+
 # ============================================================
 # CLASS: COMPLEXITY ANALYZER
 # ============================================================
@@ -965,21 +971,18 @@ def get_projects():
         p["_id"] = str(p["_id"])                 # Convert ObjectId to string for JSON serialization
     return {"status": "success", "projects": projects}
 
+# 2. Update your existing login endpoint to include progress
 @app.post("/api/login")
-@app.post("/login")
 def login_user(req: LoginRequest):
-    if users_collection is None:
-        raise HTTPException(status_code=500, detail="Database not connected")
-    
-    # Search for the user in the database by email
     user = users_collection.find_one({"email": req.email})
-    
-    # Check if user exists and password matches
-    # Note: In a production app, you should use hashed passwords (like bcrypt) instead of plain text!
     if user and user.get("password") == req.password:
-        return {"status": "success", "message": "Login successful", "email": req.email}
-    else:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        return {
+            "status": "success", 
+            "email": req.email, 
+            "name": user.get("name"),
+            "progress": user.get("progress", {}) # Add this line! Returns {} if empty
+        }
+    raise HTTPException(status_code=401, detail="Invalid email or password")
 
 @app.post("/api/signup")
 @app.post("/signup")
@@ -1004,3 +1007,27 @@ def signup_user(req: SignUpRequest):
     users_collection.insert_one(new_user)
     
     return {"status": "success", "message": "User created successfully"}
+
+# 3. Create the new endpoint to save lesson scores
+@app.post("/api/update-progress")
+def update_progress(req: ProgressRequest):
+    if users_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    
+    # MongoDB $set will add or update the specific lesson's score
+    # e.g., progress: {"bubble_sort": 100, "linear_search": 80}
+    update_query = {
+        "$set": {f"progress.{req.lesson_id}": req.score}
+    }
+    
+    result = users_collection.update_one({"email": req.email}, update_query)
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # Fetch and return the newly updated progress
+    updated_user = users_collection.find_one({"email": req.email})
+    return {
+        "status": "success",
+        "progress": updated_user.get("progress", {})
+    }
