@@ -300,7 +300,7 @@ export default function LearningPath() {
     
     // 1. Generate the random tests first
     if (topic.generator && topic.testCount) {
-      generatedTests = topic.generator(topic.testCount);
+      generatedTests = topic.generator(topic.testCount, topic.funcName);
     }
 
     // 2. Destructure the topic to separate the function from the data
