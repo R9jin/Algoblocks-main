@@ -36,7 +36,6 @@ from database import projects_collection, users_collection
 from models import ProjectModel           # Pydantic model representing a project
 from bson import ObjectId                 # MongoDB ObjectId type for document IDs
 from collections import deque             # Double-ended queue used for BFS traversal
-from .models import ProgressRequest
 
 # -------------------------------
 # CREATE FASTAPI APP INSTANCE

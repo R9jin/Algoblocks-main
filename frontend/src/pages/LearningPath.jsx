@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import "../styles/LearningPath.css";
@@ -309,11 +309,14 @@ export default function LearningPath() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
+    
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
       setUserProgress(parsedUser.progress || {});
+    } else {
+      navigate("/signin");
     }
-  }, []);
+  }, [navigate]);
 
   const toggleTopic = (topicId) => {
     setExpandedTopic(expandedTopic === topicId ? null : topicId);
@@ -322,21 +325,17 @@ export default function LearningPath() {
   const handleStartActivity = (topic) => {
     let generatedTests = [];
     
-    // 1. Generate the random tests first
     if (topic.generator && topic.testCount) {
       generatedTests = topic.generator(topic.testCount, topic.funcName);
     }
 
-    // 2. Destructure the topic to separate the function from the data
     const { generator, ...safeTopicData } = topic;
 
-    // 3. Attach the generated tests to the safe, cloneable data
     const activityDataWithTests = {
       ...safeTopicData,
       testCasesList: generatedTests
     };
 
-    // 4. Navigate using ONLY the safe, static data
     navigate("/activity", { 
       state: { 
         templatePath: safeTopicData.templatePath, 
@@ -352,9 +351,6 @@ export default function LearningPath() {
       <main className="lp-main">
         <div className="lp-back-container">
           <Link to="/dashboard" className="lp-back-link">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="lp-back-icon">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
             Back to Dashboard
           </Link>
         </div>
@@ -376,46 +372,56 @@ export default function LearningPath() {
         <div className="lp-lessons">
           {LESSONS.map((lesson) => (
             <div key={lesson.id} className="lp-lesson-card">
+
               <div className="lp-lesson-header">
                 <img src="/assets/book-icon.png" alt="Book" className="lp-book-icon" />
                 <div className="lp-lesson-title-group">
                   <span className="lp-lesson-number">{lesson.number}</span>
                   <h3 className="lp-lesson-title">{lesson.title}</h3>
-                  {/* Check if they have a score for this lesson */}
-                    {userProgress["bubble_sort_act"] !== undefined ? (
-                      <span className="score-badge">
-                        Score: {userProgress["bubble_sort_act"]}/100 ✅
-                      </span>
-                    ) : (
-                      <span className="pending-badge">Not Started</span>
-                    )}
                 </div>
               </div>
 
               <div className="lp-topics">
                 {lesson.topics.map((topic) => {
+
                   const isExpanded = expandedTopic === topic.id;
+
+                  // Extract activity key dynamically
+                  const activityKey = topic.templatePath
+                    ? topic.templatePath.split("/").pop()
+                    : null;
+
+                  const score = activityKey ? userProgress[activityKey] : undefined;
+
                   return (
                     <div key={topic.id} className={`lp-topic-container ${isExpanded ? "expanded" : ""}`}>
+                      
                       <div className="lp-topic-row" onClick={() => toggleTopic(topic.id)}>
+                        
                         <div className="lp-topic-row-left">
-                          <span className="lp-topic-arrow">
-                            {isExpanded ? (
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#BCA1FC" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                            ) : (
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#BCA1FC" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                            )}
-                          </span>
                           <div className="lp-topic-titles">
                             <span className="lp-topic-number">{topic.number}</span>
                             <h4 className="lp-topic-name">{topic.title}</h4>
                           </div>
                         </div>
-                        <div className="lp-topic-badge">{topic.level}</div>
+
+                        <div className="lp-topic-right">
+                          <div className="lp-topic-badge">{topic.level}</div>
+
+                          {score !== undefined ? (
+                            <span className="score-badge">
+                              Score: {score}/100 ✅
+                            </span>
+                          ) : (
+                            <span className="pending-badge">Not Started</span>
+                          )}
+                        </div>
+
                       </div>
 
                       {isExpanded && (
                         <div className="lp-topic-content">
+
                           <div className="lp-teaching-section">
                             <strong className="lp-teaching-title">Module Lesson:</strong>
                             <p className="lp-topic-teaching">{topic.teaching}</p>
@@ -435,7 +441,6 @@ export default function LearningPath() {
                             <p className="lp-task-desc">{topic.task}</p>
                           </div>
 
-                          {/* THIS SECTION RESTORES THE CLICKABLE REFERENCES */}
                           {topic.references && (
                             <div className="lp-references-section">
                               <strong className="lp-references-title">References:</strong>
@@ -458,9 +463,9 @@ export default function LearningPath() {
 
                           <div className="lp-topic-footer">
                             <span className="lp-test-cases">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7F57F9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="16" y2="14"></line><line x1="8" y1="18" x2="12" y2="18"></line></svg>
                               {topic.testCount} test cases
                             </span>
+
                             <button 
                               className="lp-start-btn"
                               onClick={() => handleStartActivity(topic)}
@@ -468,15 +473,19 @@ export default function LearningPath() {
                               Start Activity
                             </button>
                           </div>
+
                         </div>
                       )}
+
                     </div>
                   );
                 })}
               </div>
+
             </div>
           ))}
         </div>
+
       </main>
     </div>
   );
