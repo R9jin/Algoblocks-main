@@ -509,27 +509,17 @@ const ActivityApp = () => {
     let testHarness = `\n\n# --- System Test Cases ---\nprint("\\n--- Running Test Cases ---")\n`;
     testHarness += `passed = 0\ntotal = ${activityData.testCasesList.length}\n`;
     
-    activityData.testCasesList.forEach((tc, index) => {
+activityData.testCasesList.forEach((tc, index) => {
       testHarness += `
-                    try:
-                        assert ${tc.call} == ${tc.expected}
-                        print("Test ${index + 1} Passed: ${tc.call} == ${tc.expected}")
-                        passed += 1
-                    except AssertionError:
-                        print("Test ${index + 1} Failed: ${tc.call} did not equal ${tc.expected}")
-                    except Exception as e:
-                        print("Test ${index + 1} Error:", e)
-                    `;
-
-                          if (match) {
-                      const passed = parseInt(match[1]);
-                      setPassedTests(passed);
-                      
-                      // Trigger completion if all tests pass
-                      if (passed === total) {
-                        handleSuccess();
-                      }
-                    }
+try:
+    assert ${tc.call} == ${tc.expected}
+    print("Test ${index + 1} Passed: ${tc.call} == ${tc.expected}")
+    passed += 1
+except AssertionError:
+    print("Test ${index + 1} Failed: ${tc.call} did not equal ${tc.expected}")
+except Exception as e:
+    print("Test ${index + 1} Error:", e)
+`;
     });
     testHarness += `print(f"\\nResult: {passed}/{total} Tests Passed")\n`;
   
@@ -548,7 +538,14 @@ const ActivityApp = () => {
 
       const match = outputText.match(/Result: (\d+)\//);
       if (match) {
-        setPassedTests(parseInt(match[1]));
+        const passed = parseInt(match[1]);
+        setPassedTests(passed);
+
+        // ✅ THIS IS THE CORRECT PLACE TO CHECK FOR SUCCESS
+        const total = activityData.testCasesList.length;
+        if (passed === total) {
+          handleSuccess();
+        }
       }
 
       const newExpanded = { ...expandedTests };
