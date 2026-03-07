@@ -423,6 +423,27 @@ const ActivityApp = () => {
     }
   };
 
+  // --- NEW RUN CODE FUNCTION (NO TESTS) ---
+  const runCode = async () => {
+    setBottomPanel("console");
+    setConsoleOutput("> Running Code...\n");
+
+    try {
+      const response = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: generatedPython }),
+      });
+      const data = await response.json();
+      
+      const outputText = data.status === "success" ? data.output : "> Error: " + data.output;
+      setConsoleOutput(outputText);
+    } catch {
+      setConsoleOutput("> Connection Error while running code.");
+    }
+  };
+
+  // --- RUN TEST CASES FUNCTION ---
   const runTestCases = async () => {
     if (!activityData.testCasesList) return;
     
@@ -509,7 +530,16 @@ except Exception as e:
           </button>
         </div>
         
-        <div className="activity-actions">
+        {/* ADDED RUN CODE BUTTON NEXT TO RUN TESTS */}
+        <div className="activity-actions" style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            className="activity-action-btn" 
+            onClick={runCode}
+            style={{ backgroundColor: '#2D234A', border: '1px solid #6C5CE7', color: '#EBE4FF' }}
+            title="Run code in console without submitting to test cases"
+          >
+            ▷ Run Code
+          </button>
           <button className="activity-action-btn run-btn" onClick={runTestCases}>
             ▶ Run Tests
           </button>
