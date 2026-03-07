@@ -36,7 +36,7 @@ from database import projects_collection, users_collection
 from models import ProjectModel           # Pydantic model representing a project
 from bson import ObjectId                 # MongoDB ObjectId type for document IDs
 from collections import deque             # Double-ended queue used for BFS traversal
-
+from .models import ProgressRequest
 
 # -------------------------------
 # CREATE FASTAPI APP INSTANCE
@@ -1008,14 +1008,10 @@ def signup_user(req: SignUpRequest):
     
     return {"status": "success", "message": "User created successfully"}
 
-# 3. Create the new endpoint to save lesson scores
 @app.post("/api/update-progress")
 def update_progress(req: ProgressRequest):
-    if users_collection is None:
-        raise HTTPException(status_code=500, detail="Database not connected")
-    
-    # MongoDB $set will add or update the specific lesson's score
-    # e.g., progress: {"bubble_sort": 100, "linear_search": 80}
+    # MongoDB dot notation allows updating nested fields dynamically
+    # e.g., "progress.bubble_sort_act": 95
     update_query = {
         "$set": {f"progress.{req.lesson_id}": req.score}
     }
@@ -1025,9 +1021,4 @@ def update_progress(req: ProgressRequest):
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
         
-    # Fetch and return the newly updated progress
-    updated_user = users_collection.find_one({"email": req.email})
-    return {
-        "status": "success",
-        "progress": updated_user.get("progress", {})
-    }
+    return {"status": "success", "message": "Progress saved"}
