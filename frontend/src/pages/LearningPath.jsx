@@ -36,7 +36,8 @@ const generateFibonacciTest = (testCount) => {
   return tests;
 };
 
-const generateSortTest = (testCount) => {
+// Change this line:
+const generateSortTest = (testCount, funcName) => {
   const tests = [];
   for (let i = 0; i < testCount; i++) {
     const len = Math.floor(Math.random() * 6) + 3; 
@@ -44,14 +45,16 @@ const generateSortTest = (testCount) => {
     const sortedArr = [...arr].sort((a, b) => a - b);
     
     tests.push({ 
-      call: `sort_array([${arr.join(", ")}])`, 
+      // Update the call to use the dynamic function name
+      call: `${funcName}([${arr.join(", ")}])`, 
       expected: `[${sortedArr.join(", ")}]` 
     });
   }
   return tests;
 };
 
-const generateSearchTest = (testCount) => {
+// Change this line:
+const generateSearchTest = (testCount, funcName) => {
   const tests = [];
   for (let i = 0; i < testCount; i++) {
     const len = Math.floor(Math.random() * 6) + 4; 
@@ -74,7 +77,8 @@ const generateSearchTest = (testCount) => {
     }
 
     tests.push({ 
-      call: `search([${arr.join(", ")}], ${target})`, 
+      // Update the call to use the dynamic function name
+      call: `${funcName}([${arr.join(", ")}], ${target})`, 
       expected: `${expected}` 
     });
   }
@@ -141,6 +145,7 @@ const LESSONS = [
         task: "Build a Linear Search using blocks: Use a Loop to iterate the array, Compare to check each element, and return the index if found.",
         testCount: 3,
         templatePath: "activities/linear_search_act",
+        funcName: "linear_search",
         generator: generateSearchTest
       },
       {
@@ -157,6 +162,7 @@ const LESSONS = [
         task: "Build a Bubble Sort using nested loops and an if-condition to swap elements that are out of order.",
         testCount: 3,
         templatePath: "activities/bubble_sort_act",
+        funcName: "bubble_sort",
         generator: generateSortTest
       },
       {
@@ -173,6 +179,7 @@ const LESSONS = [
         task: "Implement Selection Sort by finding the minimum value in the unsorted portion and swapping it to the front.",
         testCount: 3,
         templatePath: "activities/selection_sort_act",
+        funcName: "selection_sort",
         generator: generateSortTest
       },
       {
@@ -189,6 +196,7 @@ const LESSONS = [
         task: "Implement Insertion Sort by shifting larger elements to the right to insert the current element in its correct order.",
         testCount: 3,
         templatePath: "activities/insertion_sort_act",
+        funcName: "insertion_sort",
         generator: generateSortTest
       }
     ]
@@ -212,6 +220,7 @@ const LESSONS = [
         task: "Complete the recursive algorithm structure to calculate a factorial.",
         testCount: 3,
         templatePath: "activities/factorial_recursive_act",
+        funcName: "factorial",
         generator: generateFactorialTest
       },
       {
@@ -228,6 +237,7 @@ const LESSONS = [
         task: "Implement the two base cases and the dual recursive calls for the Fibonacci sequence.",
         testCount: 3,
         templatePath: "activities/fibonacci_recursive_act",
+        funcName: "fibonacci",
         generator: generateFibonacciTest
       }
     ]
@@ -251,6 +261,7 @@ const LESSONS = [
         task: "Calculate the middle index, and iteratively search the left or right half based on whether the target is greater or smaller.",
         testCount: 3,
         templatePath: "activities/binary_search_act",
+        funcName: "binary_search",
         generator: generateSearchTest
       },
       {
@@ -267,6 +278,7 @@ const LESSONS = [
         task: "Implement the divide step by splitting the array in half, and the combine step to merge two sorted arrays into one.",
         testCount: 3,
         templatePath: "activities/merge_sort_act",
+        funcName: "merge_sort",
         generator: generateSortTest
       }
     ]
