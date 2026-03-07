@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { FiUser, FiMail, FiLock } from "react-icons/fi";
-import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
+import { FiLock, FiMail, FiUser } from "react-icons/fi";
+import { Link, useNavigate } from "react-router-dom";
 import "../styles/Auth.css";
 
 export default function SignUp() {
@@ -11,11 +11,35 @@ export default function SignUp() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Sign up with", name, email, password);
-    // Changed this line to route to dashboard
-    navigate("/dashboard"); 
+    
+    try {
+      // Send a POST request to your FastAPI backend
+      const response = await fetch("http://127.0.0.1:8000/api/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Send the name, email, and password states collected from the form
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Sign up success:", data);
+        
+        // As you configured, navigate to dashboard upon success
+        navigate("/dashboard");
+      } else {
+        // Handle errors like "Email already registered"
+        const errorData = await response.json();
+        alert(errorData.detail || "Sign up failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error connecting to server:", error);
+      alert("Failed to connect to the server.");
+    }
   };
 
   return (

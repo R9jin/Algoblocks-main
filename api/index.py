@@ -32,7 +32,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # -------------------------------
 # DATABASE AND MODEL IMPORTS
 # -------------------------------
-from database import projects_collection  # MongoDB collection for saving projects
+from database import projects_collection, users_collection
 from models import ProjectModel           # Pydantic model representing a project
 from bson import ObjectId                 # MongoDB ObjectId type for document IDs
 from collections import deque             # Double-ended queue used for BFS traversal
@@ -64,6 +64,14 @@ class CodePayload(BaseModel):
     # The Python code string submitted by the user for analysis
     code: str
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class SignUpRequest(BaseModel):
+    name: str
+    email: str
+    password: str
 
 # ============================================================
 # CLASS: COMPLEXITY ANALYZER
@@ -956,3 +964,43 @@ def get_projects():
     for p in projects:
         p["_id"] = str(p["_id"])                 # Convert ObjectId to string for JSON serialization
     return {"status": "success", "projects": projects}
+
+@app.post("/api/login")
+@app.post("/login")
+def login_user(req: LoginRequest):
+    if users_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    
+    # Search for the user in the database by email
+    user = users_collection.find_one({"email": req.email})
+    
+    # Check if user exists and password matches
+    # Note: In a production app, you should use hashed passwords (like bcrypt) instead of plain text!
+    if user and user.get("password") == req.password:
+        return {"status": "success", "message": "Login successful", "email": req.email}
+    else:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+@app.post("/api/signup")
+@app.post("/signup")
+def signup_user(req: SignUpRequest):
+    if users_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    
+    # 1. Check if a user with this email already exists
+    existing_user = users_collection.find_one({"email": req.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # 2. Prepare the new user document
+    # Note: In a production app, use a library like passlib to hash the password before saving!
+    new_user = {
+        "name": req.name,
+        "email": req.email,
+        "password": req.password
+    }
+    
+    # 3. Insert into MongoDB
+    users_collection.insert_one(new_user)
+    
+    return {"status": "success", "message": "User created successfully"}
