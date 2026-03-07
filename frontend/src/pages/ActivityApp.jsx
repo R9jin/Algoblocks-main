@@ -6,6 +6,7 @@ import "../styles/ActivityApp.css";
 import Split from "react-split";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import ConfirmModal from "../components/ConfirmModal.jsx"; // IMPORT MODAL
 
 // --- LEETCODE STYLE ACTIVITY TASKS ---
 // --- LEETCODE STYLE ACTIVITY TASKS (EXPANDED) ---
@@ -294,6 +295,16 @@ const ActivityApp = () => {
     lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false
   });
 
+  // --- CONFIRM MODAL STATE ---
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    isDanger: false,
+    onConfirmAction: null
+  });
+
   const [panelHeight, setPanelHeight] = useState(300);
   const isDragging = useRef(false);
 
@@ -491,7 +502,7 @@ except Exception as e:
         <aside className="activity-left-panel">
           <div className="activity-panel-header">
             <h2>
-              <img src="/assets/learning-icon.png" alt="Icon" style={{ width: '24px' }}/>
+              <img src="/assets/console-icon.png" alt="Icon" style={{ width: '24px' }}/>
               Description
             </h2>
           </div>
@@ -701,6 +712,17 @@ except Exception as e:
         </aside>
 
       </Split>
+
+    {/* RENDER THE CONFIRM MODAL */}
+      <ConfirmModal 
+        isOpen={modalConfig.isOpen}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        confirmText={modalConfig.confirmText}
+        isDanger={modalConfig.isDanger}
+        onCancel={closeModal}
+        onConfirm={modalConfig.onConfirmAction}
+      />
     </div>
   );
 };
