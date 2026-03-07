@@ -1,10 +1,10 @@
-import { Link } from "react-router-dom";
-import Header from "../components/Header";
-import "../styles/HomePage.css";
-import { LuPuzzle, LuChartBar, LuCirclePlay } from "react-icons/lu";
 import { FaPython } from "react-icons/fa";
 import { IoArrowForward } from "react-icons/io5";
+import { LuChartBar, LuCirclePlay, LuPuzzle } from "react-icons/lu";
+import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
+import Header from "../components/Header";
+import "../styles/HomePage.css";
  
 export default function LandingPage() {
   return (
@@ -27,8 +27,8 @@ export default function LandingPage() {
               performance in real-time.
             </p>
             <div className="hero-buttons">
-              <Link to="/app" className="btn-primary">
-                Launch Playground
+              <Link to="/signup" className="btn-primary">
+                Start for Free
                 <IoArrowForward className="btn-icon-inline" aria-hidden="true" />
               </Link>
               <button className="btn-secondary">

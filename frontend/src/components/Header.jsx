@@ -65,7 +65,7 @@ export default function Header() {
           they can begin building and analyzing algorithms using
           the AlgoBlocks environment.
         */}
-        <Link to="/app" className="nav-btn signup">
+        <Link to="/signup" className="nav-btn signup">
           Start Learning
         </Link>
 
