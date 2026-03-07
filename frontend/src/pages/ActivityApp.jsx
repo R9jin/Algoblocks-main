@@ -334,16 +334,16 @@ const ActivityApp = () => {
   };
 
   const handleSuccess = async () => {
-    // 1. Get the current activity ID (e.g., from your URL params or state)
-    const currentLessonId = "bubble_sort_act"; 
+    // 1. Dynamically extract the activity ID from the template path
+    const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act"; 
     
-    // 2. Calculate their score (or just pass 100 if they finished it)
-    const finalScore = 100; 
+    // 2. Calculate their score
+    const finalScore = 100;
     
     // 3. Call our unified function
     await saveLessonProgress(currentLessonId, finalScore);
     
-    // 4. (Optional) Show a success message or redirect them
+    // 4. Show a success message and redirect
     alert("Activity Completed!");
     setTimeout(() => navigate("/learning-path"), 1500);
   };
@@ -511,15 +511,25 @@ const ActivityApp = () => {
     
     activityData.testCasesList.forEach((tc, index) => {
       testHarness += `
-try:
-    assert ${tc.call} == ${tc.expected}
-    print("Test ${index + 1} Passed: ${tc.call} == ${tc.expected}")
-    passed += 1
-except AssertionError:
-    print("Test ${index + 1} Failed: ${tc.call} did not equal ${tc.expected}")
-except Exception as e:
-    print("Test ${index + 1} Error:", e)
-`;
+                    try:
+                        assert ${tc.call} == ${tc.expected}
+                        print("Test ${index + 1} Passed: ${tc.call} == ${tc.expected}")
+                        passed += 1
+                    except AssertionError:
+                        print("Test ${index + 1} Failed: ${tc.call} did not equal ${tc.expected}")
+                    except Exception as e:
+                        print("Test ${index + 1} Error:", e)
+                    `;
+
+                          if (match) {
+                      const passed = parseInt(match[1]);
+                      setPassedTests(passed);
+                      
+                      // Trigger completion if all tests pass
+                      if (passed === total) {
+                        handleSuccess();
+                      }
+                    }
     });
     testHarness += `print(f"\\nResult: {passed}/{total} Tests Passed")\n`;
   
