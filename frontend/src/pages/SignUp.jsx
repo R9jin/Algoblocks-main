@@ -27,10 +27,12 @@ export default function SignUp() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Sign up success:", data);
         
-        // As you configured, navigate to dashboard upon success
-        navigate("/dashboard");
+        // Save database user to localStorage
+        localStorage.setItem("user", JSON.stringify({ email: data.email, name: data.name }));
+        
+        // Navigate to /home instead of /dashboard for a consistent entry point
+        navigate("/home");
       } else {
         // Handle errors like "Email already registered"
         const errorData = await response.json();

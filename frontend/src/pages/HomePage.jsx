@@ -5,38 +5,42 @@ import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import "../styles/HomePage.css";
- 
-export default function LandingPage() {
-  return (
-    <div className="landing-container">
-      
-      {/* Reusing the same header component for consistency */}
-      <Header />
 
-      <main className="landing-main">
-        {/* Hero Section */}
-        <section className="hero home-hero">
-          <div className="home-hero-copy">
-            <h1 className="slogan-text">
-              Think in <span className="accent">Steps</span>.<br />
-              <span className="accent">Analyze</span> in Depth.
-            </h1>
-            <p className="hero-subtitle">
-              Build algorithms with interactive blocks and<br />
-              get line-by-line feedback on time and space<br />
-              performance in real-time.
-            </p>
-            <div className="hero-buttons">
-              <Link to="/signup" className="btn-primary">
-                Start for Free
-                <IoArrowForward className="btn-icon-inline" aria-hidden="true" />
-              </Link>
-              <button className="btn-secondary">
-                <LuCirclePlay className="btn-icon-inline" aria-hidden="true" />
-                Watch Demo
-              </button>
+export default function LandingPage() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) setUser(JSON.parse(storedUser));
+  }, []);
+
+  return (
+      <div className="landing-container">
+        <Header />
+        <main className="landing-main">
+          <section className="hero home-hero">
+            <div className="home-hero-copy">
+              <h1 className="slogan-text">
+                Think in <span className="accent">Steps</span>.<br />
+                <span className="accent">Analyze</span> in Depth.
+              </h1>
+              <p className="hero-subtitle">
+                Build algorithms with interactive blocks and<br />
+                get line-by-line feedback on time and space<br />
+                performance in real-time.
+              </p>
+              <div className="hero-buttons">
+                {/* Dynamic Call-To-Action based on DB Auth Status */}
+                <Link to={user ? "/home" : "/signup"} className="btn-primary">
+                  {user ? "Continue Learning" : "Start for Free"}
+                  <IoArrowForward className="btn-icon-inline" aria-hidden="true" />
+                </Link>
+                <button className="btn-secondary">
+                  <LuCirclePlay className="btn-icon-inline" aria-hidden="true" />
+                  Watch Demo
+                </button>
+              </div>
             </div>
-          </div>
           <div className="home-hero-media" aria-hidden="true">
             <img
               src="/assets/programming-code-editor-illustration-design-vector-removebg-preview.png"
