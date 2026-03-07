@@ -305,6 +305,15 @@ const LESSONS = [
 export default function LearningPath() {
   const navigate = useNavigate();
   const [expandedTopic, setExpandedTopic] = useState(null);
+  const [userProgress, setUserProgress] = useState({});
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUserProgress(parsedUser.progress || {});
+    }
+  }, []);
 
   const toggleTopic = (topicId) => {
     setExpandedTopic(expandedTopic === topicId ? null : topicId);
@@ -372,6 +381,14 @@ export default function LearningPath() {
                 <div className="lp-lesson-title-group">
                   <span className="lp-lesson-number">{lesson.number}</span>
                   <h3 className="lp-lesson-title">{lesson.title}</h3>
+                  {/* Check if they have a score for this lesson */}
+                    {userProgress["bubble_sort_act"] !== undefined ? (
+                      <span className="score-badge">
+                        Score: {userProgress["bubble_sort_act"]}/100 ✅
+                      </span>
+                    ) : (
+                      <span className="pending-badge">Not Started</span>
+                    )}
                 </div>
               </div>
 

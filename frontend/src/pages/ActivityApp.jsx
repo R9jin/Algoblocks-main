@@ -292,6 +292,46 @@ const renderFormattedTask = (text) => {
 const ActivityApp = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const saveLessonScore = async (lessonId, score) => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) return; // Not logged in
+
+    const user = JSON.parse(storedUser);
+
+    try {
+      const response = await fetch("http://localhost:8000/api/update-progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          lesson_id: lessonId,
+          score: score
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Update local storage with the new progress object from the DB
+        user.progress = data.progress;
+        localStorage.setItem("user", JSON.stringify(user));
+        
+        console.log("Score saved successfully!");
+      }
+    } catch (error) {
+      console.error("Failed to save score:", error);
+    }
+  };
+
+  // EXAMPLE USAGE: Call this when they click "Submit" or pass the lesson
+  const handleLessonComplete = () => {
+    const finalScore = 100; // Calculate their actual score
+    const currentLesson = "bubble_sort_act"; // Get the current activity ID
+    
+    saveLessonScore(currentLesson, finalScore);
+    // show success modal, etc.
+  };
   
   const activityData = location.state?.activityData || null;
   const initialTemplate = location.state?.templatePath || "";

@@ -26,9 +26,12 @@ export default function SignIn() {
       if (response.ok) {
         const data = await response.json();
         
-        // Save database user to localStorage
-        localStorage.setItem("user", JSON.stringify({ email: data.email, name: data.name }));
-        
+        localStorage.setItem("user", JSON.stringify({
+          email: data.email,
+          name: data.name,
+          progress: data.progress || {} // <-- Add this
+        }));
+
         navigate("/home");
       } else {
         // If backend returns a 401 error, show an alert

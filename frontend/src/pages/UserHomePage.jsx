@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"; // Added missing import
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Footer from "../components/Footer";
 import UserHeader from "../components/UserHeader";
@@ -9,7 +9,7 @@ import { LuBookOpen, LuChartBar, LuCirclePlay, LuFolder } from "react-icons/lu";
 
 export default function UserHomePage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [user, setUser] = useState(null); // Remove hardcoded props
+  const [user, setUser] = useState(null); 
   const navigate = useNavigate();
 
   // Load the user from the database session on mount
@@ -26,6 +26,9 @@ export default function UserHomePage() {
     setShowLogoutModal(false);
     navigate("/signin");
   };
+
+  // ADD THIS LINE: Prevent rendering before the user data is loaded
+  if (!user) return null; 
 
   return (
     <div className="landing-container user-homepage">
