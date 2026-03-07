@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react"; // Added missing import
 import { FaPython } from "react-icons/fa";
 import { IoArrowForward } from "react-icons/io5";
 import { LuChartBar, LuCirclePlay, LuPuzzle } from "react-icons/lu";
