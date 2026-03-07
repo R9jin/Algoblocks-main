@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Split from "react-split";
 import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
+import ConfirmModal from "../components/ConfirmModal.jsx"; // IMPORT MODAL
 import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
 import "../styles/MainApp.css";
 
-// --- NEW IMPORTS FOR SYNTAX HIGHLIGHTING ---
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
@@ -37,6 +37,18 @@ export default function MainApp() {
   const [bottomPanel, setBottomPanel] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+
+  // --- CONFIRM MODAL STATE ---
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    isDanger: false,
+    onConfirmAction: null
+  });
+
+  const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
   
   // --- DRAG TO RESIZE LOGIC ---
   const [panelHeight, setPanelHeight] = useState(450);
@@ -105,11 +117,7 @@ export default function MainApp() {
     }
   };
 
-  const loadAlgorithmTemplate = async (path, skipConfirm = false) => {
-    if (!skipConfirm) {
-      const confirmOverwrite = window.confirm("Loading this algorithm will overwrite your current workspace. Do you want to continue?");
-      if (!confirmOverwrite) return;
-    }
+  const executeLoadTemplate = async (path) => {
     try {
       const response = await fetch(`/templates/${path}.json`);
       if (!response.ok) throw new Error("Template not found");
@@ -124,6 +132,24 @@ export default function MainApp() {
     }
   };
 
+  const loadAlgorithmTemplate = (path, skipConfirm = false) => {
+    if (!skipConfirm) {
+      setModalConfig({
+        isOpen: true,
+        title: "Load Pre-made Template?",
+        message: "Loading this algorithm will overwrite your current workspace. Do you want to continue?",
+        confirmText: "Load Template",
+        isDanger: false,
+        onConfirmAction: () => {
+          closeModal();
+          executeLoadTemplate(path);
+        }
+      });
+    } else {
+      executeLoadTemplate(path);
+    }
+  };
+
   useEffect(() => {
     if (location.state && location.state.templatePath) {
       setTimeout(() => {
@@ -134,16 +160,24 @@ export default function MainApp() {
   }, [location.state]);
 
   const handleClear = () => {
-    if (window.confirm("Are you sure you want to clear the workspace? All unsaved progress will be lost.")) {
-      if (workspaceRef.current) {
-        workspaceRef.current.clear();
-        setGeneratedPython("# Drag blocks to generate Python code");
-        setBlocklyJson(null);
-        setAnalysisResult({ lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false });
-        setActiveTab("time_asymptotic");
-        setBottomPanel(null);
+    setModalConfig({
+      isOpen: true,
+      title: "Clear Workspace?",
+      message: "Are you sure you want to clear the workspace? All unsaved progress will be lost.",
+      confirmText: "Clear Workspace",
+      isDanger: true,
+      onConfirmAction: () => {
+        closeModal();
+        if (workspaceRef.current) {
+          workspaceRef.current.clear();
+          setGeneratedPython("# Drag blocks to generate Python code");
+          setBlocklyJson(null);
+          setAnalysisResult({ lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false });
+          setActiveTab("time_asymptotic");
+          setBottomPanel(null);
+        }
       }
-    }
+    });
   };
 
   const handleSave = () => {
@@ -179,7 +213,7 @@ export default function MainApp() {
     }
   };
 
-const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="workspace-app-container">
@@ -191,14 +225,12 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
         handleSave={handleSave}
       />
 
-      {/* MAIN SPLIT VIEW */}
       <Split 
         className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} 
         sizes={[20, 80]} 
         minSize={[250, 400]} 
         gutterSize={8}
       >
-        {/* SIDEBAR */}
         <aside className="templates-sidebar">
           <div className="sidebar-search">
             <img src="/assets/search-icon.png" alt="Search" className="search-icon" />
@@ -223,10 +255,8 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
           </div>
         </aside>
 
-        {/* MAIN WORKSPACE AREA */}
         <main className="workspace-main">
           
-          {/* TOGGLE SIDEBAR BUTTON */}
           <button 
             className={`sidebar-toggle-btn ${!isSidebarVisible ? 'closed' : ''}`}
             onClick={() => setIsSidebarVisible(!isSidebarVisible)}
@@ -235,13 +265,11 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
             <span className="toggle-icon">❮</span>
           </button>
 
-          {/* Blocks or Python Editor */}
           <div className="editor-container">
             <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
               <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
             </div>
             
-            {/* UPDATED: Purple Syntax Highlighter matching your CSS with fixed text color */}
             <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#1C1236', overflow: 'auto' }}>
               <SyntaxHighlighter 
                 language="python" 
@@ -252,8 +280,8 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
                   padding: '20px',
                   fontSize: '0.95rem',
                   fontFamily: "'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
-                  background: '#1C1236', // Matches the deep purple
-                  color: '#EBE4FF',      // <-- NEW: Forces default text to be light/readable
+                  background: '#1C1236',
+                  color: '#EBE4FF', 
                   minHeight: '100%'
                 }}
               >
@@ -262,10 +290,8 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
             </div>
           </div>
 
-          {/* DOCKED RESIZABLE HOVER PANEL */}
           {bottomPanel && (
             <div className="bottom-hover-panel" style={{ height: `${panelHeight}px` }}>
-              {/* DRAG HANDLE FOR RESIZING */}
               <div className="panel-resizer" onMouseDown={handleDragStart}>
                 <div className="resizer-dash"></div>
               </div>
@@ -298,7 +324,6 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
                       </span>
                     </div>
                     
-                    {/* CENTERED & COMPACT TABLE WRAPPER */}
                     <div className="complexity-table-wrapper">
                       <table className="complexity-table">
                         <thead>
@@ -329,7 +354,6 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
             </div>
           )}
 
-          {/* DOCKED FOOTER */}
           <footer className="workspace-footer">
             <div className="footer-left">
               <button 
@@ -355,6 +379,17 @@ const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().inc
 
         </main>
       </Split>
+
+      {/* RENDER THE CONFIRM MODAL */}
+      <ConfirmModal 
+        isOpen={modalConfig.isOpen}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        confirmText={modalConfig.confirmText}
+        isDanger={modalConfig.isDanger}
+        onCancel={closeModal}
+        onConfirm={modalConfig.onConfirmAction}
+      />
     </div>
   );
 }
