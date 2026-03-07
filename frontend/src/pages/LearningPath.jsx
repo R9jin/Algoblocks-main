@@ -309,7 +309,6 @@ export default function LearningPath() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
       setUserProgress(parsedUser.progress || {});
@@ -392,6 +391,7 @@ export default function LearningPath() {
                     : null;
 
                   const score = activityKey ? userProgress[activityKey] : undefined;
+                  const isCompleted = score !== undefined;
 
                   return (
                     <div key={topic.id} className={`lp-topic-container ${isExpanded ? "expanded" : ""}`}>
@@ -408,9 +408,9 @@ export default function LearningPath() {
                         <div className="lp-topic-right">
                           <div className="lp-topic-badge">{topic.level}</div>
 
-                          {score !== undefined ? (
+                          {isCompleted ? (
                             <span className="score-badge">
-                              Score: {score}/100 ✅
+                              ✅ Completed (Score: {score}/100)
                             </span>
                           ) : (
                             <span className="pending-badge">Not Started</span>
@@ -466,14 +466,22 @@ export default function LearningPath() {
                               {topic.testCount} test cases
                             </span>
 
-                            <button 
-                              className="lp-start-btn"
-                              onClick={() => handleStartActivity(topic)}
-                            >
-                              Start Activity
-                            </button>
+                            {isCompleted ? (
+                              <button
+                                className="lp-review-btn"
+                                onClick={() => handleStartActivity(topic)}
+                              >
+                                Review Activity
+                              </button>
+                            ) : (
+                              <button
+                                className="lp-start-btn"
+                                onClick={() => handleStartActivity(topic)}
+                              >
+                                Start Activity
+                              </button>
+                            )}
                           </div>
-
                         </div>
                       )}
 

@@ -293,34 +293,34 @@ const ActivityApp = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const saveLessonScore = async (lessonId, score) => {
+  const saveLessonProgress = async (lessonId, score) => {
     const storedUser = localStorage.getItem("user");
-    if (!storedUser) return; // Not logged in
+    if (!storedUser) return;
 
     const user = JSON.parse(storedUser);
 
     try {
-      const response = await fetch("http://localhost:8000/api/update-progress", {
+      const response = await fetch("/api/update-progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: user.email,
           lesson_id: lessonId,
-          score: score
+          score: score // Passes the numerical score
         })
       });
 
       if (response.ok) {
         const data = await response.json();
         
-        // Update local storage with the new progress object from the DB
+        // Updates local storage so LearningPath sees it instantly
         user.progress = data.progress;
         localStorage.setItem("user", JSON.stringify(user));
         
-        console.log("Score saved successfully!");
+        console.log(`Progress saved! Lesson: ${lessonId}, Score: ${score}`);
       }
     } catch (error) {
-      console.error("Failed to save score:", error);
+      console.error("Failed to save progress:", error);
     }
   };
 
@@ -331,6 +331,21 @@ const ActivityApp = () => {
     
     saveLessonScore(currentLesson, finalScore);
     // show success modal, etc.
+  };
+
+  const handleSuccess = async () => {
+    // 1. Get the current activity ID (e.g., from your URL params or state)
+    const currentLessonId = "bubble_sort_act"; 
+    
+    // 2. Calculate their score (or just pass 100 if they finished it)
+    const finalScore = 100; 
+    
+    // 3. Call our unified function
+    await saveLessonProgress(currentLessonId, finalScore);
+    
+    // 4. (Optional) Show a success message or redirect them
+    alert("Activity Completed!");
+    setTimeout(() => navigate("/learning-path"), 1500);
   };
   
   const activityData = location.state?.activityData || null;
