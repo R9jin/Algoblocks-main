@@ -123,6 +123,21 @@ const LESSONS = [
         task: "Use an If-Else block to check a condition. If the condition is true, output 'Yes', otherwise output 'No'.",
         testCount: 2,
         templatePath: "intro/logic_flow"
+      },
+      {
+        id: "l1-t3",
+        number: "TOPIC 3",
+        title: "Big O Notation",
+        level: "beginner",
+        teaching: `In computer science, we need a standardized way to compare the efficiency of different algorithms. This is where Big O notation comes in! Big O describes the worst-case scenario of an algorithm's execution time (Time Complexity) or memory usage (Space Complexity) as the input size grows.\n\nHere are the most common time complexities from fastest to slowest:\n\n1. O(1) - Constant Time: The algorithm takes the exact same amount of time regardless of the input size (e.g., accessing an array element by its index).\n2. O(log n) - Logarithmic Time: The algorithm's execution time grows very slowly as the input size increases, typically by repeatedly dividing the search area in half (e.g., Binary Search).\n3. O(n) - Linear Time: The execution time grows directly in proportion to the input size (e.g., checking every item in a list one by one).\n4. O(n²) - Quadratic Time: The execution time grows exponentially, usually seen when you have nested loops (e.g., checking every item against every other item).\n\nUnderstanding Big O helps us write code that scales effectively!`,
+        algorithmSteps: `Analyzing an O(n) Algorithm:\n\nProblem: Print a string 'n' times.\n\nSTART\n  Input n\n  Set counter i = 0\n  WHILE i < n DO\n    Output "Step"\n    i = i + 1\n  END WHILE\nEND\n\nBecause the loop runs exactly 'n' times, the time complexity is strictly O(n).`,
+        references: [
+          { text: "FreeCodeCamp: Big O Notation - A Beginner's Guide", url: "https://www.freecodecamp.org/news/big-o-notation-why-it-matters-and-why-it-doesnt-1674cfa8a23c/" },
+          { text: "GeeksforGeeks: Analysis of Algorithms | Big-O analysis", url: "https://www.geeksforgeeks.org/analysis-of-algorithms-set-3asymptotic-notations/" }
+        ],
+        task: `Build a simple algorithm with O(n) time complexity.\n\nGiven a number 'n', construct a loop that outputs the string "Step" exactly 'n' times.`,
+        testCount: 3, // Adjust test count based on the JSON template you eventually create
+        templatePath: "intro/big_o"
       }
     ]
   },

@@ -8,7 +8,6 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ConfirmModal from "../components/ConfirmModal.jsx"; // IMPORT MODAL
 
-// --- LEETCODE STYLE ACTIVITY TASKS ---
 // --- LEETCODE STYLE ACTIVITY TASKS (EXPANDED) ---
 const ACTIVITY_TASKS = [
   // --- LESSON 1: INTRO ---
@@ -49,12 +48,34 @@ Output: "No"
 • You must use an If-Else conditional block to control the flow of execution.
 • The output must match the casing exactly.`
   },
+  {
+    id: "l1-t3",
+    templatePath: "intro/big_o",
+    title: "3. Big O Notation",
+    difficulty: "Easy",
+    task: `Big O notation evaluates how the runtime or space requirements of an algorithm grow as the input size increases. It gives us a high-level understanding of an algorithm's efficiency.
+
+An algorithm with **O(1)** complexity takes the same amount of time regardless of the input size (Constant Time). An algorithm with **O(n)** complexity takes time directly proportional to the input size (Linear Time).
+
+Your task is to build a simple algorithm with **O(n)** time complexity. You are given a non-negative integer \`n\`. Construct a loop that outputs the string "Step" exactly \`n\` times.
+
+**Example 1:**
+Input: n = 3
+Output: 
+"Step"
+"Step"
+"Step"
+
+**Constraints:**
+• 0 <= n <= 10
+• You must use a Loop block that executes exactly \`n\` times, demonstrating linear growth.`
+  },
 
   // --- LESSON 2: SEARCHING ALGORITHMS ---
   {
     id: "l2-t1",
     templatePath: "activities/linear_search_act",
-    title: "3. Linear Search",
+    title: "4. Linear Search",
     difficulty: "Easy",
     task: `You are given a 0-indexed array of integers \`arr\` and an integer \`target\`. Your objective is to find the exact position of the \`target\` within the array. 
 
@@ -78,7 +99,7 @@ Explanation: The number 3 is not present in the array, so we return -1.
   {
     id: "l2-t2",
     templatePath: "activities/binary_search_act",
-    title: "4. Binary Search",
+    title: "5. Binary Search",
     difficulty: "Easy",
     task: `You are given an array of integers \`arr\` which is strictly sorted in ascending order, and an integer \`target\`. Write a function to search for the \`target\` in \`arr\`. If the \`target\` exists, then return its index. Otherwise, return \`-1\`. 
 
@@ -106,7 +127,7 @@ Explanation: 2 does not exist in nums so return -1.
   {
     id: "l3-t1",
     templatePath: "activities/bubble_sort_act",
-    title: "5. Bubble Sort",
+    title: "6. Bubble Sort",
     difficulty: "Easy",
     task: `You are given an array of integers \`arr\`. Your task is to sort the array in ascending order and return it. You must solve the problem using the **Bubble Sort** algorithm. 
 
@@ -128,7 +149,7 @@ Pass 3: [1, 2, 3, 5] (Array is fully sorted)
   {
     id: "l3-t2",
     templatePath: "activities/selection_sort_act",
-    title: "6. Selection Sort",
+    title: "7. Selection Sort",
     difficulty: "Easy",
     task: `You are given an array of integers \`arr\`. Your task is to sort the array in ascending order and return it using the **Selection Sort** algorithm.
 
@@ -146,7 +167,7 @@ Output: [11, 12, 22, 25, 64]
   {
     id: "l3-t3",
     templatePath: "activities/insertion_sort_act",
-    title: "7. Insertion Sort",
+    title: "8. Insertion Sort",
     difficulty: "Easy",
     task: `You are given an array of integers \`arr\`. Sort the array in ascending order and return it using the **Insertion Sort** algorithm.
 
@@ -164,7 +185,7 @@ Output: [5, 6, 11, 12, 13]
   {
     id: "l3-t4",
     templatePath: "activities/merge_sort_act",
-    title: "8. Merge Sort",
+    title: "9. Merge Sort",
     difficulty: "Medium",
     task: `You are given an array of integers \`arr\`. Sort the array in ascending order and return it. You must solve the problem using the **Merge Sort** algorithm.
 
@@ -184,7 +205,7 @@ Output: [5, 6, 7, 11, 12, 13]
   {
     id: "l4-t1",
     templatePath: "activities/factorial_recursive_act",
-    title: "9. Factorial (Recursive)",
+    title: "10. Factorial (Recursive)",
     difficulty: "Easy",
     task: `You are given a non-negative integer \`n\`. Your task is to compute and return the factorial of \`n\`, mathematically denoted as \`n!\`. 
 
@@ -304,6 +325,9 @@ const ActivityApp = () => {
     isDanger: false,
     onConfirmAction: null
   });
+
+  // HELPER: Close the modal
+  const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
 
   const [panelHeight, setPanelHeight] = useState(300);
   const isDragging = useRef(false);
@@ -645,9 +669,16 @@ except Exception as e:
             
             <div className="footer-right">
                <button className="footer-action-icon" onClick={() => {
-                 if (window.confirm("Are you sure you want to restart this activity? Your progress will be lost.")) {
-                   window.location.reload();
-                 }
+                 setModalConfig({
+                   isOpen: true,
+                   title: "Restart Activity?",
+                   message: "Are you sure you want to restart this activity? Your progress will be lost.",
+                   confirmText: "Restart",
+                   isDanger: true,
+                   onConfirmAction: () => {
+                     window.location.reload();
+                   }
+                 });
                }} title="Restart Activity">
                  <img src="/assets/recursive-icon.png" alt="Restart" />
                </button>
