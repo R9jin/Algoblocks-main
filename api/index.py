@@ -1009,8 +1009,7 @@ def signup_user(req: SignUpRequest):
 
 @app.post("/api/update-progress")
 def update_progress(req: ProgressRequest):
-    # MongoDB dot notation allows updating nested fields dynamically
-    # e.g., "progress.bubble_sort_act": 95
+    # Update the specific lesson score in the database
     update_query = {
         "$set": {f"progress.{req.lesson_id}": req.score}
     }
@@ -1020,4 +1019,11 @@ def update_progress(req: ProgressRequest):
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
         
-    return {"status": "success", "message": "Progress saved"}
+    # --- NEW CODE: Fetch the user again to get the updated progress dictionary ---
+    updated_user = users_collection.find_one({"email": req.email})
+    
+    return {
+        "status": "success", 
+        "message": "Progress saved",
+        "progress": updated_user.get("progress", {}) if updated_user else {}
+    }
