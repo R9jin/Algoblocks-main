@@ -21,8 +21,10 @@ const ActivityApp = () => {
   const [viewMode, setViewMode] = useState("workspace");
   const [passedTests, setPassedTests] = useState(0);
 
-  // --- NEW: State for Left Panel Visibility ---
   const [isLeftPanelVisible, setIsLeftPanelVisible] = useState(true);
+
+  // --- NEW: State to track which test cases are expanded (default to opening the first one) ---
+  const [expandedTests, setExpandedTests] = useState({ 0: true });
 
   const [bottomPanel, setBottomPanel] = useState(null); 
   const [activeTab, setActiveTab] = useState("time_asymptotic");
@@ -166,9 +168,23 @@ except Exception as e:
         setPassedTests(parseInt(match[1]));
       }
 
+      // Automatically expand all failed test cases for easy debugging
+      const newExpanded = { ...expandedTests };
+      activityData.testCasesList.forEach((tc, i) => {
+        if (outputText.includes(`Test ${i + 1} Failed`) || outputText.includes(`Test ${i + 1} Error`)) {
+          newExpanded[i] = true;
+        }
+      });
+      setExpandedTests(newExpanded);
+
     } catch {
       setConsoleOutput("> Connection Error while running tests.");
     }
+  };
+
+  // --- NEW: Toggle function for dropdowns ---
+  const toggleTest = (index) => {
+    setExpandedTests(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
   const totalTests = activityData?.testCasesList?.length || 0;
@@ -200,16 +216,15 @@ except Exception as e:
         
         <div className="activity-actions">
           <button className="activity-action-btn run-btn" onClick={runTestCases}>
-            <img src="/assets/play-icon.png" alt="Run"/> Run
+            ▶ Run Tests
           </button>
         </div>
       </header>
 
-      {/* --- UPDATED: Dynamic classes and minSize for the Split --- */}
       <Split 
         className={`activity-main-layout ${!isLeftPanelVisible ? 'left-hidden' : ''}`}
         sizes={[25, 50, 25]}
-        minSize={[isLeftPanelVisible ? 250 : 0, 400, 250]} /* Drop left panel minSize to 0 when hidden */
+        minSize={[isLeftPanelVisible ? 250 : 0, 400, 250]} 
         gutterSize={8}
       >
         
@@ -240,7 +255,6 @@ except Exception as e:
 
         <main className="workspace-main activity-center-panel">
           
-          {/* --- NEW: The Toggle Button --- */}
           <button 
             className={`sidebar-toggle-btn ${!isLeftPanelVisible ? 'closed' : ''}`}
             onClick={() => setIsLeftPanelVisible(!isLeftPanelVisible)}
@@ -358,6 +372,7 @@ except Exception as e:
 
         </main>
 
+        {/* --- UPDATED: Test Cases Panel with Collapsible UI --- */}
         <aside className="activity-right-panel">
           <div className="activity-panel-header">
             <h3>Test Cases</h3>
@@ -366,18 +381,52 @@ except Exception as e:
           
           <div className="activity-panel-content">
             {activityData.testCasesList?.map((tc, i) => {
-              const isPassing = consoleOutput.includes(`Test ${i + 1} Passed`);
+              // 1. Detect Status
+              const testIdentifier = `Test ${i + 1}`;
+              const isPassing = consoleOutput.includes(`${testIdentifier} Passed`);
+              const isFailing = consoleOutput.includes(`${testIdentifier} Failed`);
+              const isError = consoleOutput.includes(`${testIdentifier} Error`);
               
+              // 2. State & Styling Setup
+              const isExpanded = expandedTests[i];
+              const statusClass = isPassing ? 'passing' : (isFailing || isError) ? 'failing' : '';
+
               return (
-                <div key={i} className={`test-case-card ${isPassing ? 'passing' : ''}`}>
-                  <div className="test-case-header">
-                    <div className="test-case-indicator"></div>
-                    <strong className="test-case-title">Test {i + 1}</strong>
+                <div key={i} className={`test-case-card ${statusClass}`}>
+                  
+                  {/* Clickable Header Dropdown Toggle */}
+                  <div className="test-case-header" onClick={() => toggleTest(i)}>
+                    <div className="test-case-header-left">
+                      <div className={`test-case-indicator ${statusClass}`}></div>
+                      <strong className="test-case-title">Test {i + 1}</strong>
+                    </div>
+                    <span className={`test-case-chevron ${isExpanded ? 'open' : ''}`}>❯</span>
                   </div>
-                  <div className="test-case-details">
-                    <div><strong>Call:</strong> <span className="test-case-code">{tc.call}</span></div>
-                    <div><strong>Expected:</strong> <span className="test-case-code">{tc.expected}</span></div>
-                  </div>
+                  
+                  {/* Collapsible Code Content */}
+                  {isExpanded && (
+                    <div className="test-case-details">
+                      <div className="test-case-row">
+                        <span className="test-case-label">Input:</span>
+                        <code className="test-case-code">{tc.call}</code>
+                      </div>
+                      <div className="test-case-row">
+                        <span className="test-case-label">Expected Output:</span>
+                        <code className="test-case-code">{tc.expected}</code>
+                      </div>
+                      
+                      {/* Show immediate status inside if run */}
+                      {(isPassing || isFailing || isError) && (
+                        <div className="test-case-status-row">
+                          <span className="test-case-label">Result:</span>
+                          <span style={{ fontWeight: 'bold', color: isPassing ? '#27AE60' : '#e74c3c' }}>
+                            {isPassing ? 'Passed' : isFailing ? 'Failed (Incorrect Output)' : 'Failed (Syntax Error)'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                 </div>
               );
             })}
