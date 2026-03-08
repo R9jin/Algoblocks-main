@@ -381,9 +381,11 @@ const ActivityApp = () => {
     onConfirmAction: null
   });
 
+  const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
+
   // HELPER: Close the modal
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
-
+  
   const [panelHeight, setPanelHeight] = useState(300);
   const isDragging = useRef(false);
 
@@ -757,23 +759,30 @@ except Exception as e:
               >
                 <img src="/assets/complexity-icon.png" alt="Complexity" className="tab-icon" /> Complexity
               </button>
+              <button 
+                className="footer-tab"
+                onClick={() => setIsBigOModalOpen(true)}
+                style={{ color: '#BCA1FC', fontWeight: 'bold' }}
+              >
+                📊 Big O Reference
+              </button>
             </div>
             
             <div className="footer-right">
-               <button className="footer-action-icon" onClick={() => {
-                 setModalConfig({
-                   isOpen: true,
-                   title: "Restart Activity?",
-                   message: "Are you sure you want to restart this activity? Your progress will be lost.",
-                   confirmText: "Restart",
-                   isDanger: true,
-                   onConfirmAction: () => {
-                     window.location.reload();
-                   }
-                 });
-               }} title="Restart Activity">
-                 <img src="/assets/recursive-icon.png" alt="Restart" />
-               </button>
+                <button className="footer-action-icon" onClick={() => {
+                  setModalConfig({
+                    isOpen: true,
+                    title: "Restart Activity?",
+                    message: "Are you sure you want to restart this activity? Your progress will be lost.",
+                    confirmText: "Restart",
+                    isDanger: true,
+                    onConfirmAction: () => {
+                      window.location.reload();
+                    }
+                  });
+                }} title="Restart Activity">
+                  <img src="/assets/recursive-icon.png" alt="Restart" />
+                </button>
             </div>
           </footer>
 
