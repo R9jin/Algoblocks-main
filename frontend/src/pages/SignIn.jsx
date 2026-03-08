@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { FiMail, FiLock } from "react-icons/fi";
-import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
+import { FiLock, FiMail } from "react-icons/fi";
+import { Link, useNavigate } from "react-router-dom";
 import "../styles/Auth.css";
 
 export default function SignIn() {
@@ -10,10 +10,37 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Sign in with", email, password);
-    navigate("/home");
+    
+    try {
+      // Send a POST request to your FastAPI backend
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        localStorage.setItem("user", JSON.stringify({
+          email: data.email,
+          name: data.name,
+          progress: data.progress || {} // <-- Add this
+        }));
+
+        navigate("/home");
+      } else {
+        // If backend returns a 401 error, show an alert
+        alert("Invalid email or password. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error connecting to server:", error);
+      alert("Failed to connect to the server.");
+    }
   };
 
   return (

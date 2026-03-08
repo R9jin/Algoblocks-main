@@ -1,25 +1,38 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "../styles/UserHomePage.css"; 
-import UserHeader from "../components/UserHeader";
 import Footer from "../components/Footer";
+import UserHeader from "../components/UserHeader";
+import "../styles/UserHomePage.css";
 
-import { LuPuzzle, LuChartBar, LuCirclePlay, LuFolder, LuLayoutDashboard, LuBookOpen } from "react-icons/lu";
 import { IoArrowForward } from "react-icons/io5";
+import { LuBookOpen, LuChartBar, LuCirclePlay, LuFolder } from "react-icons/lu";
 
-export default function UserHomePage({ user = { name: "Test User", email: "test@example.com" } }) {
+export default function UserHomePage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [user, setUser] = useState(null); 
   const navigate = useNavigate();
+
+  // Load the user from the database session on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      navigate("/signin"); // Protect the route
+    }
+  }, [navigate]);
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
     navigate("/signin");
   };
 
+  // ADD THIS LINE: Prevent rendering before the user data is loaded
+  if (!user) return null; 
+
   return (
     <div className="landing-container user-homepage">
       <UserHeader user={user} onLogoutClick={() => setShowLogoutModal(true)} />
-
       <main className="landing-main">
         {/* Hero Section */}
         <section className="hero home-hero">
@@ -66,7 +79,12 @@ export default function UserHomePage({ user = { name: "Test User", email: "test@
           </p>
 
           <div className="cards-grid">
-            <div className="card">
+            {/* Updated: Made the card clickable to navigate to /projects */}
+            <div 
+              className="card" 
+              onClick={() => navigate("/projects")} 
+              style={{ cursor: "pointer" }}
+            >
               <div className="card-icon">
                 <span className="card-icon-badge">
                   <LuFolder size={24} color="#7F57F9" aria-hidden="true" />
@@ -78,7 +96,11 @@ export default function UserHomePage({ user = { name: "Test User", email: "test@
               </p>
             </div>
 
-            <div className="card">
+            <div 
+              className="card" 
+              onClick={() => navigate("/learning-path")} 
+              style={{ cursor: "pointer" }}
+            >
               <div className="card-icon">
                 <span className="card-icon-badge">
                   <LuBookOpen size={24} color="#7F57F9" aria-hidden="true" />
@@ -90,7 +112,11 @@ export default function UserHomePage({ user = { name: "Test User", email: "test@
               </p>
             </div>
 
-            <div className="card">
+            <div 
+              className="card" 
+              onClick={() => navigate("/app")} 
+              style={{ cursor: "pointer" }}
+            >
               <div className="card-icon">
                 <span className="card-icon-badge">
                   <LuChartBar size={24} color="#7F57F9" aria-hidden="true" />
