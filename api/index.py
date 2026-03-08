@@ -149,7 +149,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             'list': {'time': 'O(n)', 'space': 'O(n)'},         # Creating a list
             'index': {'time': 'O(n)', 'space': 'O(1)'},        # Searching list index
             'append': {'time': 'O(1)', 'space': 'O(1)'},       # List append
-            'copy': {'time': 'O(n)', 'space': 'O(n)'}          # List copy
+            'copy': {'time': 'O(n)', 'space': 'O(n)'},         # List copy
+            'str': {'time': 'O(n)', 'space': 'O(n)'},          # Converting a list to string
+            'max': {'time': 'O(n)', 'space': 'O(1)'},          # Finding max element
+            'min': {'time': 'O(n)', 'space': 'O(1)'},          # Finding min element
+            'sum': {'time': 'O(n)', 'space': 'O(1)'}           # Summing elements
         }
 
         # Tracks aliases of functions (e.g., f = fibonacci)
@@ -253,6 +257,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def get_color(self, complexity_str):
         # Assign a color code for visualizing complexity in a UI
+        if complexity_str == "-": return "#7f8c8d"  # Grey for ignored/definitions
         if "Dead Code" in complexity_str: return "#7f8c8d"  # Grey for dead code
         if "T(n) =" in complexity_str or "n!" in complexity_str or "T(n-1) + T" in complexity_str: return "#8e44ad"  # Purple for general recurrences
         if "2^n" in complexity_str or "2T(" in complexity_str: return "#9b59b6"  # Deep purple for exponential
@@ -321,7 +326,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         return True
         return False  # Not a √n loop if no pattern matches
 
-    def record_line(self, node, time_override=None, space_override=None):
+    def record_line(self, node, time_override=None, space_override=None, explanation=None):
         # Record complexity information for a single line of code (AST node)
         
         line_text = self.get_code_snippet(node)  # Get the actual source code text for reporting
@@ -359,17 +364,19 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         override_poly = int(match.group(1))
                         override_log = 1 if "log n" in time_override else 0
 
-        # -> FIX: Unindented the following block so it runs for every line
         # Combine loop depths and overrides to get effective complexity for this line
         total_poly = current_poly + override_poly
         total_log = current_log + override_log
         total_sqrt = current_sqrt + override_sqrt
         
-        # -> FIX: Corrected typo 'in_dead_coe' to 'in_dead_code'
         is_dead = getattr(self, 'in_dead_code', False) or time_override == "Dead Code"
 
         # Determine the time complexity string and weight for sorting in visualization
-        if time_override and is_recurrence and not is_dead:
+        if time_override == "Definition":
+            time_str = "-"
+            t_weight = 0
+            local_weight = 0
+        elif time_override and is_recurrence and not is_dead:
             time_str = time_override
             t_weight = 1000  # Recurrence gets max weight to highlight
             local_weight = 1000
@@ -378,35 +385,148 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             t_weight = -1
             local_weight = -1
         else:
-            # Default handling based on node type and detected loops
+            # FIX: Ensure lines display only their LOCAL complexity.
+            # We no longer inherit `current_poly` directly for the UI `time_str`.
             display_poly = override_poly
             display_log = override_log
             display_sqrt = override_sqrt
             
             if not time_override:
                 if isinstance(node, ast.For):
-                    display_poly = 1  # For loops assumed linear unless nested
+                    display_poly = 1
                 elif isinstance(node, ast.While):
                     if self._is_log_loop(node):
                         display_log = 1
                     elif self._is_sqrt_loop(node):
                         display_sqrt = 1
                     else:
-                        display_poly = 1  # Default linear if no special pattern detected
+                        display_poly = 1
             
-            # Build the readable complexity string (e.g., O(n log n))
+            # Build the readable complexity string (e.g., O(n)) for just this line
             time_str = self._build_time_str(display_poly, display_log, display_sqrt)
+            
+            # WEIGHTS: Must reflect TOTAL nested depth so max_complexity still calculates worst-case correctly!
             t_weight = total_poly * 10 + total_sqrt * 7 + total_log * 5
             local_weight = display_poly * 10 + display_sqrt * 7 + display_log * 5
 
         # Determine space complexity
-        space_str = space_override if space_override else "O(1)"
-        s_weight = 10 if "O(n)" in space_str else 0
-        if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
+        if time_override == "Definition":
+            space_str = "-"
+            s_weight = 0
+        else:
+            space_str = space_override if space_override else "O(1)"
+            s_weight = 10 if "O(n)" in space_str else 0
+            if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
 
         if is_dead or space_override == "Dead Code":
             space_str = "Dead Code"
             s_weight = -1
+
+        # -----------------------------------------------------------------
+        # AUTO-GENERATE CONTEXT-AWARE EDUCATIONAL EXPLANATIONS
+        # -----------------------------------------------------------------
+        if time_override == "Definition":
+            explanation = "Function definitions are purely declarations. They are not executed during runtime analysis, so they do not cost time."
+        elif getattr(self, 'in_dead_code', False) or time_override == "Dead Code":
+            explanation = "This code is unreachable (e.g., it is placed after a return statement) and will never execute, meaning it does not affect the runtime."
+        elif not explanation:
+            # Calculate outer context metrics for arithmetic explanations
+            outer_poly = total_poly - display_poly
+            outer_log = total_log - display_log
+            outer_sqrt = total_sqrt - display_sqrt
+            has_outer = outer_poly > 0 or outer_log > 0 or outer_sqrt > 0
+            
+            outer_str = self._build_time_str(outer_poly, outer_log, outer_sqrt)
+            nested_total_str = self._build_time_str(total_poly, total_log, total_sqrt)
+
+            # Helper function to safely extract variable names from AST nodes
+            def get_name(n):
+                if isinstance(n, ast.Name): return f"'{n.id}'"
+                return "a variable"
+
+            if isinstance(node, ast.For):
+                iter_name = "its collection"
+                if isinstance(node.iter, ast.Name):
+                    iter_name = f"the collection '{node.iter.id}'"
+                elif isinstance(node.iter, ast.Call) and getattr(node.iter.func, 'id', '') == 'range':
+                    iter_name = "a generated sequence of numbers"
+                
+                # Nested Arithmetic Explanation Check
+                if has_outer:
+                    explanation = (f"This 'for' loop iterates over {iter_name}. "
+                                   f"Nesting context: [Outer loop: {outer_str} × Inner loop: {time_str} ➔ Nested total: {nested_total_str}].")
+                else:
+                    explanation = f"This 'for' loop iterates sequentially over {iter_name}, running locally in {time_str} time."
+
+            elif isinstance(node, ast.While):
+                base_expl = ""
+                if display_log > 0 or "log" in time_str:
+                    base_expl = f"This 'while' loop systematically cuts the search space each iteration (highly efficient {time_str} time locally)."
+                elif display_sqrt > 0 or "√n" in time_str:
+                    base_expl = f"The mathematical condition of this 'while' loop restricts its iterations to {time_str} time locally."
+                else:
+                    base_expl = f"This 'while' loop runs until a condition is met, locally contributing {time_str} time."
+                
+                if has_outer:
+                    explanation = f"{base_expl} Nesting context: [Outer loop: {outer_str} × Inner loop: {time_str} ➔ Nested total: {nested_total_str}]."
+                else:
+                    explanation = base_expl
+
+            elif isinstance(node, ast.If):
+                explanation = f"Evaluating this conditional statement is a basic boolean check, resolving in constant O(1) time."
+
+            elif isinstance(node, ast.Assign):
+                targets = [get_name(t) for t in getattr(node, 'targets', [])]
+                target_str = ", ".join(targets) if targets else "a variable"
+                
+                if time_str == "O(1)":
+                    explanation = f"Assigning a value to {target_str} requires a basic memory allocation, taking constant O(1) time locally."
+                elif self.has_slicing:
+                    explanation = f"Assigning {target_str} using array slicing forces Python to copy elements behind the scenes, taking {time_str} time locally."
+                else:
+                    explanation = f"Assigning {target_str} involves a heavier underlying evaluation (like list formatting) taking {time_str} time locally."
+                
+                if has_outer and time_str != "O(1)":
+                    explanation += f" Because it is nested: [Outer block: {outer_str} × Action: {time_str} = Impact: {nested_total_str}]."
+
+            elif isinstance(node, ast.Return):
+                if time_str == "O(1)":
+                    explanation = "Returning a value immediately exits the current scope, taking constant O(1) time."
+                else:
+                    explanation = f"Returning this value requires a complex evaluation to occur first, taking {time_str} time locally."
+
+            elif isinstance(node, ast.Call):
+                func_name = "A function"
+                if getattr(node, 'func', None):
+                    if isinstance(node.func, ast.Name):
+                        func_name = f"The function '{node.func.id}'"
+                    elif isinstance(node.func, ast.Attribute):
+                        func_name = f"The method '{node.func.attr}'"
+
+                if is_recurrence:
+                    explanation = f"{func_name} calls itself recursively here. This branches the execution tree and establishes the relation {time_str}."
+                elif "log" in time_str:
+                    explanation = f"{func_name} utilizes an optimized algorithm (like binary search) to process items, running in {time_str} time locally."
+                elif time_str != "O(1)":
+                    explanation = f"Executing {func_name} forces the system to loop through multiple items behind the scenes, taking {time_str} time locally."
+                else:
+                    explanation = f"{func_name} performs a basic operation that resolves instantly in constant O(1) time."
+                
+                # Add nested impact arithmetic if it's expensive inside a loop
+                if has_outer and time_str != "O(1)":
+                    explanation += f" Nesting context: [Outer block: {outer_str} × Call: {time_str} ➔ Impact: {nested_total_str}]."
+
+            elif isinstance(node, ast.Subscript):
+                if isinstance(node.slice, ast.Slice):
+                    explanation = f"Slicing this array creates a brand new copy of the requested elements in memory, which takes {time_str} time."
+                else:
+                    explanation = f"Looking up a specific index in an array or list happens instantly via a memory offset calculation, taking O(1) time."
+
+            else:
+                if time_str == "O(1)":
+                    explanation = "This standard operation executes locally in constant O(1) time."
+                else:
+                    explanation = f"This operation dictates a local complexity of {time_str}."
 
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             existing_t_weight = self.details[-1].get("weight", -1)
@@ -417,14 +537,16 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.details[-1]["color"] = self.get_color(time_str)
                 self.details[-1]["weight"] = t_weight
                 self.details[-1]["local_weight"] = local_weight
+                self.details[-1]["explanation"] = explanation
         else:
             self.details.append({
-                "lineOfCode": line_text, 
-                "complexity": time_str, 
-                "indent": self.current_depth, 
-                "color": self.get_color(time_str), 
+                "lineOfCode": line_text,
+                "complexity": time_str,
+                "indent": self.current_depth,
+                "color": self.get_color(time_str),
                 "weight": t_weight,
-                "local_weight": local_weight
+                "local_weight": local_weight,
+                "explanation": explanation
             })
 
         if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
@@ -435,22 +557,22 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.space_details[-1]["weight"] = s_weight
         else:
             self.space_details.append({
-                "lineOfCode": line_text, 
-                "complexity": space_str, 
-                "indent": self.current_depth, 
-                "color": self.get_color(space_str), 
+                "lineOfCode": line_text,
+                "complexity": space_str,
+                "indent": self.current_depth,
+                "color": self.get_color(space_str),
                 "weight": s_weight
             })
 
-        if not is_dead:
-            if t_weight > self.max_complexity: 
+        if not is_dead and time_override != "Definition":
+            if t_weight > self.max_complexity:
                 self.max_complexity = t_weight
                 if t_weight < 998:
                     self.max_poly = total_poly
                     self.max_log = total_log
                     self.max_sqrt = total_sqrt
                 
-            if s_weight > self.max_space_weight: 
+            if s_weight > self.max_space_weight:
                 self.max_space_weight = s_weight
 
 
@@ -500,8 +622,8 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         # Determine if the function is unreachable (dead code)
         is_dead = node.name not in self.reachable_funcs
         # Set default complexity indicators for dead or alive functions
-        time_override = "Dead Code" if is_dead else "O(1)"
-        space_override = "Dead Code" if is_dead else "O(1)"
+        time_override = "Dead Code" if is_dead else "Definition"
+        space_override = "Dead Code" if is_dead else "Definition"
         
         # Record the function node as a line in the analyzer with overrides
         self.record_line(node, time_override=time_override, space_override=space_override)
@@ -879,8 +1001,8 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
 # ---------------------- FastAPI Endpoints ----------------------
 
-@app.post("/api/analyze") 
-@app.post("/analyze") 
+@app.post("/api/analyze")
+@app.post("/analyze")
 def analyze_complexity(payload: CodePayload):
     try:
         tree = ast.parse(payload.code)                 # Parse submitted Python code into AST
@@ -915,7 +1037,8 @@ def analyze_complexity(payload: CodePayload):
                 "complexity": asymp,
                 "indent": line.get("indent", 0),
                 "color": line.get("color", analyzer.get_color(asymp)),
-                "weight": line.get("weight", 0)
+                "weight": line.get("weight", 0),
+                "explanation": line.get("explanation", "")
             })
 
         # Return final structured JSON
@@ -970,7 +1093,7 @@ def get_projects():
         p["_id"] = str(p["_id"])                 # Convert ObjectId to string for JSON serialization
     return {"status": "success", "projects": projects}
 
-# 2. Update your existing login endpoint to include progress
+
 @app.post("/api/login")
 def login_user(req: LoginRequest):
     user = users_collection.find_one({"email": req.email})
@@ -979,9 +1102,10 @@ def login_user(req: LoginRequest):
             "status": "success", 
             "email": req.email, 
             "name": user.get("name"),
-            "progress": user.get("progress", {}) # Add this line! Returns {} if empty
+            "progress": user.get("progress", {}) 
         }
     raise HTTPException(status_code=401, detail="Invalid email or password")
+
 
 @app.post("/api/signup")
 @app.post("/signup")
@@ -995,7 +1119,6 @@ def signup_user(req: SignUpRequest):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # 2. Prepare the new user document
-    # Note: In a production app, use a library like passlib to hash the password before saving!
     new_user = {
         "name": req.name,
         "email": req.email,
@@ -1019,7 +1142,6 @@ def update_progress(req: ProgressRequest):
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
         
-    # --- NEW CODE: Fetch the user again to get the updated progress dictionary ---
     updated_user = users_collection.find_one({"email": req.email})
     
     return {
@@ -1035,7 +1157,6 @@ def delete_project(project_id: str):
         raise HTTPException(status_code=500, detail="Database not connected")
     
     try:
-        # Note: ObjectId is already imported at the top of your index.py
         result = projects_collection.delete_one({"_id": ObjectId(project_id)})
         
         if result.deleted_count == 1:

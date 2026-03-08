@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import BlocklyWorkspace from "../components/BlocklyWorkspace";
 import "../styles/ActivityApp.css";
@@ -365,9 +365,9 @@ const ActivityApp = () => {
 
   const [expandedTests, setExpandedTests] = useState({ 0: true });
 
-  const [bottomPanel, setBottomPanel] = useState(null); 
-  const [activeTab, setActiveTab] = useState("time_asymptotic");
-  const [analysisResult, setAnalysisResult] = useState({ 
+  const [bottomPanel, setBottomPanel] = useState(null);
+  const [activeTab, setActiveTab] = useState("time");
+  const [analysisResult, setAnalysisResult] = useState({
     lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false
   });
 
@@ -381,9 +381,19 @@ const ActivityApp = () => {
     onConfirmAction: null
   });
 
+  const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
+  
+  // CHANGE THIS TO AN OBJECT:
+  const [expandedLines, setExpandedLines] = useState({}); 
+
+  // ADD THIS TOGGLE FUNCTION:
+  const toggleLine = (index) => {
+    setExpandedLines(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
   // HELPER: Close the modal
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
-
+  
   const [panelHeight, setPanelHeight] = useState(300);
   const isDragging = useRef(false);
 
@@ -482,6 +492,7 @@ const ActivityApp = () => {
   const runCode = async () => {
     setBottomPanel("console");
     setConsoleOutput("> Running Code...\n");
+    setExpandedLines({});
 
     try {
       const response = await fetch("/api/run", {
@@ -504,7 +515,8 @@ const ActivityApp = () => {
     
     setBottomPanel("console");
     setConsoleOutput("> Running Tests...\n");
-    setPassedTests(0); 
+    setPassedTests(0);
+    setExpandedLines({});
   
     let testHarness = `\n\n# --- System Test Cases ---\nprint("\\n--- Running Test Cases ---")\n`;
     testHarness += `passed = 0\ntotal = ${activityData.testCasesList.length}\n`;
@@ -727,12 +739,37 @@ except Exception as e:
                         </thead>
                         <tbody>
                           {(activeTab === 'time' ? analysisResult.lines : analysisResult.space_lines).map((row, i) => (
-                            <tr key={i}>
-                              <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
-                                {row.lineOfCode}
-                              </td>
-                              <td className="complexity-cell" style={{ color: row.color || 'white' }}>{row.complexity}</td>
-                            </tr>
+                            <React.Fragment key={i}>
+                              <tr 
+                                className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
+                                onClick={() => toggleLine(i)}
+                                style={{ cursor: row.explanation ? 'pointer' : 'default' }}
+                                title="Click to view explanation"
+                              >
+                                <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
+                                  {row.lineOfCode}
+                                </td>
+                                <td className="complexity-cell" style={{ color: row.color || 'white' }}>
+                                  {row.complexity}
+                                  {row.explanation && (
+                                    <span className="dropdown-chevron">
+                                      {expandedLines[i] ? '▼' : '▶'}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                              
+                              {expandedLines[i] && row.explanation && (
+                                <tr className="explanation-row">
+                                  <td colSpan="2">
+                                    <div className="explanation-content">
+                                      <span className="explanation-icon">💡</span>
+                                      <p>{row.explanation}</p>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
                           ))}
                         </tbody>
                       </table>
@@ -757,23 +794,30 @@ except Exception as e:
               >
                 <img src="/assets/complexity-icon.png" alt="Complexity" className="tab-icon" /> Complexity
               </button>
+              <button 
+                className="footer-tab"
+                onClick={() => setIsBigOModalOpen(true)}
+                style={{ color: '#BCA1FC', fontWeight: 'bold' }}
+              >
+                📊 Big O Reference
+              </button>
             </div>
             
             <div className="footer-right">
-               <button className="footer-action-icon" onClick={() => {
-                 setModalConfig({
-                   isOpen: true,
-                   title: "Restart Activity?",
-                   message: "Are you sure you want to restart this activity? Your progress will be lost.",
-                   confirmText: "Restart",
-                   isDanger: true,
-                   onConfirmAction: () => {
-                     window.location.reload();
-                   }
-                 });
-               }} title="Restart Activity">
-                 <img src="/assets/recursive-icon.png" alt="Restart" />
-               </button>
+                <button className="footer-action-icon" onClick={() => {
+                  setModalConfig({
+                    isOpen: true,
+                    title: "Restart Activity?",
+                    message: "Are you sure you want to restart this activity? Your progress will be lost.",
+                    confirmText: "Restart",
+                    isDanger: true,
+                    onConfirmAction: () => {
+                      window.location.reload();
+                    }
+                  });
+                }} title="Restart Activity">
+                  <img src="/assets/recursive-icon.png" alt="Restart" />
+                </button>
             </div>
           </footer>
 
@@ -846,6 +890,13 @@ except Exception as e:
         onCancel={closeModal}
         onConfirm={modalConfig.onConfirmAction}
       />
+
+      {/* ADD THE BIG O MODAL HERE */}
+      <BigOModal 
+        isOpen={isBigOModalOpen} 
+        onClose={() => setIsBigOModalOpen(false)} 
+      />
+
     </div>
   );
 };
