@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Split from "react-split";
 import BigOModal from "../components/BigOModal.jsx"; // ADD THIS IMPORT
@@ -29,7 +29,7 @@ export default function MainApp() {
     lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false
   });
   
-  const [activeTab, setActiveTab] = useState("time_asymptotic");
+  const [activeTab, setActiveTab] = useState("time");
   const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
   const [consoleOutput, setConsoleOutput] = useState("Ready to run...");
   const [blocklyJson, setBlocklyJson] = useState(null);
@@ -52,7 +52,14 @@ export default function MainApp() {
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
   
   const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
-  const [expandedLineIndex, setExpandedLineIndex] = useState(null); // NEW STATE
+  
+  // CHANGE THIS TO AN OBJECT:
+  const [expandedLines, setExpandedLines] = useState({}); 
+
+  // ADD THIS TOGGLE FUNCTION:
+  const toggleLine = (index) => {
+    setExpandedLines(prev => ({ ...prev, [index]: !prev[index] }));
+  };
 
   const [panelHeight, setPanelHeight] = useState(450);
   const isDragging = useRef(false);
@@ -188,9 +195,9 @@ export default function MainApp() {
           setGeneratedPython("# Drag blocks to generate Python code");
           setBlocklyJson(null);
           setAnalysisResult({ lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false });
-          setActiveTab("time_asymptotic");
+          setActiveTab("time");
           setBottomPanel(null);
-          setExpandedLineIndex(null);
+          setExpandedLines({});
         }
       }
     });
@@ -258,7 +265,7 @@ export default function MainApp() {
   const runCode = async () => {
     setConsoleOutput("> Running...");
     setBottomPanel("console");
-    setExpandedLineIndex(null); // ADD THIS
+    setExpandedLines({});
     try {
       const response = await fetch("/api/run", {
         method: "POST",
@@ -400,8 +407,8 @@ export default function MainApp() {
                             <React.Fragment key={i}>
                               {/* Main Clickable Row */}
                               <tr 
-                                className={`complexity-row ${expandedLineIndex === i ? 'expanded' : ''}`}
-                                onClick={() => setExpandedLineIndex(expandedLineIndex === i ? null : i)}
+                                className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
+                                onClick={() => toggleLine(i)}
                                 style={{ cursor: row.explanation ? 'pointer' : 'default' }}
                                 title="Click to view explanation"
                               >
@@ -412,14 +419,14 @@ export default function MainApp() {
                                   {row.complexity}
                                   {row.explanation && (
                                     <span className="dropdown-chevron">
-                                      {expandedLineIndex === i ? '▼' : '▶'}
+                                      {expandedLines[i] ? '▼' : '▶'}
                                     </span>
                                   )}
                                 </td>
                               </tr>
                               
                               {/* Hidden Explanation Dropdown Row */}
-                              {expandedLineIndex === i && row.explanation && (
+                              {expandedLines[i] && row.explanation && (
                                 <tr className="explanation-row">
                                   <td colSpan="2">
                                     <div className="explanation-content">
