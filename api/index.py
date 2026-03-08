@@ -321,7 +321,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         return True
         return False  # Not a √n loop if no pattern matches
 
-    def record_line(self, node, time_override=None, space_override=None):
+    def record_line(self, node, time_override=None, space_override=None, explanation=None):
         # Record complexity information for a single line of code (AST node)
         
         line_text = self.get_code_snippet(node)  # Get the actual source code text for reporting
@@ -359,13 +359,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         override_poly = int(match.group(1))
                         override_log = 1 if "log n" in time_override else 0
 
-        # -> FIX: Unindented the following block so it runs for every line
         # Combine loop depths and overrides to get effective complexity for this line
         total_poly = current_poly + override_poly
         total_log = current_log + override_log
         total_sqrt = current_sqrt + override_sqrt
         
-        # -> FIX: Corrected typo 'in_dead_coe' to 'in_dead_code'
         is_dead = getattr(self, 'in_dead_code', False) or time_override == "Dead Code"
 
         # Determine the time complexity string and weight for sorting in visualization
@@ -407,7 +405,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if is_dead or space_override == "Dead Code":
             space_str = "Dead Code"
             s_weight = -1
-        
+
         # -----------------------------------------------------------------
         # NEW: AUTO-GENERATE EDUCATIONAL EXPLANATIONS
         # -----------------------------------------------------------------
@@ -450,7 +448,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.details[-1]["color"] = self.get_color(time_str)
                 self.details[-1]["weight"] = t_weight
                 self.details[-1]["local_weight"] = local_weight
-                self.details[-1]["explanation"] = explanation # ADD EXPLANATION HERE
+                self.details[-1]["explanation"] = explanation
         else:
             self.details.append({
                 "lineOfCode": line_text,
@@ -459,7 +457,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 "color": self.get_color(time_str),
                 "weight": t_weight,
                 "local_weight": local_weight,
-                "explanation": explanation # ADD EXPLANATION HERE
+                "explanation": explanation
             })
 
         if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
@@ -470,22 +468,22 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.space_details[-1]["weight"] = s_weight
         else:
             self.space_details.append({
-                "lineOfCode": line_text, 
-                "complexity": space_str, 
-                "indent": self.current_depth, 
-                "color": self.get_color(space_str), 
+                "lineOfCode": line_text,
+                "complexity": space_str,
+                "indent": self.current_depth,
+                "color": self.get_color(space_str),
                 "weight": s_weight
             })
 
         if not is_dead:
-            if t_weight > self.max_complexity: 
+            if t_weight > self.max_complexity:
                 self.max_complexity = t_weight
                 if t_weight < 998:
                     self.max_poly = total_poly
                     self.max_log = total_log
                     self.max_sqrt = total_sqrt
                 
-            if s_weight > self.max_space_weight: 
+            if s_weight > self.max_space_weight:
                 self.max_space_weight = s_weight
 
 
@@ -914,8 +912,8 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
 # ---------------------- FastAPI Endpoints ----------------------
 
-@app.post("/api/analyze") 
-@app.post("/analyze") 
+@app.post("/api/analyze")
+@app.post("/analyze")
 def analyze_complexity(payload: CodePayload):
     try:
         tree = ast.parse(payload.code)                 # Parse submitted Python code into AST
@@ -950,7 +948,8 @@ def analyze_complexity(payload: CodePayload):
                 "complexity": asymp,
                 "indent": line.get("indent", 0),
                 "color": line.get("color", analyzer.get_color(asymp)),
-                "weight": line.get("weight", 0)
+                "weight": line.get("weight", 0),
+                "explanation": line.get("explanation", "") # ADD THIS LINE
             })
 
         # Return final structured JSON
