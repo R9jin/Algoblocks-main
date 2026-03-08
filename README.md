@@ -1,6 +1,3 @@
-Here is the updated `README.md` that includes the new database integration steps. I have added instructions for setting up the MongoDB environment variables so developers can test the new cloud-saving and user authentication features locally.
-
-```markdown
 # AlgoBlocks Developer Setup Guide
 
 Welcome to the AlgoBlocks team! This project uses a decoupled architecture: a **React + Vite + Blockly** frontend and a **Python + FastAPI** backend, designed to be deployed on **Vercel**. 
