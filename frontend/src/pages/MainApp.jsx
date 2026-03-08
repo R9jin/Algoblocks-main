@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Split from "react-split";
+import BigOModal from "../components/BigOModal.jsx"; // ADD THIS IMPORT
 import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx"; // IMPORT MODAL
 import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
@@ -150,6 +151,8 @@ export default function MainApp() {
       executeLoadTemplate(path);
     }
   };
+
+  const [expandedLineIndex, setExpandedLineIndex] = useState(null);
 
   useEffect(() => {
     if (location.state) {
@@ -389,16 +392,44 @@ export default function MainApp() {
                           </tr>
                         </thead>
                         <tbody>
-                          {(activeTab === 'time' ? analysisResult.lines
-                            : activeTab === 'time_recurrence' ? analysisResult.recurrence_lines
+                          {(activeTab === 'time' ? analysisResult.lines 
+                            : activeTab === 'time_recurrence' ? analysisResult.recurrence_lines 
                             : analysisResult.space_lines
                           ).map((row, i) => (
-                            <tr key={i}>
-                              <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
-                                {row.lineOfCode}
-                              </td>
-                              <td className="complexity-cell" style={{ color: row.color || 'white' }}>{row.complexity}</td>
-                            </tr>
+                            <React.Fragment key={i}>
+                              {/* Main Clickable Row */}
+                              <tr 
+                                className={`complexity-row ${expandedLineIndex === i ? 'expanded' : ''}`}
+                                onClick={() => setExpandedLineIndex(expandedLineIndex === i ? null : i)}
+                                style={{ cursor: row.explanation ? 'pointer' : 'default' }}
+                                title="Click to view explanation"
+                              >
+                                <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
+                                  {row.lineOfCode}
+                                </td>
+                                <td className="complexity-cell" style={{ color: row.color || 'white' }}>
+                                  {row.complexity}
+                                  {/* Dropdown Chevron indicator */}
+                                  {row.explanation && (
+                                    <span className="dropdown-chevron">
+                                      {expandedLineIndex === i ? '▼' : '▶'}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                              
+                              {/* Hidden Explanation Dropdown Row */}
+                              {expandedLineIndex === i && row.explanation && (
+                                <tr className="explanation-row">
+                                  <td colSpan="2">
+                                    <div className="explanation-content">
+                                      <span className="explanation-icon">💡</span>
+                                      <p>{row.explanation}</p>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
                           ))}
                         </tbody>
                       </table>

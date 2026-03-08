@@ -855,6 +855,13 @@ except Exception as e:
         onCancel={closeModal}
         onConfirm={modalConfig.onConfirmAction}
       />
+
+      {/* ADD THE BIG O MODAL HERE */}
+      <BigOModal 
+        isOpen={isBigOModalOpen} 
+        onClose={() => setIsBigOModalOpen(false)} 
+      />
+
     </div>
   );
 };
