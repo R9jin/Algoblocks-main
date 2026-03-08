@@ -52,7 +52,8 @@ export default function MainApp() {
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
   
   const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
-  // --- DRAG TO RESIZE LOGIC ---
+  const [expandedLineIndex, setExpandedLineIndex] = useState(null); // NEW STATE
+
   const [panelHeight, setPanelHeight] = useState(450);
   const isDragging = useRef(false);
 
@@ -152,8 +153,6 @@ export default function MainApp() {
     }
   };
 
-  const [expandedLineIndex, setExpandedLineIndex] = useState(null);
-
   useEffect(() => {
     if (location.state) {
       setTimeout(() => {
@@ -191,6 +190,7 @@ export default function MainApp() {
           setAnalysisResult({ lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false });
           setActiveTab("time_asymptotic");
           setBottomPanel(null);
+          setExpandedLineIndex(null);
         }
       }
     });
@@ -258,6 +258,7 @@ export default function MainApp() {
   const runCode = async () => {
     setConsoleOutput("> Running...");
     setBottomPanel("console");
+    setExpandedLineIndex(null); // ADD THIS
     try {
       const response = await fetch("/api/run", {
         method: "POST",
@@ -409,7 +410,6 @@ export default function MainApp() {
                                 </td>
                                 <td className="complexity-cell" style={{ color: row.color || 'white' }}>
                                   {row.complexity}
-                                  {/* Dropdown Chevron indicator */}
                                   {row.explanation && (
                                     <span className="dropdown-chevron">
                                       {expandedLineIndex === i ? '▼' : '▶'}

@@ -382,6 +382,7 @@ const ActivityApp = () => {
   });
 
   const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
+  const [expandedLineIndex, setExpandedLineIndex] = useState(null); // NEW STATE
 
   // HELPER: Close the modal
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
@@ -484,6 +485,7 @@ const ActivityApp = () => {
   const runCode = async () => {
     setBottomPanel("console");
     setConsoleOutput("> Running Code...\n");
+    setExpandedLineIndex(null); // ADD THIS
 
     try {
       const response = await fetch("/api/run", {
@@ -506,7 +508,8 @@ const ActivityApp = () => {
     
     setBottomPanel("console");
     setConsoleOutput("> Running Tests...\n");
-    setPassedTests(0); 
+    setPassedTests(0);
+    setExpandedLineIndex(null); // ADD THIS
   
     let testHarness = `\n\n# --- System Test Cases ---\nprint("\\n--- Running Test Cases ---")\n`;
     testHarness += `passed = 0\ntotal = ${activityData.testCasesList.length}\n`;
@@ -729,12 +732,37 @@ except Exception as e:
                         </thead>
                         <tbody>
                           {(activeTab === 'time' ? analysisResult.lines : analysisResult.space_lines).map((row, i) => (
-                            <tr key={i}>
-                              <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
-                                {row.lineOfCode}
-                              </td>
-                              <td className="complexity-cell" style={{ color: row.color || 'white' }}>{row.complexity}</td>
-                            </tr>
+                            <React.Fragment key={i}>
+                              <tr 
+                                className={`complexity-row ${expandedLineIndex === i ? 'expanded' : ''}`}
+                                onClick={() => setExpandedLineIndex(expandedLineIndex === i ? null : i)}
+                                style={{ cursor: row.explanation ? 'pointer' : 'default' }}
+                                title="Click to view explanation"
+                              >
+                                <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
+                                  {row.lineOfCode}
+                                </td>
+                                <td className="complexity-cell" style={{ color: row.color || 'white' }}>
+                                  {row.complexity}
+                                  {row.explanation && (
+                                    <span className="dropdown-chevron">
+                                      {expandedLineIndex === i ? '▼' : '▶'}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                              
+                              {expandedLineIndex === i && row.explanation && (
+                                <tr className="explanation-row">
+                                  <td colSpan="2">
+                                    <div className="explanation-content">
+                                      <span className="explanation-icon">💡</span>
+                                      <p>{row.explanation}</p>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
                           ))}
                         </tbody>
                       </table>
