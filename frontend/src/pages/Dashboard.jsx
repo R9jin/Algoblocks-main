@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader"; // <-- Import the new header
 import "../styles/Dashboard.css";
@@ -67,13 +68,52 @@ const TEMPLATES = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [recentProjects, setRecentProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  // Fetch projects to populate the Recent Projects sidebar
+  useEffect(() => {
+    const fetchRecentProjects = async () => {
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) {
+        setLoading(false);
+        return; // User is not signed in
+      }
+      
+      const user = JSON.parse(storedUser);
+
+      try {
+        const response = await fetch("/api/projects");
+        const result = await response.json();
+        
+        if (response.ok && result.status === "success") {
+          // Filter projects so the user only sees their own
+          const userProjects = result.projects.filter(p => p.owner_id === user.email);
+          // Reverse to show the newest first, and take only the top 5
+          setRecentProjects(userProjects.reverse().slice(0, 5));
+        }
+      } catch (error) {
+        console.error("Failed to fetch recent projects:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecentProjects();
+  }, []);
+
+  // Handle opening pre-made templates
   const handleTemplateClick = (template) => {
     const confirmStart = window.confirm(`Do you want to start a new project using the "${template.name}" template? Any unsaved progress in your current workspace will be lost.`);
     
     if (confirmStart) {
       navigate("/app", { state: { templatePath: template.path } });
     }
+  };
+
+  // Handle opening a saved project from MongoDB
+  const handleOpenProject = (project) => {
+    navigate('/app', { state: { projectToLoad: project } });
   };
 
   return (
@@ -164,10 +204,34 @@ export default function Dashboard() {
 
         <aside className="dashboard-sidebar">
           <h3 className="sidebar-label">RECENT PROJECTS</h3>
-          <div className="empty-projects-box">
-            No recent projects yet.
-          </div>
+          {loading ? (
+            <div className="empty-projects-box">Loading...</div>
+          ) : recentProjects.length === 0 ? (
+            <div className="empty-projects-box">No recent projects yet.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
+              {recentProjects.map(proj => (
+                <div 
+                  key={proj._id} 
+                  style={{
+                    backgroundColor: '#2A1F4C', 
+                    padding: '15px', 
+                    borderRadius: '8px', 
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3B2D6C'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2A1F4C'}
+                  onClick={() => handleOpenProject(proj)}
+                >
+                  <div style={{ fontWeight: 'bold', color: '#EBE4FF', marginBottom: '4px' }}>{proj.title}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#A594DC' }}>Saved to Cloud</div>
+                </div>
+              ))}
+            </div>
+          )}
         </aside>
+
       </div>
     </div>
   );

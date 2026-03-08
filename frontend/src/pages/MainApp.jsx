@@ -151,11 +151,23 @@ export default function MainApp() {
   };
 
   useEffect(() => {
-    if (location.state && location.state.templatePath) {
+    if (location.state) {
       setTimeout(() => {
-        loadAlgorithmTemplate(location.state.templatePath, true);
+        // 1. Handle loading pre-made algorithm templates
+        if (location.state.templatePath) {
+          loadAlgorithmTemplate(location.state.templatePath, true);
+        }
+        
+        // 2. Handle loading saved projects from MongoDB
+        if (location.state.projectToLoad && workspaceRef.current) {
+          // Load the saved JSON data into the workspace
+          workspaceRef.current.loadTemplate(location.state.projectToLoad.data);
+          setViewMode("workspace");
+        }
+
+        // Clear the state so refreshing doesn't trigger the load again
         window.history.replaceState({}, document.title);
-      }, 300);
+      }, 300); // Small delay ensures Blockly is fully mounted
     }
   }, [location.state]);
 
@@ -180,8 +192,8 @@ export default function MainApp() {
     });
   };
 
-  const handleSave = () => {
-    const projectName = window.prompt("Enter a name for your project file:", "my_algorithm");
+  const handleExport = () => {
+    const projectName = window.prompt("Enter a name for your export file:", "my_algorithm");
     if (projectName && blocklyJson) {
       const blob = new Blob([JSON.stringify(blocklyJson, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -193,7 +205,49 @@ export default function MainApp() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } else if (!blocklyJson) {
+      alert("The workspace is empty. Nothing to export!");
+    }
+  };
+
+  const handleSaveToDB = async () => {
+    if (!blocklyJson) {
       alert("The workspace is empty. Nothing to save!");
+      return;
+    }
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      alert("You must be signed in to save projects to the cloud.");
+      return;
+    }
+    
+    const user = JSON.parse(storedUser);
+    const projectName = window.prompt("Enter a name for your project:", "my_algorithm");
+    
+    if (projectName) {
+      try {
+        const response = await fetch("/api/projects", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: projectName,
+            data: blocklyJson,
+            owner_id: user.email
+          }),
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+          alert("Project saved successfully!");
+        } else {
+          alert("Failed to save project: " + (result.detail || "Unknown error"));
+        }
+      } catch (error) {
+        console.error("Failed to save project:", error);
+        alert("An error occurred while saving the project. Check console.");
+      }
     }
   };
 
@@ -222,7 +276,8 @@ export default function MainApp() {
         viewMode={viewMode}
         setViewMode={setViewMode}
         runCode={runCode}
-        handleSave={handleSave}
+        handleExport={handleExport}
+        handleSaveToDB={handleSaveToDB}
       />
 
       <Split 

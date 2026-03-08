@@ -79,7 +79,12 @@ export default function UserHomePage() {
           </p>
 
           <div className="cards-grid">
-            <div className="card">
+            {/* Updated: Made the card clickable to navigate to /projects */}
+            <div 
+              className="card" 
+              onClick={() => navigate("/projects")} 
+              style={{ cursor: "pointer" }}
+            >
               <div className="card-icon">
                 <span className="card-icon-badge">
                   <LuFolder size={24} color="#7F57F9" aria-hidden="true" />
@@ -91,7 +96,11 @@ export default function UserHomePage() {
               </p>
             </div>
 
-            <div className="card">
+            <div 
+              className="card" 
+              onClick={() => navigate("/learning-path")} 
+              style={{ cursor: "pointer" }}
+            >
               <div className="card-icon">
                 <span className="card-icon-badge">
                   <LuBookOpen size={24} color="#7F57F9" aria-hidden="true" />
@@ -103,7 +112,11 @@ export default function UserHomePage() {
               </p>
             </div>
 
-            <div className="card">
+            <div 
+              className="card" 
+              onClick={() => navigate("/app")} 
+              style={{ cursor: "pointer" }}
+            >
               <div className="card-icon">
                 <span className="card-icon-badge">
                   <LuChartBar size={24} color="#7F57F9" aria-hidden="true" />
