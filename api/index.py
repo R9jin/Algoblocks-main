@@ -385,19 +385,27 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             t_weight = -1
             local_weight = -1
         else:
-            # Default handling based on node type and detected loops
+            # FIX: Ensure lines display only their LOCAL complexity.
+            # We no longer inherit `current_poly` directly for the UI `time_str`.
             display_poly = override_poly
             display_log = override_log
             display_sqrt = override_sqrt
             
             if not time_override:
-                if isinstance(node, (ast.For, ast.While)):
-                    display_poly = current_poly
-                    display_log = current_log
-                    display_sqrt = current_sqrt
+                if isinstance(node, ast.For):
+                    display_poly = 1
+                elif isinstance(node, ast.While):
+                    if self._is_log_loop(node):
+                        display_log = 1
+                    elif self._is_sqrt_loop(node):
+                        display_sqrt = 1
+                    else:
+                        display_poly = 1
             
-            # Build the readable complexity string (e.g., O(n log n))
+            # Build the readable complexity string (e.g., O(n)) for just this line
             time_str = self._build_time_str(display_poly, display_log, display_sqrt)
+            
+            # WEIGHTS: Must reflect TOTAL nested depth so max_complexity still calculates worst-case correctly!
             t_weight = total_poly * 10 + total_sqrt * 7 + total_log * 5
             local_weight = display_poly * 10 + display_sqrt * 7 + display_log * 5
 
@@ -418,10 +426,19 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         # AUTO-GENERATE CONTEXT-AWARE EDUCATIONAL EXPLANATIONS
         # -----------------------------------------------------------------
         if time_override == "Definition":
-            explanation = "Function definition is not analyzed in time complexity. Only the execution of the function call is evaluated for runtime work."
+            explanation = "Function definitions are purely declarations. They are not executed during runtime analysis, so they do not cost time."
         elif getattr(self, 'in_dead_code', False) or time_override == "Dead Code":
             explanation = "This code is unreachable (e.g., it is placed after a return statement) and will never execute, meaning it does not affect the runtime."
         elif not explanation:
+            # Calculate outer context metrics for arithmetic explanations
+            outer_poly = total_poly - display_poly
+            outer_log = total_log - display_log
+            outer_sqrt = total_sqrt - display_sqrt
+            has_outer = outer_poly > 0 or outer_log > 0 or outer_sqrt > 0
+            
+            outer_str = self._build_time_str(outer_poly, outer_log, outer_sqrt)
+            nested_total_str = self._build_time_str(total_poly, total_log, total_sqrt)
+
             # Helper function to safely extract variable names from AST nodes
             def get_name(n):
                 if isinstance(n, ast.Name): return f"'{n.id}'"
@@ -434,39 +451,49 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 elif isinstance(node.iter, ast.Call) and getattr(node.iter.func, 'id', '') == 'range':
                     iter_name = "a generated sequence of numbers"
                 
-                # Contextualize based on nesting
-                if total_poly > 1 or "n^" in time_str or "n!" in time_str:
-                    explanation = f"This inner 'for' loop iterates over {iter_name}. Because it is nested inside another loop, their complexities multiply, resulting in {time_str}."
+                # Nested Arithmetic Explanation Check
+                if has_outer:
+                    explanation = (f"This 'for' loop iterates over {iter_name}. "
+                                   f"Nesting context: [Outer loop: {outer_str} × Inner loop: {time_str} ➔ Nested total: {nested_total_str}].")
                 else:
-                    explanation = f"This 'for' loop iterates sequentially over {iter_name}, taking time proportional to the number of elements ({time_str})."
+                    explanation = f"This 'for' loop iterates sequentially over {iter_name}, running locally in {time_str} time."
 
             elif isinstance(node, ast.While):
+                base_expl = ""
                 if display_log > 0 or "log" in time_str:
-                    explanation = f"This 'while' loop systematically cuts the search space (usually in half) each iteration, resulting in a highly efficient {time_str} logarithmic time."
+                    base_expl = f"This 'while' loop systematically cuts the search space each iteration (highly efficient {time_str} time locally)."
                 elif display_sqrt > 0 or "√n" in time_str:
-                    explanation = f"The mathematical condition of this 'while' loop restricts its total iterations to the square root of n, yielding {time_str} time."
+                    base_expl = f"The mathematical condition of this 'while' loop restricts its iterations to {time_str} time locally."
                 else:
-                    explanation = f"This 'while' loop continues until its condition is met, running sequentially and contributing a {time_str} factor."
+                    base_expl = f"This 'while' loop runs until a condition is met, locally contributing {time_str} time."
+                
+                if has_outer:
+                    explanation = f"{base_expl} Nesting context: [Outer loop: {outer_str} × Inner loop: {time_str} ➔ Nested total: {nested_total_str}]."
+                else:
+                    explanation = base_expl
 
             elif isinstance(node, ast.If):
-                explanation = f"Evaluating this conditional statement requires a simple boolean check, which the processor handles instantly in constant O(1) time."
+                explanation = f"Evaluating this conditional statement is a basic boolean check, resolving in constant O(1) time."
 
             elif isinstance(node, ast.Assign):
                 targets = [get_name(t) for t in getattr(node, 'targets', [])]
                 target_str = ", ".join(targets) if targets else "a variable"
                 
                 if time_str == "O(1)":
-                    explanation = f"Assigning a value to {target_str} requires a basic memory allocation, which is a constant O(1) operation."
+                    explanation = f"Assigning a value to {target_str} requires a basic memory allocation, taking constant O(1) time locally."
                 elif self.has_slicing:
-                    explanation = f"Assigning {target_str} using array slicing forces Python to copy elements one by one, requiring {time_str} time."
+                    explanation = f"Assigning {target_str} using array slicing forces Python to copy elements behind the scenes, taking {time_str} time locally."
                 else:
-                    explanation = f"Assigning {target_str} involves a heavier underlying evaluation (like string conversions or list formatting) taking {time_str} time."
+                    explanation = f"Assigning {target_str} involves a heavier underlying evaluation (like list formatting) taking {time_str} time locally."
+                
+                if has_outer and time_str != "O(1)":
+                    explanation += f" Because it is nested: [Outer block: {outer_str} × Action: {time_str} = Impact: {nested_total_str}]."
 
             elif isinstance(node, ast.Return):
                 if time_str == "O(1)":
-                    explanation = "Returning a value immediately exits the current function, which executes in constant O(1) time."
+                    explanation = "Returning a value immediately exits the current scope, taking constant O(1) time."
                 else:
-                    explanation = f"Returning this value requires the system to first perform a complex evaluation, requiring {time_str} time."
+                    explanation = f"Returning this value requires a complex evaluation to occur first, taking {time_str} time locally."
 
             elif isinstance(node, ast.Call):
                 func_name = "A function"
@@ -479,11 +506,15 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 if is_recurrence:
                     explanation = f"{func_name} calls itself recursively here. This branches the execution tree and establishes the relation {time_str}."
                 elif "log" in time_str:
-                    explanation = f"{func_name} utilizes a divide-and-conquer strategy or operates on an optimized data structure, executing in {time_str} time."
+                    explanation = f"{func_name} utilizes an optimized algorithm (like binary search) to process items, running in {time_str} time locally."
                 elif time_str != "O(1)":
-                    explanation = f"Executing {func_name} requires the system to loop through and process multiple items under the hood, taking {time_str} time."
+                    explanation = f"Executing {func_name} forces the system to loop through multiple items behind the scenes, taking {time_str} time locally."
                 else:
-                    explanation = f"{func_name} performs a basic operation that resolves in constant O(1) time."
+                    explanation = f"{func_name} performs a basic operation that resolves instantly in constant O(1) time."
+                
+                # Add nested impact arithmetic if it's expensive inside a loop
+                if has_outer and time_str != "O(1)":
+                    explanation += f" Nesting context: [Outer block: {outer_str} × Call: {time_str} ➔ Impact: {nested_total_str}]."
 
             elif isinstance(node, ast.Subscript):
                 if isinstance(node.slice, ast.Slice):
@@ -493,9 +524,9 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
             else:
                 if time_str == "O(1)":
-                    explanation = "This standard operation executes sequentially in a constant O(1) amount of time."
+                    explanation = "This standard operation executes locally in constant O(1) time."
                 else:
-                    explanation = f"This operation dictates a complexity of {time_str}."
+                    explanation = f"This operation dictates a local complexity of {time_str}."
 
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             existing_t_weight = self.details[-1].get("weight", -1)
