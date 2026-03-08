@@ -9,7 +9,8 @@
  * - viewMode: string ('workspace' | 'python') representing the current view.
  * - setViewMode: function to switch between workspace and Python code views.
  * - runCode: function to execute the current workspace code.
- * - handleSave: function to save the current project (may prompt sign-in).
+ * - handleExport: function to export the current project as a JSON file.
+ * - handleSaveToDB: function to save the current project to MongoDB.
  */
 
 import { useNavigate } from "react-router-dom";
@@ -18,7 +19,8 @@ export default function WorkspaceHeader({
   viewMode, 
   setViewMode, 
   runCode, 
-  handleSave 
+  handleExport,
+  handleSaveToDB
 }) {
 
   /** React Router navigation helper */
@@ -86,7 +88,7 @@ export default function WorkspaceHeader({
 
 
       {/* -------------------------------------------------------------- */}
-      {/* Right Section: Action Buttons (Run / Save)                   */}
+      {/* Right Section: Action Buttons (Run / Export / Save)          */}
       {/* -------------------------------------------------------------- */}
 
       <div className="header-right">
@@ -100,11 +102,18 @@ export default function WorkspaceHeader({
         </button>
 
         {/*
-          Save button triggers project save functionality.
-          Prompts sign-in if user is not authenticated.
+          Export button triggers project download functionality.
         */}
-        <button onClick={handleSave} className="action-btn btn-save">
-          Sign in to save
+        <button onClick={handleExport} className="action-btn btn-save">
+          Export
+        </button>
+
+        {/*
+          Save button triggers project save to MongoDB.
+          Requires sign in.
+        */}
+        <button onClick={handleSaveToDB} className="action-btn btn-save">
+          Save to Cloud
         </button>
 
       </div>

@@ -6,9 +6,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://localhost:8000', // Your local Python FastAPI/Flask server
         changeOrigin: true,
-        // This ensures the local Vite server passes the request to your local FastAPI server
       }
     }
   }

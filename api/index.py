@@ -32,11 +32,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # -------------------------------
 # DATABASE AND MODEL IMPORTS
 # -------------------------------
-from database import projects_collection  # MongoDB collection for saving projects
+from database import projects_collection, users_collection
 from models import ProjectModel           # Pydantic model representing a project
 from bson import ObjectId                 # MongoDB ObjectId type for document IDs
 from collections import deque             # Double-ended queue used for BFS traversal
-
 
 # -------------------------------
 # CREATE FASTAPI APP INSTANCE
@@ -64,6 +63,20 @@ class CodePayload(BaseModel):
     # The Python code string submitted by the user for analysis
     code: str
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class SignUpRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+
+# 1. Add this new model for the incoming request
+class ProgressRequest(BaseModel):
+    email: str
+    lesson_id: str
+    score: int
 
 # ============================================================
 # CLASS: COMPLEXITY ANALYZER
@@ -956,3 +969,79 @@ def get_projects():
     for p in projects:
         p["_id"] = str(p["_id"])                 # Convert ObjectId to string for JSON serialization
     return {"status": "success", "projects": projects}
+
+# 2. Update your existing login endpoint to include progress
+@app.post("/api/login")
+def login_user(req: LoginRequest):
+    user = users_collection.find_one({"email": req.email})
+    if user and user.get("password") == req.password:
+        return {
+            "status": "success", 
+            "email": req.email, 
+            "name": user.get("name"),
+            "progress": user.get("progress", {}) # Add this line! Returns {} if empty
+        }
+    raise HTTPException(status_code=401, detail="Invalid email or password")
+
+@app.post("/api/signup")
+@app.post("/signup")
+def signup_user(req: SignUpRequest):
+    if users_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    
+    # 1. Check if a user with this email already exists
+    existing_user = users_collection.find_one({"email": req.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # 2. Prepare the new user document
+    # Note: In a production app, use a library like passlib to hash the password before saving!
+    new_user = {
+        "name": req.name,
+        "email": req.email,
+        "password": req.password
+    }
+    
+    # 3. Insert into MongoDB
+    users_collection.insert_one(new_user)
+    
+    return {"status": "success", "message": "User created successfully"}
+
+@app.post("/api/update-progress")
+def update_progress(req: ProgressRequest):
+    # Update the specific lesson score in the database
+    update_query = {
+        "$set": {f"progress.{req.lesson_id}": req.score}
+    }
+    
+    result = users_collection.update_one({"email": req.email}, update_query)
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # --- NEW CODE: Fetch the user again to get the updated progress dictionary ---
+    updated_user = users_collection.find_one({"email": req.email})
+    
+    return {
+        "status": "success", 
+        "message": "Progress saved",
+        "progress": updated_user.get("progress", {}) if updated_user else {}
+    }
+
+@app.delete("/api/projects/{project_id}")
+@app.delete("/projects/{project_id}")
+def delete_project(project_id: str):
+    if projects_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    
+    try:
+        # Note: ObjectId is already imported at the top of your index.py
+        result = projects_collection.delete_one({"_id": ObjectId(project_id)})
+        
+        if result.deleted_count == 1:
+            return {"status": "success", "message": "Project deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Project not found")
+            
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid project ID format")

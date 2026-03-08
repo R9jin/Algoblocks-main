@@ -292,6 +292,61 @@ const renderFormattedTask = (text) => {
 const ActivityApp = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const saveLessonProgress = async (lessonId, score) => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) return;
+
+    const user = JSON.parse(storedUser);
+
+    try {
+      const response = await fetch("/api/update-progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          lesson_id: lessonId,
+          score: score // Passes the numerical score
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Updates local storage so LearningPath sees it instantly
+        user.progress = data.progress;
+        localStorage.setItem("user", JSON.stringify(user));
+        
+        console.log(`Progress saved! Lesson: ${lessonId}, Score: ${score}`);
+      }
+    } catch (error) {
+      console.error("Failed to save progress:", error);
+    }
+  };
+
+  // EXAMPLE USAGE: Call this when they click "Submit" or pass the lesson
+  const handleLessonComplete = () => {
+    const finalScore = 100; // Calculate their actual score
+    const currentLesson = "bubble_sort_act"; // Get the current activity ID
+    
+    saveLessonScore(currentLesson, finalScore);
+    // show success modal, etc.
+  };
+
+  const handleSuccess = async () => {
+    // 1. Dynamically extract the activity ID from the template path
+    const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act"; 
+    
+    // 2. Calculate their score
+    const finalScore = 100;
+    
+    // 3. Call our unified function
+    await saveLessonProgress(currentLessonId, finalScore);
+    
+    // 4. Show a success message and redirect
+    alert("Activity Completed!");
+    setTimeout(() => navigate("/learning-path"), 1500);
+  };
   
   const activityData = location.state?.activityData || null;
   const initialTemplate = location.state?.templatePath || "";
@@ -454,7 +509,7 @@ const ActivityApp = () => {
     let testHarness = `\n\n# --- System Test Cases ---\nprint("\\n--- Running Test Cases ---")\n`;
     testHarness += `passed = 0\ntotal = ${activityData.testCasesList.length}\n`;
     
-    activityData.testCasesList.forEach((tc, index) => {
+activityData.testCasesList.forEach((tc, index) => {
       testHarness += `
 try:
     assert ${tc.call} == ${tc.expected}
@@ -483,7 +538,14 @@ except Exception as e:
 
       const match = outputText.match(/Result: (\d+)\//);
       if (match) {
-        setPassedTests(parseInt(match[1]));
+        const passed = parseInt(match[1]);
+        setPassedTests(passed);
+
+        // ✅ THIS IS THE CORRECT PLACE TO CHECK FOR SUCCESS
+        const total = activityData.testCasesList.length;
+        if (passed === total) {
+          handleSuccess();
+        }
       }
 
       const newExpanded = { ...expandedTests };
