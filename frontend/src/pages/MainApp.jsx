@@ -50,6 +50,7 @@ export default function MainApp() {
 
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
   
+  const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
   // --- DRAG TO RESIZE LOGIC ---
   const [panelHeight, setPanelHeight] = useState(450);
   const isDragging = useRef(false);
@@ -411,17 +412,24 @@ export default function MainApp() {
 
           <footer className="workspace-footer">
             <div className="footer-left">
-              <button 
+              <button
                 className={`footer-tab ${bottomPanel === 'console' ? 'active' : ''}`}
                 onClick={() => setBottomPanel(bottomPanel === 'console' ? null : 'console')}
               >
                 <img src="/assets/console-icon.png" alt="Console" className="tab-icon" /> Console
               </button>
-              <button 
+              <button
                 className={`footer-tab ${bottomPanel === 'complexity' ? 'active' : ''}`}
                 onClick={() => setBottomPanel(bottomPanel === 'complexity' ? null : 'complexity')}
               >
                 <img src="/assets/complexity-icon.png" alt="Complexity" className="tab-icon" /> Complexity
+              </button>
+              <button
+                className="footer-tab"
+                onClick={() => setIsBigOModalOpen(true)}
+                style={{ color: '#BCA1FC', fontWeight: 'bold' }}
+              >
+                📊 Big O Reference
               </button>
             </div>
             
@@ -444,6 +452,11 @@ export default function MainApp() {
         isDanger={modalConfig.isDanger}
         onCancel={closeModal}
         onConfirm={modalConfig.onConfirmAction}
+      />
+
+      <BigOModal 
+        isOpen={isBigOModalOpen} 
+        onClose={() => setIsBigOModalOpen(false)} 
       />
     </div>
   );
