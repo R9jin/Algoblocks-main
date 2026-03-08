@@ -1027,3 +1027,21 @@ def update_progress(req: ProgressRequest):
         "message": "Progress saved",
         "progress": updated_user.get("progress", {}) if updated_user else {}
     }
+
+@app.delete("/api/projects/{project_id}")
+@app.delete("/projects/{project_id}")
+def delete_project(project_id: str):
+    if projects_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    
+    try:
+        # Note: ObjectId is already imported at the top of your index.py
+        result = projects_collection.delete_one({"_id": ObjectId(project_id)})
+        
+        if result.deleted_count == 1:
+            return {"status": "success", "message": "Project deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Project not found")
+            
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid project ID format")
