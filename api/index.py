@@ -407,6 +407,39 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if is_dead or space_override == "Dead Code":
             space_str = "Dead Code"
             s_weight = -1
+        
+        # -----------------------------------------------------------------
+        # NEW: AUTO-GENERATE EDUCATIONAL EXPLANATIONS
+        # -----------------------------------------------------------------
+        if not explanation and not getattr(self, 'in_dead_code', False):
+            if isinstance(node, ast.For):
+                explanation = "A 'for' loop iterates over a collection, multiplying the time taken by the number of elements (n)."
+            elif isinstance(node, ast.While):
+                if "log" in time_str:
+                    explanation = "This 'while' loop divides the search space each iteration, resulting in highly efficient logarithmic time."
+                else:
+                    explanation = "A 'while' loop continues until a condition is met, contributing a linear factor (n) to the execution time."
+            elif isinstance(node, ast.If):
+                explanation = "Conditional checks are simple boolean evaluations that execute in constant O(1) time."
+            elif isinstance(node, ast.Assign):
+                explanation = "Assigning a value to a variable is a basic operation that executes instantly in constant O(1) time."
+            elif isinstance(node, ast.Return):
+                explanation = "Returning a value halts the function and is a basic O(1) operation."
+            elif isinstance(node, ast.Call):
+                if "log" in time_str:
+                    explanation = "This function utilizes an optimized algorithm (like binary search or efficient sorting) to reduce execution time."
+                elif "n" in time_str:
+                    explanation = "This function call processes multiple elements, resulting in linear or greater time complexity."
+                else:
+                    explanation = "This standard function call executes basic operations in constant time."
+            else:
+                if time_str == "O(1)":
+                    explanation = "Basic operations execute in a constant amount of time regardless of input size."
+                else:
+                    explanation = f"This block of code contributes {time_str} to the overall runtime."
+        
+        if getattr(self, 'in_dead_code', False) or time_override == "Dead Code":
+            explanation = "This code is unreachable and will never execute, so it does not affect runtime."
 
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             existing_t_weight = self.details[-1].get("weight", -1)
@@ -417,14 +450,16 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.details[-1]["color"] = self.get_color(time_str)
                 self.details[-1]["weight"] = t_weight
                 self.details[-1]["local_weight"] = local_weight
+                self.details[-1]["explanation"] = explanation # ADD EXPLANATION HERE
         else:
             self.details.append({
-                "lineOfCode": line_text, 
-                "complexity": time_str, 
-                "indent": self.current_depth, 
-                "color": self.get_color(time_str), 
+                "lineOfCode": line_text,
+                "complexity": time_str,
+                "indent": self.current_depth,
+                "color": self.get_color(time_str),
                 "weight": t_weight,
-                "local_weight": local_weight
+                "local_weight": local_weight,
+                "explanation": explanation # ADD EXPLANATION HERE
             })
 
         if self.space_details and self.space_details[-1]["lineOfCode"] == line_text:
