@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import BlocklyWorkspace from "../components/BlocklyWorkspace";
 import "../styles/ActivityApp.css";
@@ -365,9 +365,9 @@ const ActivityApp = () => {
 
   const [expandedTests, setExpandedTests] = useState({ 0: true });
 
-  const [bottomPanel, setBottomPanel] = useState(null); 
-  const [activeTab, setActiveTab] = useState("time_asymptotic");
-  const [analysisResult, setAnalysisResult] = useState({ 
+  const [bottomPanel, setBottomPanel] = useState(null);
+  const [activeTab, setActiveTab] = useState("time");
+  const [analysisResult, setAnalysisResult] = useState({
     lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false
   });
 
@@ -382,7 +382,14 @@ const ActivityApp = () => {
   });
 
   const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
-  const [expandedLineIndex, setExpandedLineIndex] = useState(null); // NEW STATE
+  
+  // CHANGE THIS TO AN OBJECT:
+  const [expandedLines, setExpandedLines] = useState({}); 
+
+  // ADD THIS TOGGLE FUNCTION:
+  const toggleLine = (index) => {
+    setExpandedLines(prev => ({ ...prev, [index]: !prev[index] }));
+  };
 
   // HELPER: Close the modal
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
@@ -485,7 +492,7 @@ const ActivityApp = () => {
   const runCode = async () => {
     setBottomPanel("console");
     setConsoleOutput("> Running Code...\n");
-    setExpandedLineIndex(null); // ADD THIS
+    setExpandedLines({});
 
     try {
       const response = await fetch("/api/run", {
@@ -509,7 +516,7 @@ const ActivityApp = () => {
     setBottomPanel("console");
     setConsoleOutput("> Running Tests...\n");
     setPassedTests(0);
-    setExpandedLineIndex(null); // ADD THIS
+    setExpandedLines({});
   
     let testHarness = `\n\n# --- System Test Cases ---\nprint("\\n--- Running Test Cases ---")\n`;
     testHarness += `passed = 0\ntotal = ${activityData.testCasesList.length}\n`;
@@ -734,8 +741,8 @@ except Exception as e:
                           {(activeTab === 'time' ? analysisResult.lines : analysisResult.space_lines).map((row, i) => (
                             <React.Fragment key={i}>
                               <tr 
-                                className={`complexity-row ${expandedLineIndex === i ? 'expanded' : ''}`}
-                                onClick={() => setExpandedLineIndex(expandedLineIndex === i ? null : i)}
+                                className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
+                                onClick={() => toggleLine(i)}
                                 style={{ cursor: row.explanation ? 'pointer' : 'default' }}
                                 title="Click to view explanation"
                               >
@@ -746,13 +753,13 @@ except Exception as e:
                                   {row.complexity}
                                   {row.explanation && (
                                     <span className="dropdown-chevron">
-                                      {expandedLineIndex === i ? '▼' : '▶'}
+                                      {expandedLines[i] ? '▼' : '▶'}
                                     </span>
                                   )}
                                 </td>
                               </tr>
                               
-                              {expandedLineIndex === i && row.explanation && (
+                              {expandedLines[i] && row.explanation && (
                                 <tr className="explanation-row">
                                   <td colSpan="2">
                                     <div className="explanation-content">

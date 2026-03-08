@@ -149,7 +149,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             'list': {'time': 'O(n)', 'space': 'O(n)'},         # Creating a list
             'index': {'time': 'O(n)', 'space': 'O(1)'},        # Searching list index
             'append': {'time': 'O(1)', 'space': 'O(1)'},       # List append
-            'copy': {'time': 'O(n)', 'space': 'O(n)'}          # List copy
+            'copy': {'time': 'O(n)', 'space': 'O(n)'},         # List copy
+            'str': {'time': 'O(n)', 'space': 'O(n)'},          # Converting a list to string
+            'max': {'time': 'O(n)', 'space': 'O(1)'},          # Finding max element
+            'min': {'time': 'O(n)', 'space': 'O(1)'},          # Finding min element
+            'sum': {'time': 'O(n)', 'space': 'O(1)'}           # Summing elements
         }
 
         # Tracks aliases of functions (e.g., f = fibonacci)
@@ -253,6 +257,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def get_color(self, complexity_str):
         # Assign a color code for visualizing complexity in a UI
+        if complexity_str == "-": return "#7f8c8d"  # Grey for ignored/definitions
         if "Dead Code" in complexity_str: return "#7f8c8d"  # Grey for dead code
         if "T(n) =" in complexity_str or "n!" in complexity_str or "T(n-1) + T" in complexity_str: return "#8e44ad"  # Purple for general recurrences
         if "2^n" in complexity_str or "2T(" in complexity_str: return "#9b59b6"  # Deep purple for exponential
@@ -367,7 +372,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         is_dead = getattr(self, 'in_dead_code', False) or time_override == "Dead Code"
 
         # Determine the time complexity string and weight for sorting in visualization
-        if time_override and is_recurrence and not is_dead:
+        if time_override == "Definition":
+            time_str = "-"
+            t_weight = 0
+            local_weight = 0
+        elif time_override and is_recurrence and not is_dead:
             time_str = time_override
             t_weight = 1000  # Recurrence gets max weight to highlight
             local_weight = 1000
@@ -382,15 +391,10 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             display_sqrt = override_sqrt
             
             if not time_override:
-                if isinstance(node, ast.For):
-                    display_poly = 1  # For loops assumed linear unless nested
-                elif isinstance(node, ast.While):
-                    if self._is_log_loop(node):
-                        display_log = 1
-                    elif self._is_sqrt_loop(node):
-                        display_sqrt = 1
-                    else:
-                        display_poly = 1  # Default linear if no special pattern detected
+                if isinstance(node, (ast.For, ast.While)):
+                    display_poly = current_poly
+                    display_log = current_log
+                    display_sqrt = current_sqrt
             
             # Build the readable complexity string (e.g., O(n log n))
             time_str = self._build_time_str(display_poly, display_log, display_sqrt)
@@ -398,46 +402,100 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             local_weight = display_poly * 10 + display_sqrt * 7 + display_log * 5
 
         # Determine space complexity
-        space_str = space_override if space_override else "O(1)"
-        s_weight = 10 if "O(n)" in space_str else 0
-        if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
+        if time_override == "Definition":
+            space_str = "-"
+            s_weight = 0
+        else:
+            space_str = space_override if space_override else "O(1)"
+            s_weight = 10 if "O(n)" in space_str else 0
+            if "n!" in space_str or "T(n-1) + T" in space_str: s_weight = 1000
 
         if is_dead or space_override == "Dead Code":
             space_str = "Dead Code"
             s_weight = -1
 
         # -----------------------------------------------------------------
-        # NEW: AUTO-GENERATE EDUCATIONAL EXPLANATIONS
+        # AUTO-GENERATE CONTEXT-AWARE EDUCATIONAL EXPLANATIONS
         # -----------------------------------------------------------------
-        if not explanation and not getattr(self, 'in_dead_code', False):
+        if time_override == "Definition":
+            explanation = "Function definition is not analyzed in time complexity. Only the execution of the function call is evaluated for runtime work."
+        elif getattr(self, 'in_dead_code', False) or time_override == "Dead Code":
+            explanation = "This code is unreachable (e.g., it is placed after a return statement) and will never execute, meaning it does not affect the runtime."
+        elif not explanation:
+            # Helper function to safely extract variable names from AST nodes
+            def get_name(n):
+                if isinstance(n, ast.Name): return f"'{n.id}'"
+                return "a variable"
+
             if isinstance(node, ast.For):
-                explanation = "A 'for' loop iterates over a collection, multiplying the time taken by the number of elements (n)."
+                iter_name = "its collection"
+                if isinstance(node.iter, ast.Name):
+                    iter_name = f"the collection '{node.iter.id}'"
+                elif isinstance(node.iter, ast.Call) and getattr(node.iter.func, 'id', '') == 'range':
+                    iter_name = "a generated sequence of numbers"
+                
+                # Contextualize based on nesting
+                if total_poly > 1 or "n^" in time_str or "n!" in time_str:
+                    explanation = f"This inner 'for' loop iterates over {iter_name}. Because it is nested inside another loop, their complexities multiply, resulting in {time_str}."
+                else:
+                    explanation = f"This 'for' loop iterates sequentially over {iter_name}, taking time proportional to the number of elements ({time_str})."
+
             elif isinstance(node, ast.While):
-                if "log" in time_str:
-                    explanation = "This 'while' loop divides the search space each iteration, resulting in highly efficient logarithmic time."
+                if display_log > 0 or "log" in time_str:
+                    explanation = f"This 'while' loop systematically cuts the search space (usually in half) each iteration, resulting in a highly efficient {time_str} logarithmic time."
+                elif display_sqrt > 0 or "√n" in time_str:
+                    explanation = f"The mathematical condition of this 'while' loop restricts its total iterations to the square root of n, yielding {time_str} time."
                 else:
-                    explanation = "A 'while' loop continues until a condition is met, contributing a linear factor (n) to the execution time."
+                    explanation = f"This 'while' loop continues until its condition is met, running sequentially and contributing a {time_str} factor."
+
             elif isinstance(node, ast.If):
-                explanation = "Conditional checks are simple boolean evaluations that execute in constant O(1) time."
+                explanation = f"Evaluating this conditional statement requires a simple boolean check, which the processor handles instantly in constant O(1) time."
+
             elif isinstance(node, ast.Assign):
-                explanation = "Assigning a value to a variable is a basic operation that executes instantly in constant O(1) time."
-            elif isinstance(node, ast.Return):
-                explanation = "Returning a value halts the function and is a basic O(1) operation."
-            elif isinstance(node, ast.Call):
-                if "log" in time_str:
-                    explanation = "This function utilizes an optimized algorithm (like binary search or efficient sorting) to reduce execution time."
-                elif "n" in time_str:
-                    explanation = "This function call processes multiple elements, resulting in linear or greater time complexity."
+                targets = [get_name(t) for t in getattr(node, 'targets', [])]
+                target_str = ", ".join(targets) if targets else "a variable"
+                
+                if time_str == "O(1)":
+                    explanation = f"Assigning a value to {target_str} requires a basic memory allocation, which is a constant O(1) operation."
+                elif self.has_slicing:
+                    explanation = f"Assigning {target_str} using array slicing forces Python to copy elements one by one, requiring {time_str} time."
                 else:
-                    explanation = "This standard function call executes basic operations in constant time."
+                    explanation = f"Assigning {target_str} involves a heavier underlying evaluation (like string conversions or list formatting) taking {time_str} time."
+
+            elif isinstance(node, ast.Return):
+                if time_str == "O(1)":
+                    explanation = "Returning a value immediately exits the current function, which executes in constant O(1) time."
+                else:
+                    explanation = f"Returning this value requires the system to first perform a complex evaluation, requiring {time_str} time."
+
+            elif isinstance(node, ast.Call):
+                func_name = "A function"
+                if getattr(node, 'func', None):
+                    if isinstance(node.func, ast.Name):
+                        func_name = f"The function '{node.func.id}'"
+                    elif isinstance(node.func, ast.Attribute):
+                        func_name = f"The method '{node.func.attr}'"
+
+                if is_recurrence:
+                    explanation = f"{func_name} calls itself recursively here. This branches the execution tree and establishes the relation {time_str}."
+                elif "log" in time_str:
+                    explanation = f"{func_name} utilizes a divide-and-conquer strategy or operates on an optimized data structure, executing in {time_str} time."
+                elif time_str != "O(1)":
+                    explanation = f"Executing {func_name} requires the system to loop through and process multiple items under the hood, taking {time_str} time."
+                else:
+                    explanation = f"{func_name} performs a basic operation that resolves in constant O(1) time."
+
+            elif isinstance(node, ast.Subscript):
+                if isinstance(node.slice, ast.Slice):
+                    explanation = f"Slicing this array creates a brand new copy of the requested elements in memory, which takes {time_str} time."
+                else:
+                    explanation = f"Looking up a specific index in an array or list happens instantly via a memory offset calculation, taking O(1) time."
+
             else:
                 if time_str == "O(1)":
-                    explanation = "Basic operations execute in a constant amount of time regardless of input size."
+                    explanation = "This standard operation executes sequentially in a constant O(1) amount of time."
                 else:
-                    explanation = f"This block of code contributes {time_str} to the overall runtime."
-        
-        if getattr(self, 'in_dead_code', False) or time_override == "Dead Code":
-            explanation = "This code is unreachable and will never execute, so it does not affect runtime."
+                    explanation = f"This operation dictates a complexity of {time_str}."
 
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             existing_t_weight = self.details[-1].get("weight", -1)
@@ -475,7 +533,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 "weight": s_weight
             })
 
-        if not is_dead:
+        if not is_dead and time_override != "Definition":
             if t_weight > self.max_complexity:
                 self.max_complexity = t_weight
                 if t_weight < 998:
@@ -533,8 +591,8 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         # Determine if the function is unreachable (dead code)
         is_dead = node.name not in self.reachable_funcs
         # Set default complexity indicators for dead or alive functions
-        time_override = "Dead Code" if is_dead else "O(1)"
-        space_override = "Dead Code" if is_dead else "O(1)"
+        time_override = "Dead Code" if is_dead else "Definition"
+        space_override = "Dead Code" if is_dead else "Definition"
         
         # Record the function node as a line in the analyzer with overrides
         self.record_line(node, time_override=time_override, space_override=space_override)
@@ -949,7 +1007,7 @@ def analyze_complexity(payload: CodePayload):
                 "indent": line.get("indent", 0),
                 "color": line.get("color", analyzer.get_color(asymp)),
                 "weight": line.get("weight", 0),
-                "explanation": line.get("explanation", "") # ADD THIS LINE
+                "explanation": line.get("explanation", "")
             })
 
         # Return final structured JSON
@@ -1004,7 +1062,7 @@ def get_projects():
         p["_id"] = str(p["_id"])                 # Convert ObjectId to string for JSON serialization
     return {"status": "success", "projects": projects}
 
-# 2. Update your existing login endpoint to include progress
+
 @app.post("/api/login")
 def login_user(req: LoginRequest):
     user = users_collection.find_one({"email": req.email})
@@ -1013,9 +1071,10 @@ def login_user(req: LoginRequest):
             "status": "success", 
             "email": req.email, 
             "name": user.get("name"),
-            "progress": user.get("progress", {}) # Add this line! Returns {} if empty
+            "progress": user.get("progress", {}) 
         }
     raise HTTPException(status_code=401, detail="Invalid email or password")
+
 
 @app.post("/api/signup")
 @app.post("/signup")
@@ -1029,7 +1088,6 @@ def signup_user(req: SignUpRequest):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # 2. Prepare the new user document
-    # Note: In a production app, use a library like passlib to hash the password before saving!
     new_user = {
         "name": req.name,
         "email": req.email,
@@ -1053,7 +1111,6 @@ def update_progress(req: ProgressRequest):
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
         
-    # --- NEW CODE: Fetch the user again to get the updated progress dictionary ---
     updated_user = users_collection.find_one({"email": req.email})
     
     return {
@@ -1069,7 +1126,6 @@ def delete_project(project_id: str):
         raise HTTPException(status_code=500, detail="Database not connected")
     
     try:
-        # Note: ObjectId is already imported at the top of your index.py
         result = projects_collection.delete_one({"_id": ObjectId(project_id)})
         
         if result.deleted_count == 1:
