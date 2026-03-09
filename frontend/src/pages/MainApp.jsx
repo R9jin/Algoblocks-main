@@ -121,6 +121,17 @@ export default function MainApp() {
           is_recursive: data.is_recursive || false
         });
         setActiveTab(prev => (prev === 'time_recurrence' && !data.is_recursive) ? 'time_asymptotic' : prev);
+      } else {
+        // 2. ADD THIS ELSE BLOCK TO HANDLE ERRORS
+        setAnalysisResult({ 
+          total: "Error", 
+          total_recurrence: "Error", 
+          space_total: "Error",
+          lines: [{ lineOfCode: "Analysis Failed", complexity: "Error", explanation: data.message || "The backend analyzer encountered an error with this code." }],
+          recurrence_lines: [], 
+          space_lines: [], 
+          is_recursive: false 
+        });
       }
     } catch (error) {
       console.error("Analysis Error:", error);
@@ -129,6 +140,13 @@ export default function MainApp() {
 
   const executeLoadTemplate = async (path) => {
     try {
+      // 1. ADD THIS TO RESET THE UI WHILE LOADING
+      setAnalysisResult({ 
+        lines: [], recurrence_lines: [], 
+        total: "Analyzing...", total_recurrence: "Analyzing...", 
+        space_lines: [], space_total: "Analyzing...", is_recursive: false 
+      });
+
       const response = await fetch(`/templates/${path}.json`);
       if (!response.ok) throw new Error("Template not found");
       const json = await response.json();
