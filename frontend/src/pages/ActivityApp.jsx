@@ -7,6 +7,8 @@ import Split from "react-split";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ConfirmModal from "../components/ConfirmModal.jsx"; // IMPORT MODAL
+import BigOModal from "../components/BigOModal.jsx"; // ADD THIS LINE
+
 
 // --- LEETCODE STYLE ACTIVITY TASKS (EXPANDED) ---
 const ACTIVITY_TASKS = [
@@ -326,11 +328,11 @@ const ActivityApp = () => {
 
   // EXAMPLE USAGE: Call this when they click "Submit" or pass the lesson
   const handleLessonComplete = () => {
-    const finalScore = 100; // Calculate their actual score
-    const currentLesson = "bubble_sort_act"; // Get the current activity ID
+    const finalScore = 100; 
+    const currentLesson = "bubble_sort_act"; 
     
-    saveLessonScore(currentLesson, finalScore);
-    // show success modal, etc.
+    // CHANGE THIS from saveLessonScore to saveLessonProgress
+    saveLessonProgress(currentLesson, finalScore); 
   };
 
   const handleSuccess = async () => {
