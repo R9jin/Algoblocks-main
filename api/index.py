@@ -513,7 +513,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     explanation = f"{func_name} performs a basic operation that resolves instantly in constant O(1) time."
                 
                 # Add nested impact arithmetic if it's expensive inside a loop
-                if has_outer and time_str != "O(1)":
+                if has_outer and time_str != "O(1)" and not is_recurrence:
                     explanation += f" Nesting context: [Outer block: {outer_str} × Call: {time_str} ➔ Impact: {nested_total_str}]."
 
             elif isinstance(node, ast.Subscript):
