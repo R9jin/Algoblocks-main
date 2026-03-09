@@ -327,7 +327,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return False  # Not a √n loop if no pattern matches
 
     def record_line(self, node, time_override=None, space_override=None, explanation=None):
-        # Record complexity information for a single line of code (AST node)
+# Record complexity information for a single line of code (AST node)
         
         line_text = self.get_code_snippet(node)  # Get the actual source code text for reporting
         
@@ -371,6 +371,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         
         is_dead = getattr(self, 'in_dead_code', False) or time_override == "Dead Code"
 
+        # --- FIX: INITIALIZE THESE VARIABLES HERE SO THEY ALWAYS EXIST ---
+        display_poly = override_poly
+        display_log = override_log
+        display_sqrt = override_sqrt
+
         # Determine the time complexity string and weight for sorting in visualization
         if time_override == "Definition":
             time_str = "-"
@@ -385,12 +390,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             t_weight = -1
             local_weight = -1
         else:
-            # FIX: Ensure lines display only their LOCAL complexity.
-            # We no longer inherit `current_poly` directly for the UI `time_str`.
-            display_poly = override_poly
-            display_log = override_log
-            display_sqrt = override_sqrt
-            
+            # --- FIX: REMOVED INITIALIZATIONS FROM HERE ---
             if not time_override:
                 if isinstance(node, ast.For):
                     display_poly = 1
@@ -408,7 +408,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             # WEIGHTS: Must reflect TOTAL nested depth so max_complexity still calculates worst-case correctly!
             t_weight = total_poly * 10 + total_sqrt * 7 + total_log * 5
             local_weight = display_poly * 10 + display_sqrt * 7 + display_log * 5
-
+            
         # Determine space complexity
         if time_override == "Definition":
             space_str = "-"
