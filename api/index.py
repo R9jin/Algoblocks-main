@@ -33,7 +33,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # DATABASE AND MODEL IMPORTS
 # -------------------------------
 from database import projects_collection, users_collection
-from models import ProjectModel           # Pydantic model representing a project
+from models import ProjectModel, ProjectUpdate           # Pydantic model representing a project
 from bson import ObjectId                 # MongoDB ObjectId type for document IDs
 from collections import deque             # Double-ended queue used for BFS traversal
 
@@ -1193,3 +1193,24 @@ def delete_project(project_id: str):
             
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid project ID format")
+
+@app.put("/api/projects/{project_id}")
+@app.put("/projects/{project_id}")
+def update_project(project_id: str, payload: ProjectUpdate):
+    if projects_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    
+    try:
+        # Update the specific project's 'data' field
+        result = projects_collection.update_one(
+            {"_id": ObjectId(project_id)},
+            {"$set": {"data": payload.data}}
+        )
+        
+        if result.matched_count == 1:
+            return {"status": "success", "message": "Project updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Project not found")
+            
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid update request format")
