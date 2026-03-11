@@ -511,9 +511,9 @@ export default function MainApp() {
                                   {row.complexity}
                                   {row.explanation && (
                                     <span className="dropdown-chevron">
-                                      {expandedLines[i] ? '▼' : '▶'}
+                                      ▶
                                     </span>
-                                  )}
+                                  )}  
                                 </td>
                               </tr>
                               
@@ -557,9 +557,8 @@ export default function MainApp() {
               <button
                 className="footer-tab"
                 onClick={() => setIsBigOModalOpen(true)}
-                style={{ color: '#BCA1FC', fontWeight: 'bold' }}
               >
-                📊 Big O Reference
+                <img src="/assets/table-icon.png" alt="Reference" className="tab-icon" /> Big O Reference
               </button>
             </div>
             
