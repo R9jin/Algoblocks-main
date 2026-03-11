@@ -39,6 +39,9 @@ export default function MainApp() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
+  const [currentProjectId, setCurrentProjectId] = useState(null);
+  const [currentProjectTitle, setCurrentProjectTitle] = useState("Untitled Project");
+
   // --- CONFIRM MODAL STATE ---
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
@@ -188,8 +191,13 @@ export default function MainApp() {
         
         // 2. Handle loading saved projects from MongoDB
         if (location.state.projectToLoad && workspaceRef.current) {
-          // Load the saved JSON data into the workspace
           workspaceRef.current.loadTemplate(location.state.projectToLoad.data);
+          
+          // --- NEW ADDITIONS ---
+          setCurrentProjectId(location.state.projectToLoad._id);
+          setCurrentProjectTitle(location.state.projectToLoad.title);
+          // ---------------------
+          
           setViewMode("workspace");
         }
 
@@ -198,6 +206,38 @@ export default function MainApp() {
       }, 300); // Small delay ensures Blockly is fully mounted
     }
   }, [location.state]);
+
+  // --- ADD THIS USEEFFECT FOR CTRL+S / CMD+S SHORTCUT ---
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Check for Ctrl + S (Windows/Linux) or Cmd + S (Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault(); // Prevent the default browser HTML save dialog
+        
+        // If the workspace is empty, do nothing to prevent empty saves
+        if (!blocklyJson) {
+            alert("The workspace is empty. Nothing to save!");
+            return;
+        }
+
+        // Trigger the correct save function based on whether a project is already loaded
+        if (currentProjectId) {
+          handleUpdateDB();
+        } else {
+          handleSaveToDB();
+        }
+      }
+    };
+
+    // Attach the event listener to the window
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup function to remove the listener when the component unmounts
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [currentProjectId, blocklyJson]); // Re-bind when the project ID or workspace data changes
+  // ------------------------------------------------------
 
   const handleClear = () => {
     setModalConfig({
@@ -216,6 +256,8 @@ export default function MainApp() {
           setActiveTab("time");
           setBottomPanel(null);
           setExpandedLines({});
+          setCurrentProjectId(null);
+          setCurrentProjectTitle("Untitled Project");
         }
       }
     });
@@ -280,6 +322,33 @@ export default function MainApp() {
     }
   };
 
+  const handleUpdateDB = async () => {
+    if (!blocklyJson || !currentProjectId) return;
+    
+    try {
+      const response = await fetch(`/api/projects/${currentProjectId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          data: blocklyJson
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert("Changes saved successfully!");
+      } else {
+        alert("Failed to save changes: " + (result.detail || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Failed to update project:", error);
+      alert("An error occurred while saving. Check console.");
+    }
+  };
+
   const runCode = async () => {
     setConsoleOutput("> Running...");
     setBottomPanel("console");
@@ -308,6 +377,11 @@ export default function MainApp() {
         runCode={runCode}
         handleExport={handleExport}
         handleSaveToDB={handleSaveToDB}
+        
+        // --- NEW PROPS ---
+        currentProjectId={currentProjectId}
+        currentProjectTitle={currentProjectTitle}
+        handleUpdateDB={handleUpdateDB}
       />
 
       <Split 
