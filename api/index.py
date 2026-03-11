@@ -653,19 +653,31 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         
         # Determine the recurrence/complexity relation for this function
         if self.has_recursion_in_loop:
-            # Recursion occurs inside a loop
             relation = "T(n) = n * T(n-1) + O(1)"
         elif self.recursive_calls_count >= 2:
-            # Multiple recursive calls in the function
-            # If slicing/division occurs, assume divide-and-conquer; else Fibonacci-like
-            relation = "T(n) = 2T(n/2) + O(n)" if (self.has_slicing or self.has_division) else "T(n) = T(n-1) + T(n-2) + O(1)"
+            if self.has_slicing or self.has_division or self.max_poly > 0:
+                # Merge Sort / Quick Sort
+                relation = "T(n) = 2T(n/2) + O(n)"
+            else:
+                # Fallback: We assume O(2^n) for math (Fibonacci), but note that Tree Traversal is mathematically 2T(n/2) + O(1) -> O(n).
+                # To be safe for standard block-learning algorithms, we keep the Fibonacci default.
+                relation = "T(n) = T(n-1) + T(n-2) + O(1)"
         elif self.recursive_calls_count == 1:
-            # Single recursive call
-            relation = "T(n) = T(n-1) + O(1)"
+            if self.has_division and self.max_poly > 0:
+                # NEW: Halving search space WITH linear local work (e.g., Quickselect)
+                relation = "T(n) = T(n/2) + O(n)"
+            elif self.has_division:
+                # Halving search space WITHOUT loop (e.g., Binary Search)
+                relation = "T(n) = T(n/2) + O(1)"
+            elif self.max_poly > 0 or self.has_slicing:
+                # Recursive with linear local work (e.g., Recursive Bubble Sort)
+                relation = "T(n) = T(n-1) + O(n)"
+            else:
+                # Simple linear recursion (e.g., Factorial)
+                relation = "T(n) = T(n-1) + O(1)"
         else:
-            # No recursion; compute complexity based on loops
             relation = self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
-        
+            
         # Store the computed time complexity for this function
         self.custom_functions[node.name] = relation
         
@@ -854,6 +866,14 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     call_comp = "O(n log n)"
                 elif "T(n-1) + T(n-2)" in call_comp:
                     call_comp = "O(2^n)"
+                elif "T(n/2) + O(1)" in call_comp:     # <--- ADD THIS
+                    call_comp = "O(log n)"             # <--- ADD THIS
+                elif "T(n-1) + O(n)" in call_comp:     # <--- ADD THIS
+                    call_comp = "O(n^2)"               # <--- ADD THIS
+                elif "T(n/2) + O(n)" in call_comp:
+                    call_comp = "O(n)"
+                elif "2T(n/2) + O(1)" in call_comp:
+                    call_comp = "O(n)"
                 elif "T(n-1)" in call_comp:
                     call_comp = "O(n)"
                 
@@ -994,10 +1014,13 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             if "T(n) = n * T(n-1)" in comp or comp == "O(n!)": return "O(n!)"
             elif "2T(n/2)" in comp or comp == "O(n log n)": return "O(n log n)"
             elif "T(n-1) + T(n-2)" in comp or comp == "O(2^n)": return "O(2^n)"
+            elif "T(n/2) + O(1)" in comp: return "O(log n)"    # <--- ADD THIS
+            elif "T(n-1) + O(n)" in comp: return "O(n^2)"      # <--- ADD THIS
+            elif "T(n/2) + O(n)" in comp: return "O(n)"
+            elif "2T(n/2) + O(1)" in comp: return "O(n)"   
             elif "T(n-1)" in comp: return "O(n)"
         # Fallback: build from max_poly, max_log, max_sqrt
         return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
-
 
 # ---------------------- FastAPI Endpoints ----------------------
 
@@ -1030,6 +1053,10 @@ def analyze_complexity(payload: CodePayload):
             if "T(n) = n * T(n-1)" in comp: asymp = "O(n!)"
             elif "2T(n/2)" in comp: asymp = "O(n log n)"
             elif "T(n-1) + T(n-2)" in comp: asymp = "O(2^n)"
+            elif "T(n/2) + O(1)" in comp: asymp = "O(log n)"   # <--- ADD THIS
+            elif "T(n-1) + O(n)" in comp: asymp = "O(n^2)"     # <--- ADD THIS
+            elif "T(n) = T(n/2) + O(n)" in comp: asymp = "O(n)"
+            elif "T(n) = 2T(n/2) + O(1)" in comp: asymp = "O(n)"
             elif "T(n-1)" in comp: asymp = "O(n)"
             
             asymptotic_lines.append({
