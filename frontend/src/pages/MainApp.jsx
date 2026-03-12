@@ -466,15 +466,23 @@ export default function MainApp() {
                   <div className="complexity-content">
                     <div className="complexity-tabs">
                       <button
-                        onClick={() => setActiveTab("time")}
+                        onClick={() => { 
+                          setActiveTab("time"); 
+                          setExpandedLines({}); // Closes all dropdowns when switching
+                        }}
                         className={`tab-btn ${activeTab === 'time' ? 'active' : ''}`}>
                         Time Complexity
                       </button>
+                      
                       <button
-                        onClick={() => setActiveTab("space")}
+                        onClick={() => { 
+                          setActiveTab("space"); 
+                          setExpandedLines({}); // Closes all dropdowns when switching
+                        }}
                         className={`tab-btn ${activeTab === 'space' ? 'active' : ''}`}>
                         Space Complexity
                       </button>
+                      
                       <span className="total-badge">
                         <span className="total-label">Total:</span>{" "}
                         {activeTab === "space"

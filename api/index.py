@@ -427,8 +427,10 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         # -----------------------------------------------------------------
         if time_override == "Definition":
             explanation = "Function definitions are purely declarations. They are not executed during runtime analysis, so they do not cost time."
+            space_explanation = "Function definitions are purely declarations. They do not allocate active memory during runtime, taking no space."
         elif getattr(self, 'in_dead_code', False) or time_override == "Dead Code":
             explanation = "This code is unreachable (e.g., it is placed after a return statement) and will never execute, meaning it does not affect the runtime."
+            space_explanation = "This code is unreachable and will never execute, meaning it allocates no memory."
         elif not explanation:
             # Calculate outer context metrics for arithmetic explanations
             outer_poly = total_poly - display_poly
@@ -451,12 +453,14 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 elif isinstance(node.iter, ast.Call) and getattr(node.iter.func, 'id', '') == 'range':
                     iter_name = "a generated sequence of numbers"
                 
-                # Nested Arithmetic Explanation Check
                 if has_outer:
                     explanation = (f"This 'for' loop iterates over {iter_name}. "
                                    f"Nesting context: [Outer loop: {outer_str} × Inner loop: {time_str} ➔ Nested total: {nested_total_str}].")
                 else:
                     explanation = f"This 'for' loop iterates sequentially over {iter_name}, running locally in {time_str} time."
+                    
+                # --- NEW: Dynamic Space Explanation ---
+                space_explanation = f"Iterating over {iter_name} uses a constant O(1) auxiliary space for the loop pointer."
 
             elif isinstance(node, ast.While):
                 base_expl = ""
@@ -471,9 +475,13 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     explanation = f"{base_expl} Nesting context: [Outer loop: {outer_str} × Inner loop: {time_str} ➔ Nested total: {nested_total_str}]."
                 else:
                     explanation = base_expl
+                    
+                # --- NEW: Dynamic Space Explanation ---
+                space_explanation = "The 'while' loop condition evaluates in-place without allocating extra dynamic memory, taking O(1) space."
 
             elif isinstance(node, ast.If):
                 explanation = f"Evaluating this conditional statement is a basic boolean check, resolving in constant O(1) time."
+                space_explanation = "Evaluating this conditional check requires no extra memory, taking O(1) space."
 
             elif isinstance(node, ast.Assign):
                 targets = [get_name(t) for t in getattr(node, 'targets', [])]
@@ -488,12 +496,19 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 
                 if has_outer and time_str != "O(1)":
                     explanation += f" Because it is nested: [Outer block: {outer_str} × Action: {time_str} = Impact: {nested_total_str}]."
+                    
+                # --- NEW: Dynamic Space Explanation ---
+                if space_str == "O(1)":
+                    space_explanation = f"Assigning a value to {target_str} requires a small, fixed amount of memory (O(1) space)."
+                else:
+                    space_explanation = f"Allocating memory for {target_str} (e.g., creating a copy or list) requires {space_str} space."
 
             elif isinstance(node, ast.Return):
                 if time_str == "O(1)":
                     explanation = "Returning a value immediately exits the current scope, taking constant O(1) time."
                 else:
                     explanation = f"Returning this value requires a complex evaluation to occur first, taking {time_str} time locally."
+                space_explanation = "Returning a value passes a memory reference back to the caller, taking O(1) extra space."
 
             elif isinstance(node, ast.Call):
                 func_name = "A function"
@@ -512,21 +527,32 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 else:
                     explanation = f"{func_name} performs a basic operation that resolves instantly in constant O(1) time."
                 
-                # Add nested impact arithmetic if it's expensive inside a loop
                 if has_outer and time_str != "O(1)" and not is_recurrence:
                     explanation += f" Nesting context: [Outer block: {outer_str} × Call: {time_str} ➔ Impact: {nested_total_str}]."
+                    
+                # --- NEW: Dynamic Space Explanation ---
+                if is_recurrence:
+                    space_explanation = f"Each recursive call to {func_name} pushes a new frame onto the system's call stack. At maximum depth, this requires {space_str} memory."
+                elif space_str == "O(1)":
+                    space_explanation = f"Executing {func_name} utilizes a fixed, minimal amount of local memory (O(1) space)."
+                else:
+                    space_explanation = f"Executing {func_name} allocates memory for internal data structures or returned collections, taking {space_str} space."
 
             elif isinstance(node, ast.Subscript):
                 if isinstance(node.slice, ast.Slice):
                     explanation = f"Slicing this array creates a brand new copy of the requested elements in memory, which takes {time_str} time."
+                    space_explanation = f"Slicing an array forces Python to create a brand new list in memory, requiring {space_str} space."
                 else:
                     explanation = f"Looking up a specific index in an array or list happens instantly via a memory offset calculation, taking O(1) time."
+                    space_explanation = "Accessing a specific index retrieves a reference in-place, taking O(1) space."
 
             else:
                 if time_str == "O(1)":
                     explanation = "This standard operation executes locally in constant O(1) time."
+                    space_explanation = "This standard operation evaluates in-place without needing extra dynamic memory, taking O(1) space."
                 else:
                     explanation = f"This operation dictates a local complexity of {time_str}."
+                    space_explanation = f"This operation requires allocating {space_str} memory."
 
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             existing_t_weight = self.details[-1].get("weight", -1)
@@ -555,13 +581,15 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.space_details[-1]["complexity"] = space_str
                 self.space_details[-1]["color"] = self.get_color(space_str)
                 self.space_details[-1]["weight"] = s_weight
+                self.space_details[-1]["explanation"] = space_explanation # Attach to override
         else:
             self.space_details.append({
                 "lineOfCode": line_text,
                 "complexity": space_str,
                 "indent": self.current_depth,
                 "color": self.get_color(space_str),
-                "weight": s_weight
+                "weight": s_weight,
+                "explanation": space_explanation # Attach to new line
             })
 
         if not is_dead and time_override != "Definition":
