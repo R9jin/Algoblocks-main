@@ -466,15 +466,23 @@ export default function MainApp() {
                   <div className="complexity-content">
                     <div className="complexity-tabs">
                       <button
-                        onClick={() => setActiveTab("time")}
+                        onClick={() => { 
+                          setActiveTab("time"); 
+                          setExpandedLines({}); // Closes all dropdowns when switching
+                        }}
                         className={`tab-btn ${activeTab === 'time' ? 'active' : ''}`}>
                         Time Complexity
                       </button>
+                      
                       <button
-                        onClick={() => setActiveTab("space")}
+                        onClick={() => { 
+                          setActiveTab("space"); 
+                          setExpandedLines({}); // Closes all dropdowns when switching
+                        }}
                         className={`tab-btn ${activeTab === 'space' ? 'active' : ''}`}>
                         Space Complexity
                       </button>
+                      
                       <span className="total-badge">
                         <span className="total-label">Total:</span>{" "}
                         {activeTab === "space"
@@ -522,7 +530,7 @@ export default function MainApp() {
                                 <tr className="explanation-row">
                                   <td colSpan="2">
                                     <div className="explanation-content">
-                                      <span className="explanation-icon">💡</span>
+                                      <img src="/assets/lightbulb-icon.png" alt="Console" className="tab-icon" />
                                       <p>{row.explanation}</p>
                                     </div>
                                   </td>
@@ -557,6 +565,7 @@ export default function MainApp() {
               <button
                 className="footer-tab"
                 onClick={() => setIsBigOModalOpen(true)}
+                style={{ color: '#ffffff', fontWeight: 'bold' }}
               >
                 <img src="/assets/table-icon.png" alt="Reference" className="tab-icon" /> Big O Reference
               </button>
