@@ -530,7 +530,7 @@ export default function MainApp() {
                                 <tr className="explanation-row">
                                   <td colSpan="2">
                                     <div className="explanation-content">
-                                      <span className="explanation-icon">💡</span>
+                                      <img src="/assets/lightbulb-icon.png" alt="Console" className="tab-icon" />
                                       <p>{row.explanation}</p>
                                     </div>
                                   </td>
@@ -565,6 +565,7 @@ export default function MainApp() {
               <button
                 className="footer-tab"
                 onClick={() => setIsBigOModalOpen(true)}
+                style={{ color: '#ffffff', fontWeight: 'bold' }}
               >
                 <img src="/assets/table-icon.png" alt="Reference" className="tab-icon" /> Big O Reference
               </button>
