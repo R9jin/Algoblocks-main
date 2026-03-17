@@ -12,7 +12,7 @@ export default function SignIn() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       // Send a POST request to your FastAPI backend
       const response = await fetch("/api/login", {
@@ -25,7 +25,7 @@ export default function SignIn() {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         localStorage.setItem("user", JSON.stringify({
           email: data.email,
           name: data.name,

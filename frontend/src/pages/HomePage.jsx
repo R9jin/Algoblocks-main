@@ -16,32 +16,32 @@ export default function LandingPage() {
   }, []);
 
   return (
-      <div className="landing-container">
-        <Header />
-        <main className="landing-main">
-          <section className="hero home-hero">
-            <div className="home-hero-copy">
-              <h1 className="slogan-text">
-                Think in <span className="accent">Steps</span>.<br />
-                <span className="accent">Analyze</span> in Depth.
-              </h1>
-              <p className="hero-subtitle">
-                Build algorithms with interactive blocks and<br />
-                get line-by-line feedback on time and space<br />
-                performance in real-time.
-              </p>
-              <div className="hero-buttons">
-                {/* Dynamic Call-To-Action based on DB Auth Status */}
-                <Link to={user ? "/home" : "/signup"} className="btn-primary">
-                  {user ? "Continue Learning" : "Start for Free"}
-                  <IoArrowForward className="btn-icon-inline" aria-hidden="true" />
-                </Link>
-                <button className="btn-secondary">
-                  <LuCirclePlay className="btn-icon-inline" aria-hidden="true" />
-                  Watch Demo
-                </button>
-              </div>
+    <div className="landing-container">
+      <Header />
+      <main className="landing-main">
+        <section className="hero home-hero">
+          <div className="home-hero-copy">
+            <h1 className="slogan-text">
+              Think in <span className="accent">Steps</span>.<br />
+              <span className="accent">Analyze</span> in Depth.
+            </h1>
+            <p className="hero-subtitle">
+              Build algorithms with interactive blocks and<br />
+              get line-by-line feedback on time and space<br />
+              performance in real-time.
+            </p>
+            <div className="hero-buttons">
+              {/* Dynamic Call-To-Action based on DB Auth Status */}
+              <Link to={user ? "/home" : "/signup"} className="btn-primary">
+                {user ? "Continue Learning" : "Start for Free"}
+                <IoArrowForward className="btn-icon-inline" aria-hidden="true" />
+              </Link>
+              <button className="btn-secondary">
+                <LuCirclePlay className="btn-icon-inline" aria-hidden="true" />
+                Watch Demo
+              </button>
             </div>
+          </div>
           <div className="home-hero-media" aria-hidden="true">
             <img
               src="/assets/programming-code-editor-illustration-design-vector-removebg-preview.png"
@@ -102,7 +102,7 @@ export default function LandingPage() {
           <div className="code-snippet">
             <pre>
               <code>
-{`def bubble_sort(arr):
+                {`def bubble_sort(arr):
     n = len(arr)
     for i in range(n):
         for j in range(0, n-i-1):

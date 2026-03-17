@@ -8,9 +8,9 @@ import "../styles/LearningPath.css";
 const generateFactorialTest = (testCount) => {
   const tests = [];
   const usedNumbers = new Set();
-  
+
   while (tests.length < testCount) {
-    const n = Math.floor(Math.random() * 7) + 1; 
+    const n = Math.floor(Math.random() * 7) + 1;
     if (!usedNumbers.has(n)) {
       usedNumbers.add(n);
       let expected = 1;
@@ -27,7 +27,7 @@ const generateFibonacciTest = (testCount) => {
   const fib = (x) => (x <= 1 ? x : fib(x - 1) + fib(x - 2));
 
   while (tests.length < testCount) {
-    const n = Math.floor(Math.random() * 10) + 1; 
+    const n = Math.floor(Math.random() * 10) + 1;
     if (!usedNumbers.has(n)) {
       usedNumbers.add(n);
       tests.push({ call: `fibonacci(${n})`, expected: `${fib(n)}` });
@@ -40,14 +40,14 @@ const generateFibonacciTest = (testCount) => {
 const generateSortTest = (testCount, funcName) => {
   const tests = [];
   for (let i = 0; i < testCount; i++) {
-    const len = Math.floor(Math.random() * 6) + 3; 
+    const len = Math.floor(Math.random() * 6) + 3;
     const arr = Array.from({ length: len }, () => Math.floor(Math.random() * 50));
     const sortedArr = [...arr].sort((a, b) => a - b);
-    
-    tests.push({ 
+
+    tests.push({
       // Update the call to use the dynamic function name
-      call: `${funcName}([${arr.join(", ")}])`, 
-      expected: `[${sortedArr.join(", ")}]` 
+      call: `${funcName}([${arr.join(", ")}])`,
+      expected: `[${sortedArr.join(", ")}]`
     });
   }
   return tests;
@@ -57,9 +57,9 @@ const generateSortTest = (testCount, funcName) => {
 const generateSearchTest = (testCount, funcName) => {
   const tests = [];
   for (let i = 0; i < testCount; i++) {
-    const len = Math.floor(Math.random() * 6) + 4; 
+    const len = Math.floor(Math.random() * 6) + 4;
     const arr = Array.from({ length: len }, () => Math.floor(Math.random() * 50)).sort((a, b) => a - b);
-    
+
     let exists = Math.random() > 0.3;
     if (i === 0) exists = true;
     if (i === 1) exists = false;
@@ -72,14 +72,14 @@ const generateSearchTest = (testCount, funcName) => {
       target = arr[randomIndex];
       expected = randomIndex;
     } else {
-      target = 999; 
-      expected = -1; 
+      target = 999;
+      expected = -1;
     }
 
-    tests.push({ 
+    tests.push({
       // Update the call to use the dynamic function name
-      call: `${funcName}([${arr.join(", ")}], ${target})`, 
-      expected: `${expected}` 
+      call: `${funcName}([${arr.join(", ")}], ${target})`,
+      expected: `${expected}`
     });
   }
   return tests;
@@ -323,7 +323,7 @@ export default function LearningPath() {
 
   const handleStartActivity = (topic) => {
     let generatedTests = [];
-    
+
     if (topic.generator && topic.testCount) {
       generatedTests = topic.generator(topic.testCount, topic.funcName);
     }
@@ -335,11 +335,11 @@ export default function LearningPath() {
       testCasesList: generatedTests
     };
 
-    navigate("/activity", { 
-      state: { 
-        templatePath: safeTopicData.templatePath, 
-        activityData: activityDataWithTests 
-      } 
+    navigate("/activity", {
+      state: {
+        templatePath: safeTopicData.templatePath,
+        activityData: activityDataWithTests
+      }
     });
   };
 
@@ -395,9 +395,9 @@ export default function LearningPath() {
 
                   return (
                     <div key={topic.id} className={`lp-topic-container ${isExpanded ? "expanded" : ""}`}>
-                      
+
                       <div className="lp-topic-row" onClick={() => toggleTopic(topic.id)}>
-                        
+
                         <div className="lp-topic-row-left">
                           <div className="lp-topic-titles">
                             <span className="lp-topic-number">{topic.number}</span>
@@ -426,7 +426,7 @@ export default function LearningPath() {
                             <strong className="lp-teaching-title">Module Lesson:</strong>
                             <p className="lp-topic-teaching">{topic.teaching}</p>
                           </div>
-                          
+
                           <div className="lp-algorithm-steps">
                             <strong className="lp-steps-title">Algorithm Procedure:</strong>
                             <div className="lp-code-block">
@@ -447,10 +447,10 @@ export default function LearningPath() {
                               <ul className="lp-references-list">
                                 {topic.references.map((ref, idx) => (
                                   <li key={idx}>
-                                    <a 
-                                      href={ref.url} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer" 
+                                    <a
+                                      href={ref.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
                                       className="lp-reference-link"
                                     >
                                       {ref.text}

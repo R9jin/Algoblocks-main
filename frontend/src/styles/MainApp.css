@@ -16,35 +16,51 @@
   width: 100%;
 }
 
-.gutter { 
-  background-color: #e0e0e0; 
-  cursor: col-resize; 
-  transition: 0.2s; 
+.gutter {
+  background-color: #e0e0e0;
+  cursor: col-resize;
+  transition: 0.2s;
 }
-.gutter:hover { background-color: #BCA1FC; }
+
+.gutter:hover {
+  background-color: #BCA1FC;
+}
 
 /* HEADER */
 .workspace-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #3A2A6B; /* Deep purple */
+  background-color: #3A2A6B;
+  /* Deep purple */
   height: 64px;
   padding: 0 20px;
   flex-shrink: 0;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   z-index: 10;
 }
 
-.header-left, .header-center, .header-right {
+.header-left,
+.header-center,
+.header-right {
   display: flex;
   align-items: center;
   gap: 15px;
 }
 
-.header-left { flex: 1; }
-.header-center { flex: 1; justify-content: center; }
-.header-right { flex: 1; justify-content: flex-end; }
+.header-left {
+  flex: 1;
+}
+
+.header-center {
+  flex: 1;
+  justify-content: center;
+}
+
+.header-right {
+  flex: 1;
+  justify-content: flex-end;
+}
 
 .back-btn {
   background: transparent;
@@ -58,7 +74,9 @@
   gap: 6px;
 }
 
-.back-btn:hover { color: #EBE4FF; }
+.back-btn:hover {
+  color: #EBE4FF;
+}
 
 .project-name {
   color: #BCA1FC;
@@ -86,7 +104,9 @@
   object-fit: contain;
 }
 
-.action-btn:active { transform: scale(0.97); }
+.action-btn:active {
+  transform: scale(0.97);
+}
 
 .btn-run {
   background-color: white;
@@ -223,6 +243,7 @@
   margin: 0;
   font-family: 'Fira Code', monospace;
 }
+
 /* DOCKED FOOTER */
 .workspace-footer {
   height: 48px;
@@ -235,7 +256,8 @@
   z-index: 2000;
 }
 
-.footer-left, .footer-right {
+.footer-left,
+.footer-right {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -283,13 +305,21 @@
   transition: opacity 0.2s;
 }
 
-.footer-action-icon:hover { opacity: 1; }
-.footer-action-icon img { width: 18px; height: 18px; filter: brightness(0) invert(1); }
+.footer-action-icon:hover {
+  opacity: 1;
+}
+
+.footer-action-icon img {
+  width: 18px;
+  height: 18px;
+  filter: brightness(0) invert(1);
+}
 
 /* --- HOVER PANEL & RESIZER --- */
 .bottom-hover-panel {
   position: absolute;
-  bottom: 48px; /* Matches footer height */
+  bottom: 48px;
+  /* Matches footer height */
   left: 0;
   right: 0;
   background: rgba(31, 20, 67, 0.95);
@@ -316,7 +346,8 @@
   transition: background-color 0.2s;
 }
 
-.panel-resizer:hover, .panel-resizer:active {
+.panel-resizer:hover,
+.panel-resizer:active {
   background: #E058FB;
 }
 
@@ -381,7 +412,9 @@
   font-size: 0.75rem;
 }
 
-.tab-btn.active { background: #7F57F9; }
+.tab-btn.active {
+  background: #7F57F9;
+}
 
 .total-badge {
   margin-left: auto;
@@ -389,6 +422,7 @@
   font-weight: bold;
   font-size: 0.9rem;
 }
+
 /* --- COMPLEXITY TABLE (REFINED FOR READABILITY) --- */
 .complexity-table-wrapper {
   display: flex;
@@ -399,35 +433,41 @@
 
 .complexity-table {
   width: 100%;
-  max-width: 750px; 
+  max-width: 750px;
   border-collapse: collapse;
-  font-size: 0.8rem; /* Decreased font size */
-  background: #e7e7e7; 
+  font-size: 0.8rem;
+  /* Decreased font size */
+  background: #e7e7e7;
   border-radius: 8px;
-  overflow: hidden; 
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); 
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Distinct header styling */
-.complexity-table th { 
-  padding: 10px 15px; /* Tighter padding */
-  color: #EBE4FF; 
-  background: #2D1F52; 
-  text-align: left; 
+.complexity-table th {
+  padding: 10px 15px;
+  /* Tighter padding */
+  color: #EBE4FF;
+  background: #2D1F52;
+  text-align: left;
   font-weight: 600;
   letter-spacing: 0.5px;
-  font-size: 0.8rem; /* Smaller header font */
+  font-size: 0.8rem;
+  /* Smaller header font */
 }
-.complexity-table th.right-align { text-align: right; }
+
+.complexity-table th.right-align {
+  text-align: right;
+}
 
 /* Thicker border under the header */
-.complexity-table thead tr { 
-  border-bottom: 2px solid #7F57F9; 
+.complexity-table thead tr {
+  border-bottom: 2px solid #7F57F9;
 }
 
 /* Base row styling */
-.complexity-table tbody tr { 
-  border-bottom: 1px solid rgba(127, 87, 249, 0.15); 
+.complexity-table tbody tr {
+  border-bottom: 1px solid rgba(127, 87, 249, 0.15);
   transition: background-color 0.15s ease;
 }
 
@@ -441,19 +481,23 @@
   background: rgba(127, 87, 249, 0.15);
 }
 
-.code-cell { 
-  padding: 8px 15px; /* Tighter padding for a more compact table */
-  font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace; 
-  font-size: 0.8rem; /* Decreased font size */
+.code-cell {
+  padding: 8px 15px;
+  /* Tighter padding for a more compact table */
+  font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.8rem;
+  /* Decreased font size */
   line-height: 1.4;
 }
 
-.complexity-cell { 
-  text-align: right; 
-  padding: 8px 15px; /* Tighter padding */
-  white-space: nowrap; 
-  font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace; 
-  font-size: 0.85rem; /* Decreased font size but kept slightly larger than the code */
+.complexity-cell {
+  text-align: right;
+  padding: 8px 15px;
+  /* Tighter padding */
+  white-space: nowrap;
+  font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.85rem;
+  /* Decreased font size but kept slightly larger than the code */
 }
 
 /* ========================= */
@@ -464,7 +508,8 @@
 @media (max-width: 1024px) {
 
   .project-name {
-    display: none; /* prevent header crowding */
+    display: none;
+    /* prevent header crowding */
   }
 
   .complexity-table {
@@ -481,7 +526,8 @@
   }
 
   .gutter {
-    display: none; /* disable drag divider on small screens */
+    display: none;
+    /* disable drag divider on small screens */
   }
 
   .templates-sidebar {
@@ -588,6 +634,7 @@
     font-size: 0.8rem;
   }
 }
+
 /* ========================= */
 /* Sidebar Toggle & Hidden State */
 /* ========================= */
@@ -609,7 +656,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
   transition: background-color 0.2s ease;
   font-size: 14px;
 }
@@ -624,10 +671,11 @@
 
 /* 1. Add smooth transitions to the panels */
 .templates-sidebar {
-  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
-              min-width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
-              opacity 0.2s ease;
-  overflow: hidden; /* Clips the content smoothly as it shrinks */
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    min-width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 0.2s ease;
+  overflow: hidden;
+  /* Clips the content smoothly as it shrinks */
 }
 
 .workspace-main {
@@ -639,8 +687,9 @@
 }
 
 /* 2. Prevent content from squishing/wrapping while the sidebar is sliding closed */
-.sidebar-search, .sidebar-list {
-  min-width: 250px; 
+.sidebar-search,
+.sidebar-list {
+  min-width: 250px;
 }
 
 /* 3. Animate to 0 width instead of display: none */
@@ -654,16 +703,18 @@
 .workspace-split.sidebar-hidden .gutter {
   width: 0 !important;
   opacity: 0;
-  pointer-events: none; /* Prevents grabbing the invisible divider */
+  pointer-events: none;
+  /* Prevents grabbing the invisible divider */
 }
 
 .workspace-split.sidebar-hidden .workspace-main {
   width: 100% !important;
 }
 
-.total-label{
-  color:#a78bfa; /* choose your color */
-  font-weight:600;
+.total-label {
+  color: #a78bfa;
+  /* choose your color */
+  font-weight: 600;
 }
 
 /* --- Complexity Table Dropdown Styles --- */
@@ -676,7 +727,7 @@
 }
 
 .complexity-row.expanded {
-  background-color: rgba(188, 161, 252, 0.1); 
+  background-color: rgba(188, 161, 252, 0.1);
   border-left: 2px solid #BCA1FC;
 }
 
@@ -691,15 +742,17 @@
 
 .explanation-row td {
   padding: 0 !important;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .explanation-content {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background-color: #170c2e; /* Darker inset background */
-  padding: 12px 15px 12px 35px; /* Indented to look nested */
+  background-color: #170c2e;
+  /* Darker inset background */
+  padding: 12px 15px 12px 35px;
+  /* Indented to look nested */
   color: #D4C5F9;
   font-size: 0.85rem;
   font-style: italic;
@@ -717,6 +770,13 @@
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

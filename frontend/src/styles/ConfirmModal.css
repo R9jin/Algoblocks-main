@@ -27,13 +27,25 @@
 }
 
 @keyframes fade-in {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
 
 @keyframes modal-pop {
-  0% { transform: scale(0.9); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .custom-modal-header h3 {
@@ -78,7 +90,8 @@
 }
 
 .btn-modal-confirm {
-  background: #6C5CE7; /* Default Primary Purple */
+  background: #6C5CE7;
+  /* Default Primary Purple */
   color: #fff;
 }
 
@@ -88,7 +101,8 @@
 }
 
 .btn-modal-danger {
-  background: #e74c3c; /* Red for destructive actions */
+  background: #e74c3c;
+  /* Red for destructive actions */
 }
 
 .btn-modal-danger:hover {

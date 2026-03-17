@@ -15,7 +15,8 @@
   background: white;
 }
 
-.dashboard-header .header-left, .dashboard-header .header-right {
+.dashboard-header .header-left,
+.dashboard-header .header-right {
   display: flex;
   align-items: center;
   gap: 20px;
@@ -38,7 +39,8 @@
   font-size: 0.9rem;
   display: flex;
   align-items: center;
-  gap: 8px; /* Adds space between the icon and the text */
+  gap: 8px;
+  /* Adds space between the icon and the text */
 }
 
 /* Add this new class to control the size of your icon */
@@ -63,19 +65,21 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: none; /* <-- Changed from '1px solid #5A1398' to 'none' */
+  border: none;
+  /* <-- Changed from '1px solid #5A1398' to 'none' */
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  overflow: hidden; 
-  background-color: transparent; /* Changed to transparent so there's no background box */
+  overflow: hidden;
+  background-color: transparent;
+  /* Changed to transparent so there's no background box */
 }
 
 .user-profile-icon img {
   width: 100%;
   height: 100%;
-  object-fit: cover; 
+  object-fit: cover;
 }
 
 .dashboard-body {
@@ -130,7 +134,8 @@
 .banner-icon img {
   width: 50px;
   height: 50px;
-  object-fit: contain; /* Prevents image stretching */
+  object-fit: contain;
+  /* Prevents image stretching */
 }
 
 .banner-text h2 {
@@ -172,7 +177,8 @@
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 20px;
   margin-bottom: 40px;
-  align-items: start; /* Prevents cards from stretching heights to match neighbors */
+  align-items: start;
+  /* Prevents cards from stretching heights to match neighbors */
 }
 
 .template-card {
@@ -193,7 +199,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 0; 
+  margin-bottom: 0;
   transition: margin-bottom 0.3s ease;
 }
 
@@ -203,7 +209,7 @@
   align-items: center;
   gap: 10px;
   /* Removed the hardcoded margin-bottom so the card is compact when collapsed */
-  margin-bottom: 0; 
+  margin-bottom: 0;
   transition: margin-bottom 0.3s ease;
 }
 
@@ -216,7 +222,7 @@
 .card-icon-img {
   width: 24px;
   height: 24px;
-  object-fit: contain; 
+  object-fit: contain;
 }
 
 /* --- HOVER ANIMATION LOGIC --- */
@@ -231,9 +237,10 @@
 
 /* Hover state: Expand the container to reveal both text and button */
 .template-card:hover .card-hover-content {
-  max-height: 250px; /* Made slightly taller to ensure long descriptions + button fit */
+  max-height: 250px;
+  /* Made slightly taller to ensure long descriptions + button fit */
   opacity: 1;
-  margin-top: 12px; 
+  margin-top: 12px;
 }
 
 /* Base text styling */
@@ -242,7 +249,8 @@
   color: #555;
   font-size: 0.85rem;
   line-height: 1.5;
-  margin-bottom: 15px; /* Adds space between the text and the button */
+  margin-bottom: 15px;
+  /* Adds space between the text and the button */
 }
 
 /* Test Template Button Styling */
@@ -264,6 +272,7 @@
   background-color: #7F57F9;
   transform: translateY(-1px);
 }
+
 /* ... keep sidebar and banner CSS ... */
 
 /* Sidebar */
@@ -292,6 +301,7 @@
 
 /* Large Tablets */
 @media (max-width: 1024px) {
+
   .dashboard-main,
   .dashboard-sidebar {
     padding: 25px;
@@ -394,8 +404,10 @@
 
 .algorithm-library-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 columns for Sorting, Searching, Recursive */
-  gap: 40px; /* space between columns */
+  grid-template-columns: repeat(3, 1fr);
+  /* 3 columns for Sorting, Searching, Recursive */
+  gap: 40px;
+  /* space between columns */
   margin-bottom: 50px;
 }
 
@@ -446,8 +458,10 @@
 
 .algorithm-library-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 columns for Sorting / Searching / Recursive */
-  gap: 40px; /* spacing between columns */
+  grid-template-columns: repeat(3, 1fr);
+  /* 3 columns for Sorting / Searching / Recursive */
+  gap: 40px;
+  /* spacing between columns */
   margin-bottom: 50px;
 }
 
@@ -508,7 +522,8 @@
 }
 
 .algorithm-card:hover .card-hover-content {
-  max-height: 250px; /* enough space for desc + button */
+  max-height: 250px;
+  /* enough space for desc + button */
   opacity: 1;
   margin-top: 12px;
 }
@@ -540,8 +555,10 @@
 
 .algorithm-library-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 columns for Sorting / Searching / Recursive */
-  gap: 40px; /* spacing between columns */
+  grid-template-columns: repeat(3, 1fr);
+  /* 3 columns for Sorting / Searching / Recursive */
+  gap: 40px;
+  /* spacing between columns */
   margin-bottom: 50px;
 }
 
@@ -602,7 +619,8 @@
 }
 
 .algorithm-card:hover .card-hover-content {
-  max-height: 250px; /* enough space for desc + button */
+  max-height: 250px;
+  /* enough space for desc + button */
   opacity: 1;
   margin-top: 12px;
 }
@@ -632,9 +650,11 @@
   transform: translateY(-1px);
 }
 
-.dashboard-body > * {
+.dashboard-body>* {
   height: 100%;
 }
+
 .dashboard-body {
-  height: calc(100vh - 80px); /* adjust if your header height is 80px */
+  height: calc(100vh - 80px);
+  /* adjust if your header height is 80px */
 }

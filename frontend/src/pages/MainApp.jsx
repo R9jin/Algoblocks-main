@@ -12,7 +12,7 @@ import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const SIDEBAR_TEMPLATES = [
   { name: "Linear Search", path: "search/linear_search", desc: "Sequentially checks each element until the target is found or the list is exhausted." },
-  { name: "Binary Search", path: "search/binary_search", desc: "Finds the position of a target value within a sorted array by repeatedly dividing the search interval in half." }, 
+  { name: "Binary Search", path: "search/binary_search", desc: "Finds the position of a target value within a sorted array by repeatedly dividing the search interval in half." },
   { name: "Bubble Sort", path: "sort/bubble_sort", desc: "Repeatedly swaps adjacent elements if they are in the wrong order." },
   { name: "Selection Sort", path: "sort/selection_sort", desc: "Finds the minimum element from the unsorted part and places it at the beginning." },
   { name: "Insertion Sort", path: "sort/insertion_sort", desc: "Builds the final sorted array one element at a time by inserting elements into their correct position." },
@@ -25,16 +25,16 @@ const SIDEBAR_TEMPLATES = [
 export default function MainApp() {
   const location = useLocation();
 
-  const [analysisResult, setAnalysisResult] = useState({ 
+  const [analysisResult, setAnalysisResult] = useState({
     lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false
   });
-  
+
   const [activeTab, setActiveTab] = useState("time");
   const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
   const [consoleOutput, setConsoleOutput] = useState("Ready to run...");
   const [blocklyJson, setBlocklyJson] = useState(null);
-  
-  const [viewMode, setViewMode] = useState("workspace"); 
+
+  const [viewMode, setViewMode] = useState("workspace");
   const [bottomPanel, setBottomPanel] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
@@ -50,11 +50,11 @@ export default function MainApp() {
   });
 
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
-  
+
   const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
-  
+
   // CHANGE THIS TO AN OBJECT:
-  const [expandedLines, setExpandedLines] = useState({}); 
+  const [expandedLines, setExpandedLines] = useState({});
 
   // ADD THIS TOGGLE FUNCTION:
   const toggleLine = (index) => {
@@ -91,7 +91,7 @@ export default function MainApp() {
   }, []);
 
   const handleDragStart = (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     isDragging.current = true;
     document.body.style.cursor = "ns-resize";
     document.body.style.userSelect = "none";
@@ -104,15 +104,15 @@ export default function MainApp() {
     setGeneratedPython(pythonCode);
     setBlocklyJson(json);
     try {
-      const response = await fetch('/api/analyze', { 
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: pythonCode })
       });
       const data = await response.json();
       if (data.status === "success") {
-        setAnalysisResult({ 
-          total: data.total, 
+        setAnalysisResult({
+          total: data.total,
           total_recurrence: data.total_recurrence || data.total,
           lines: data.lines,
           recurrence_lines: data.recurrence_lines || [],
@@ -123,14 +123,14 @@ export default function MainApp() {
         setActiveTab(prev => (prev === 'time_recurrence' && !data.is_recursive) ? 'time_asymptotic' : prev);
       } else {
         // 2. ADD THIS ELSE BLOCK TO HANDLE ERRORS
-        setAnalysisResult({ 
-          total: "Error", 
-          total_recurrence: "Error", 
+        setAnalysisResult({
+          total: "Error",
+          total_recurrence: "Error",
           space_total: "Error",
           lines: [{ lineOfCode: "Analysis Failed", complexity: "Error", explanation: data.message || "The backend analyzer encountered an error with this code." }],
-          recurrence_lines: [], 
-          space_lines: [], 
-          is_recursive: false 
+          recurrence_lines: [],
+          space_lines: [],
+          is_recursive: false
         });
       }
     } catch (error) {
@@ -141,16 +141,16 @@ export default function MainApp() {
   const executeLoadTemplate = async (path) => {
     try {
       // 1. ADD THIS TO RESET THE UI WHILE LOADING
-      setAnalysisResult({ 
-        lines: [], recurrence_lines: [], 
-        total: "Analyzing...", total_recurrence: "Analyzing...", 
-        space_lines: [], space_total: "Analyzing...", is_recursive: false 
+      setAnalysisResult({
+        lines: [], recurrence_lines: [],
+        total: "Analyzing...", total_recurrence: "Analyzing...",
+        space_lines: [], space_total: "Analyzing...", is_recursive: false
       });
 
       const response = await fetch(`/templates/${path}.json`);
       if (!response.ok) throw new Error("Template not found");
       const json = await response.json();
-      
+
       if (workspaceRef.current) {
         workspaceRef.current.loadTemplate(json);
         setViewMode("workspace");
@@ -185,7 +185,7 @@ export default function MainApp() {
         if (location.state.templatePath) {
           loadAlgorithmTemplate(location.state.templatePath, true);
         }
-        
+
         // 2. Handle loading saved projects from MongoDB
         if (location.state.projectToLoad && workspaceRef.current) {
           // Load the saved JSON data into the workspace
@@ -248,10 +248,10 @@ export default function MainApp() {
       alert("You must be signed in to save projects to the cloud.");
       return;
     }
-    
+
     const user = JSON.parse(storedUser);
     const projectName = window.prompt("Enter a name for your project:", "my_algorithm");
-    
+
     if (projectName) {
       try {
         const response = await fetch("/api/projects", {
@@ -267,7 +267,7 @@ export default function MainApp() {
         });
 
         const result = await response.json();
-        
+
         if (response.ok) {
           alert("Project saved successfully!");
         } else {
@@ -301,8 +301,8 @@ export default function MainApp() {
 
   return (
     <div className="workspace-app-container">
-      
-      <WorkspaceHeader 
+
+      <WorkspaceHeader
         viewMode={viewMode}
         setViewMode={setViewMode}
         runCode={runCode}
@@ -310,23 +310,23 @@ export default function MainApp() {
         handleSaveToDB={handleSaveToDB}
       />
 
-      <Split 
-        className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} 
-        sizes={[20, 80]} 
-        minSize={[250, 400]} 
+      <Split
+        className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`}
+        sizes={[20, 80]}
+        minSize={[250, 400]}
         gutterSize={8}
       >
         <aside className="templates-sidebar">
           <div className="sidebar-search">
             <img src="/assets/search-icon.png" alt="Search" className="search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search Templates" 
+            <input
+              type="text"
+              placeholder="Search Templates"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
+
           <div className="sidebar-list">
             {filteredTemplates.map((template) => (
               <div key={template.name} className="sidebar-card" onClick={() => loadAlgorithmTemplate(template.path)}>
@@ -341,8 +341,8 @@ export default function MainApp() {
         </aside>
 
         <main className="workspace-main">
-          
-          <button 
+
+          <button
             className={`sidebar-toggle-btn ${!isSidebarVisible ? 'closed' : ''}`}
             onClick={() => setIsSidebarVisible(!isSidebarVisible)}
             title={isSidebarVisible ? "Hide Templates" : "Show Templates"}
@@ -354,10 +354,10 @@ export default function MainApp() {
             <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
               <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
             </div>
-            
+
             <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#1C1236', overflow: 'auto' }}>
-              <SyntaxHighlighter 
-                language="python" 
+              <SyntaxHighlighter
+                language="python"
                 style={shadesOfPurple}
                 showLineNumbers={true}
                 customStyle={{
@@ -366,7 +366,7 @@ export default function MainApp() {
                   fontSize: '0.95rem',
                   fontFamily: "'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
                   background: '#1C1236',
-                  color: '#EBE4FF', 
+                  color: '#EBE4FF',
                   minHeight: '100%'
                 }}
               >
@@ -380,7 +380,7 @@ export default function MainApp() {
               <div className="panel-resizer" onMouseDown={handleDragStart}>
                 <div className="resizer-dash"></div>
               </div>
-              
+
               <div className="panel-header">
                 <span className="panel-title">{bottomPanel === 'console' ? 'Console Output' : 'Complexity Analysis'}</span>
                 <button onClick={() => setBottomPanel(null)} className="panel-close-btn">✕</button>
@@ -408,7 +408,7 @@ export default function MainApp() {
                           : analysisResult.total}
                       </span>
                     </div>
-                    
+
                     <div className="complexity-table-wrapper">
                       <table className="complexity-table">
                         <thead>
@@ -418,13 +418,13 @@ export default function MainApp() {
                           </tr>
                         </thead>
                         <tbody>
-                          {(activeTab === 'time' ? analysisResult.lines 
-                            : activeTab === 'time_recurrence' ? analysisResult.recurrence_lines 
-                            : analysisResult.space_lines
+                          {(activeTab === 'time' ? analysisResult.lines
+                            : activeTab === 'time_recurrence' ? analysisResult.recurrence_lines
+                              : analysisResult.space_lines
                           ).map((row, i) => (
                             <React.Fragment key={i}>
                               {/* Main Clickable Row */}
-                              <tr 
+                              <tr
                                 className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
                                 onClick={() => toggleLine(i)}
                                 style={{ cursor: row.explanation ? 'pointer' : 'default' }}
@@ -442,7 +442,7 @@ export default function MainApp() {
                                   )}
                                 </td>
                               </tr>
-                              
+
                               {/* Hidden Explanation Dropdown Row */}
                               {expandedLines[i] && row.explanation && (
                                 <tr className="explanation-row">
@@ -488,7 +488,7 @@ export default function MainApp() {
                 📊 Big O Reference
               </button>
             </div>
-            
+
             <div className="footer-right">
               <button className="footer-action-icon" onClick={handleClear} title="Clear Workspace">
                 <img src="/assets/recursive-icon.png" alt="Refresh" />
@@ -500,7 +500,7 @@ export default function MainApp() {
       </Split>
 
       {/* RENDER THE CONFIRM MODAL */}
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={modalConfig.isOpen}
         title={modalConfig.title}
         message={modalConfig.message}
@@ -510,9 +510,9 @@ export default function MainApp() {
         onConfirm={modalConfig.onConfirmAction}
       />
 
-      <BigOModal 
-        isOpen={isBigOModalOpen} 
-        onClose={() => setIsBigOModalOpen(false)} 
+      <BigOModal
+        isOpen={isBigOModalOpen}
+        onClose={() => setIsBigOModalOpen(false)}
       />
     </div>
   );

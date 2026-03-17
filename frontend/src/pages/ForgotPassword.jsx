@@ -1,6 +1,6 @@
 import { useState } from "react";
+import { FiCheckCircle, FiMail } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { FiMail, FiCheckCircle } from "react-icons/fi";
 import "../styles/Auth.css";
 
 export default function ForgotPassword() {
