@@ -734,39 +734,62 @@
 .dropdown-chevron {
   display: inline-block;
   margin-left: 8px;
-  font-size: 0.65rem;
-  color: #BCA1FC;
-  opacity: 0.8;
-  vertical-align: middle;
+  font-size: 0.8rem;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.complexity-row.expanded .dropdown-chevron {
+  transform: rotate(90deg); /* Rotates ▶ to point downwards */
 }
 
 .explanation-row td {
   padding: 0 !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border: none;
 }
 
 .explanation-content {
+  background: rgba(255, 255, 255, 0.05);
+  margin: 0px 16px 12px 16px; /* Spacing inside the cell */
+  border-radius: 8px;
+  border-left: 3px solid #BCA1FC;
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  background-color: #170c2e;
-  /* Darker inset background */
-  padding: 12px 15px 12px 35px;
-  /* Indented to look nested */
-  color: #D4C5F9;
-  font-size: 0.85rem;
-  font-style: italic;
-  animation: slideDown 0.2s ease-out;
+  gap: 12px;
+  overflow: hidden; /* Hide text while it expands */
+  
+  /* Trigger the slide-down animation when React mounts it */
+  animation: slide-down-explanation 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top;
 }
 
 .explanation-content p {
   margin: 0;
-  line-height: 1.4;
+  font-size: 0.9rem;
+  color: #3912ff;
+  line-height: 1.5;
+  padding-right: 12px;
 }
 
 .explanation-icon {
-  font-style: normal;
-  font-size: 1rem;
+  font-size: 1.2rem;
+  margin-left: 12px;
+}
+
+/* 4. The Keyframes for the buttery smooth slide and fade */
+@keyframes slide-down-explanation {
+  0% {
+    opacity: 0;
+    max-height: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    transform: scaleY(0.95);
+  }
+  100% {
+    opacity: 1;
+    max-height: 200px; /* Adjust if your explanations get very long */
+    padding-top: 12px;
+    padding-bottom: 12px;
+    transform: scaleY(1);
+  }
 }
 
 @keyframes slideDown {

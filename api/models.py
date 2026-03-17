@@ -10,6 +10,10 @@ class ProjectModel(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     owner_id: Optional[str] = None
 
+class ProjectUpdate(BaseModel):
+    data: dict
+
 class UserModel(BaseModel):
     username: str
     hashed_password: str
+

@@ -20,43 +20,24 @@ export default function WorkspaceHeader({
   setViewMode,
   runCode,
   handleExport,
-  handleSaveToDB
+  handleSaveToDB,
+  currentProjectId,       // NEW
+  currentProjectTitle,    // NEW
+  handleUpdateDB          // NEW
 }) {
 
-  /** React Router navigation helper */
   const navigate = useNavigate();
 
   return (
-    /**
-     * Main header container for the workspace interface.
-     * CSS classes define layout and styling.
-     */
     <header className="workspace-header">
-
-      {/* -------------------------------------------------------------- */}
-      {/* Left Section: Back Navigation & Project Name                  */}
-      {/* -------------------------------------------------------------- */}
-
       <div className="header-left">
-
-        {/*
-          Back button to return to the dashboard.
-          Uses an image icon and text for clear navigation affordance.
-        */}
         <button className="back-btn" onClick={() => navigate('/dashboard')}>
           <img src="/assets/back-icon.png" alt="Back" className="btn-icon" />
           Back to Dashboard
         </button>
-
-        {/* Displays the current project name */}
-        <span className="project-name">Untitled Project</span>
-
+        {/* Update this span to use the dynamic title */}
+        <span className="project-name">{currentProjectTitle}</span>
       </div>
-
-
-      {/* -------------------------------------------------------------- */}
-      {/* Center Section: View Toggle (Workspace / Python Code)        */}
-      {/* -------------------------------------------------------------- */}
 
       <div className="header-center">
         <div className="view-toggle">
@@ -86,38 +67,26 @@ export default function WorkspaceHeader({
         </div>
       </div>
 
-
-      {/* -------------------------------------------------------------- */}
-      {/* Right Section: Action Buttons (Run / Export / Save)          */}
-      {/* -------------------------------------------------------------- */}
-
       <div className="header-right">
-
-        {/*
-          Run button to execute the code in the current workspace.
-          Uses an icon for quick recognition.
-        */}
         <button onClick={runCode} className="action-btn btn-run">
           <img src="/assets/play-icon.png" alt="Run" className="btn-icon" /> Run
         </button>
 
-        {/*
-          Export button triggers project download functionality.
-        */}
         <button onClick={handleExport} className="action-btn btn-save">
           Export
         </button>
 
-        {/*
-          Save button triggers project save to MongoDB.
-          Requires sign in.
-        */}
-        <button onClick={handleSaveToDB} className="action-btn btn-save">
-          Save to Cloud
-        </button>
-
+        {/* Conditionally render "Save Changes" if a project is loaded, otherwise show "Save to Cloud" */}
+        {currentProjectId ? (
+          <button onClick={handleUpdateDB} className="action-btn btn-save" style={{ backgroundColor: '#27ae60', color: 'white' }}>
+            Save Changes
+          </button>
+        ) : (
+          <button onClick={handleSaveToDB} className="action-btn btn-save">
+            Save to Cloud
+          </button>
+        )}
       </div>
-
     </header>
   );
 }
