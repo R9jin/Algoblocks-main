@@ -13,7 +13,7 @@ export default function SignUp() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       // Send a POST request to your FastAPI backend
       const response = await fetch("api/signup", {
@@ -27,10 +27,10 @@ export default function SignUp() {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         // Save database user to localStorage
         localStorage.setItem("user", JSON.stringify({ email: data.email, name: data.name }));
-        
+
         // Navigate to /home instead of /dashboard for a consistent entry point
         navigate("/home");
       } else {

@@ -18,12 +18,12 @@ function App() {
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/dashboard" element={<Dashboard />} /> 
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/learning-path" element={<LearningPath />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/app" element={<MainApp />} />
         <Route path="/home" element={<UserHomePage />} />
-        <Route path="/activity" element={<ActivityApp />}/>
+        <Route path="/activity" element={<ActivityApp />} />
       </Routes>
     </BrowserRouter>
   );
