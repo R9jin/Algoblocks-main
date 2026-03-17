@@ -765,7 +765,7 @@ except Exception as e:
                                 <tr className="explanation-row">
                                   <td colSpan="2">
                                     <div className="explanation-content">
-                                      <span className="explanation-icon">💡</span>
+                                      <img src="/assets/lightbulb-icon.png" alt="Console" className="tab-icon" />
                                       <p>{row.explanation}</p>
                                     </div>
                                   </td>
@@ -799,9 +799,9 @@ except Exception as e:
               <button
                 className="footer-tab"
                 onClick={() => setIsBigOModalOpen(true)}
-                style={{ color: '#BCA1FC', fontWeight: 'bold' }}
+                style={{ color: '#ffffff', fontWeight: 'bold' }}
               >
-                📊 Big O Reference
+                <img src="/assets/table-icon.png" alt="Reference" className="tab-icon" /> Big O Reference
               </button>
             </div>
 

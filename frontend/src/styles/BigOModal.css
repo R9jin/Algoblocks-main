@@ -5,11 +5,13 @@
     width: 100vw;
     height: 100vh;
     background: rgba(15, 5, 36, 0.6);
-    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
+
+    /* Overlay fade animation */
+    animation: bigo-fade-in 0.3s ease-out forwards;
 }
 
 .big-o-modal-content {
@@ -19,7 +21,9 @@
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     overflow: hidden;
-    animation: modalFadeIn 0.2s ease-out;
+
+    /* Smooth upward slide and fade */
+    animation: bigo-smooth-slide 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .big-o-modal-header {
@@ -160,6 +164,7 @@
     margin: 0;
 }
 
+/* Animations */
 @keyframes modalFadeIn {
     from {
         opacity: 0;
@@ -167,6 +172,30 @@
     }
 
     to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bigo-fade-in {
+    0% {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+
+    100% {
+        opacity: 1;
+        backdrop-filter: blur(4px);
+    }
+}
+
+@keyframes bigo-smooth-slide {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    100% {
         opacity: 1;
         transform: translateY(0);
     }
