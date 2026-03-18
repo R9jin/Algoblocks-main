@@ -135,6 +135,63 @@ const customBlocks = [
     output: "Number",
     colour: "#4C97FF",
     tooltip: "Returns the maximum or minimum of two numbers"
+  },
+  // --- DICTIONARY BLOCKS (Perfect Visual & Connection Match) ---
+  {
+    type: "dict_create_empty",
+    message0: "create empty dictionary { }",
+    output: null, // Ensures it can plug into ANY variable block
+    style: "list_blocks", // Perfectly matches your theme's 3D List style
+    tooltip: "Creates a new, empty Python dictionary"
+  },
+  {
+    type: "dict_set",
+    message0: "in dictionary %1 set key %2 to %3",
+    args0: [
+      { type: "input_value", name: "DICT" },
+      { type: "input_value", name: "KEY" },
+      { type: "input_value", name: "VALUE" }
+    ],
+    inputsInline: true,
+    previousStatement: null, // Notch on top to stack below variables
+    nextStatement: null,     // Notch on bottom to continue the code
+    style: "list_blocks",
+    tooltip: "Sets a key-value pair in a dictionary (e.g., dict['key'] = value)"
+  },
+  {
+    type: "dict_get",
+    message0: "in dictionary %1 get key %2",
+    args0: [
+      { type: "input_value", name: "DICT" },
+      { type: "input_value", name: "KEY" }
+    ],
+    inputsInline: true,
+    output: null, // Puzzle tab on the left to plug into variables
+    style: "list_blocks",
+    tooltip: "Retrieves the value for a specific key in a dictionary"
+  },
+  // --- DYNAMIC DICTIONARY CONSTRUCTOR BLOCKS ---
+  {
+    type: "dict_pair",
+    message0: "key %1 : value %2",
+    args0: [
+      { type: "input_value", "name": "KEY" },
+      { type: "input_value", "name": "VALUE" }
+    ],
+    inputsInline: true,
+    output: "DictPair", // Custom output type so it snaps cleanly
+    style: "list_blocks",
+    tooltip: "Creates a single Key-Value pair (e.g., 'A': 1)"
+  },
+  {
+    type: "dict_from_pairs",
+    message0: "create dictionary from pairs %1",
+    args0: [
+      { type: "input_value", "name": "LIST", check: "Array" }
+    ],
+    output: null,
+    style: "list_blocks",
+    tooltip: "Converts a list of key-value pairs into a dynamic dictionary"
   }
 ];
 
@@ -151,6 +208,8 @@ const toolbox = {
   kind: "categoryToolbox",
   contents: [
     { kind: "search", name: "Search", contents: [] },
+
+    // Logic
     {
       kind: "category",
       name: "Logic",
@@ -166,6 +225,8 @@ const toolbox = {
         { kind: "block", type: "procedure_return_value" }
       ]
     },
+
+    // Loops
     {
       kind: "category",
       name: "Loops",
@@ -173,18 +234,31 @@ const toolbox = {
       contents: [
         { kind: "block", type: "controls_repeat_ext", inputs: { TIMES: { shadow: { type: "math_number", fields: { NUM: 10 } } } } },
         { kind: "block", type: "controls_whileUntil" },
-        { kind: "block", type: "controls_for", inputs: { FROM: { shadow: { type: "math_number", fields: { NUM: 1 } } }, TO: { shadow: { type: "math_number", fields: { NUM: 10 } } }, BY: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
+        {
+          kind: "block", type: "controls_for", inputs: {
+            FROM: { shadow: { type: "math_number", fields: { NUM: 1 } } },
+            TO: { shadow: { type: "math_number", fields: { NUM: 10 } } },
+            BY: { shadow: { type: "math_number", fields: { NUM: 1 } } }
+          }
+        },
         { kind: "block", type: "controls_forEach" },
         { kind: "block", type: "controls_flow_statements" }
       ]
     },
+
+    // Math
     {
       kind: "category",
       name: "Math",
       categorystyle: "math_category",
       contents: [
-        { kind: "block", type: "math_number", fields: { NUM: 123 } },
-        { kind: "block", type: "math_arithmetic", inputs: { A: { shadow: { type: "math_number", fields: { NUM: 1 } } }, B: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
+        { kind: "block", type: "math_number", fields: { NUM: 1 } },
+        {
+          kind: "block", type: "math_arithmetic", inputs: {
+            A: { shadow: { type: "math_number", fields: { NUM: 1 } } },
+            B: { shadow: { type: "math_number", fields: { NUM: 1 } } }
+          }
+        },
         { kind: "block", type: "math_advanced_operators" },
         { kind: "block", type: "math_assignment", inputs: { DELTA: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
         { kind: "block", type: "type_cast_int" },
@@ -196,11 +270,23 @@ const toolbox = {
         { kind: "block", type: "math_round" },
         { kind: "block", type: "math_on_list" },
         { kind: "block", type: "math_modulo" },
-        { kind: "block", type: "math_constrain", inputs: { LOW: { shadow: { type: "math_number", fields: { NUM: 1 } } }, HIGH: { shadow: { type: "math_number", fields: { NUM: 100 } } } } },
-        { kind: "block", type: "math_random_int", inputs: { FROM: { shadow: { type: "math_number", fields: { NUM: 1 } } }, TO: { shadow: { type: "math_number", fields: { NUM: 100 } } } } },
+        {
+          kind: "block", type: "math_constrain", inputs: {
+            LOW: { shadow: { type: "math_number", fields: { NUM: 1 } } },
+            HIGH: { shadow: { type: "math_number", fields: { NUM: 100 } } }
+          }
+        },
+        {
+          kind: "block", type: "math_random_int", inputs: {
+            FROM: { shadow: { type: "math_number", fields: { NUM: 1 } } },
+            TO: { shadow: { type: "math_number", fields: { NUM: 100 } } }
+          }
+        },
         { kind: "block", type: "math_random_float" }
       ]
     },
+
+    // Text
     {
       kind: "category",
       name: "Text",
@@ -219,9 +305,15 @@ const toolbox = {
         { kind: "block", type: "text_changeCase" },
         { kind: "block", type: "text_trim" },
         { kind: "block", type: "text_print" },
-        { kind: "block", type: "text_prompt_ext", inputs: { TEXT: { shadow: { type: "text", fields: { TEXT: "abc" } } } } }
+        {
+          kind: "block", type: "text_prompt_ext", inputs: {
+            TEXT: { shadow: { type: "text", fields: { TEXT: "abc" } } }
+          }
+        }
       ]
     },
+
+    // Lists and Dictionaries
     {
       kind: "category",
       name: "Lists",
@@ -238,9 +330,36 @@ const toolbox = {
         { kind: "block", type: "lists_setIndex" },
         { kind: "block", type: "lists_getSublist" },
         { kind: "block", type: "lists_split" },
-        { kind: "block", type: "lists_sort" }
+        { kind: "block", type: "lists_sort" },
+
+        // Dictionary blocks
+        { kind: "block", type: "dict_create_empty" },
+        {
+          kind: "block", type: "dict_set", inputs: {
+            KEY: { shadow: { type: "text", fields: { TEXT: "key_name" } } },
+            VALUE: { shadow: { type: "text", fields: { TEXT: "value" } } }
+          }
+        },
+        {
+          kind: "block", type: "dict_get", inputs: {
+            KEY: { shadow: { type: "text", fields: { TEXT: "key_name" } } }
+          }
+        },
+        {
+          kind: "block", type: "dict_from_pairs", inputs: {
+            PAIRS: { shadow: { type: "lists_create_with", extraState: { itemCount: 0 } } }
+          }
+        },
+        {
+          kind: "block", type: "dict_pair", inputs: {
+            KEY: { shadow: { type: "text", fields: { TEXT: "key_name" } } },
+            VALUE: { shadow: { type: "text", fields: { TEXT: "value" } } }
+          }
+        }
       ]
     },
+
+    // Variables & Functions
     { kind: "category", name: "Variables", categorystyle: "variable_category", custom: "VARIABLE" },
     { kind: "category", name: "Functions", categorystyle: "procedure_category", custom: "PROCEDURE" }
   ]
@@ -427,50 +546,81 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return `for ${variable} in ${rangeCode}:\n${branch}`;
       };
 
+      // lists_getIndex: Access list elements by index (FULLY PATCHED)
       pythonGenerator.forBlock['lists_getIndex'] = function (block) {
         const mode = block.getFieldValue('MODE') || 'GET';
         const where = block.getFieldValue('WHERE') || 'FROM_START';
         const list = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_MEMBER) || '[]';
 
-        // NEW: Handle standard pop() -> gets and removes the LAST item
-        if (mode === 'GET_REMOVE' && where === 'LAST') {
-          return [list + '.pop()', pythonGenerator.ORDER_FUNCTION_CALL];
+        // 1. Determine the exact index string based on the dropdown
+        let indexCode = '0';
+        if (where === 'FIRST') {
+          indexCode = '0';
+        } else if (where === 'LAST') {
+          indexCode = '-1';
+        } else if (where === 'FROM_START') {
+          indexCode = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
+        } else if (where === 'FROM_END') {
+          const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '1';
+          indexCode = '-' + at;
         }
 
-        // NEW: Handle pop(index) -> gets and removes an item from a SPECIFIC index
-        if (mode === 'GET_REMOVE' && where === 'FROM_START') {
-          const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
-          return [list + '.pop(' + at + ')', pythonGenerator.ORDER_FUNCTION_CALL];
+        // 2. GET AND REMOVE (pop)
+        if (mode === 'GET_REMOVE') {
+          if (where === 'LAST') {
+            return [`${list}.pop()`, pythonGenerator.ORDER_FUNCTION_CALL];
+          }
+          return [`${list}.pop(${indexCode})`, pythonGenerator.ORDER_FUNCTION_CALL];
         }
 
-        // Existing: Standard index lookup (list[0])
-        if (where === 'FROM_START') {
-          const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
-          return [list + '[' + at + ']', pythonGenerator.ORDER_MEMBER];
+        // 3. REMOVE ONLY (deletes item without returning it)
+        if (mode === 'REMOVE') {
+          if (where === 'LAST') {
+            return `${list}.pop()\n`;
+          }
+          return `${list}.pop(${indexCode})\n`;
         }
 
-        return [list, pythonGenerator.ORDER_MEMBER];
+        // 4. GET ONLY (standard index lookup like list[0] or list[-1])
+        return [`${list}[${indexCode}]`, pythonGenerator.ORDER_MEMBER];
       };
 
-      /// lists_setIndex: Modify list elements by index (UPGRADED FOR APPEND)
+      // lists_setIndex: Modify list elements by index (FULLY PATCHED)
       pythonGenerator.forBlock['lists_setIndex'] = function (block) {
         const list = pythonGenerator.valueToCode(block, 'LIST', pythonGenerator.ORDER_MEMBER) || '[]';
         const mode = block.getFieldValue('MODE') || 'SET';
         const where = block.getFieldValue('WHERE') || 'FROM_START';
         const value = pythonGenerator.valueToCode(block, 'TO', pythonGenerator.ORDER_NONE) || 'None';
 
-        // NEW: Handle append() -> inserts an item at the END of the list
-        if (mode === 'INSERT' && where === 'LAST') {
-          return list + '.append(' + value + ')\n';
+        // 1. INSERT MODE (append to end, or insert at specific index)
+        if (mode === 'INSERT') {
+          if (where === 'LAST') {
+            return `${list}.append(${value})\n`;
+          } else if (where === 'FIRST') {
+            return `${list}.insert(0, ${value})\n`;
+          } else if (where === 'FROM_START') {
+            const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
+            return `${list}.insert(${at}, ${value})\n`;
+          } else if (where === 'FROM_END') {
+            const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '1';
+            return `${list}.insert(-${at}, ${value})\n`;
+          }
         }
 
-        // Existing: Standard assignment (list[0] = x) or insert at specific index
-        if (where === 'FROM_START') {
-          const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
-          if (mode === 'SET') return list + '[' + at + '] = ' + value + '\n';
-          else if (mode === 'INSERT') return list + '.insert(' + at + ', ' + value + ')\n';
+        // 2. SET MODE (standard assignment like list[0] = x)
+        let indexCode = '0';
+        if (where === 'FIRST') {
+          indexCode = '0';
+        } else if (where === 'LAST') {
+          indexCode = '-1'; // Python shortcut for last element
+        } else if (where === 'FROM_START') {
+          indexCode = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
+        } else if (where === 'FROM_END') {
+          const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '1';
+          indexCode = '-' + at;
         }
-        return '';
+
+        return `${list}[${indexCode}] = ${value}\n`;
       };
 
       // procedure_return_value: Return a value from function
@@ -558,6 +708,30 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
 
         // Return the formatted f-string
         return [`f"${fStringContent}"`, pythonGenerator.ORDER_ATOMIC];
+      };
+
+      // --- DICTIONARY GENERATORS ---
+
+      // 1. Create Empty Dictionary: {}
+      pythonGenerator.forBlock['dict_create_empty'] = function (block) {
+        return ['{}', pythonGenerator.ORDER_ATOMIC];
+      };
+
+      // 2. Set Dictionary Key: dict['key'] = value
+      pythonGenerator.forBlock['dict_set'] = function (block) {
+        const dict = pythonGenerator.valueToCode(block, 'DICT', pythonGenerator.ORDER_MEMBER) || '{}';
+        const key = pythonGenerator.valueToCode(block, 'KEY', pythonGenerator.ORDER_NONE) || '""';
+        const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
+
+        return `${dict}[${key}] = ${value}\n`;
+      };
+
+      // 3. Get Dictionary Value: dict['key']
+      pythonGenerator.forBlock['dict_get'] = function (block) {
+        const dict = pythonGenerator.valueToCode(block, 'DICT', pythonGenerator.ORDER_MEMBER) || '{}';
+        const key = pythonGenerator.valueToCode(block, 'KEY', pythonGenerator.ORDER_NONE) || '""';
+
+        return [`${dict}[${key}]`, pythonGenerator.ORDER_MEMBER];
       };
 
       // --- WORKSPACE CHANGE LISTENER ---
