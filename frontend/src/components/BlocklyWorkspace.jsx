@@ -734,6 +734,23 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return [`${dict}[${key}]`, pythonGenerator.ORDER_MEMBER];
       };
 
+      // --- DYNAMIC DICTIONARY GENERATORS ---
+      
+      // 1. Generate a Python Tuple: ('key', value)
+      pythonGenerator.forBlock['dict_pair'] = function(block) {
+        const key = pythonGenerator.valueToCode(block, 'KEY', pythonGenerator.ORDER_NONE) || '""';
+        const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
+        
+        return [`(${key}, ${value})`, pythonGenerator.ORDER_ATOMIC];
+      };
+
+      // 2. Generate the Dictionary Constructor: dict([...])
+      pythonGenerator.forBlock['dict_from_pairs'] = function(block) {
+        const list = pythonGenerator.valueToCode(block, 'LIST', pythonGenerator.ORDER_NONE) || '[]';
+        
+        return [`dict(${list})`, pythonGenerator.ORDER_FUNCTION_CALL];
+      };
+
       // --- WORKSPACE CHANGE LISTENER ---
       // Fires whenever the workspace changes, except during template load or UI events
       workspace.current.addChangeListener((event) => {
