@@ -6,13 +6,10 @@ import "../styles/ActivityApp.css";
 import Split from "react-split";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import BigOModal from "../components/BigOModal.jsx"; // ADD THIS LINE
-import ConfirmModal from "../components/ConfirmModal.jsx"; // IMPORT MODAL
+import BigOModal from "../components/BigOModal.jsx";
+import ConfirmModal from "../components/ConfirmModal.jsx";
 
-
-// --- LEETCODE STYLE ACTIVITY TASKS (EXPANDED) ---
 const ACTIVITY_TASKS = [
-  // --- LESSON 1: INTRO ---
   {
     id: "l1-t1",
     templatePath: "intro/what_is_algo",
@@ -72,8 +69,6 @@ Output:
 • 0 <= n <= 10
 • You must use a Loop block that executes exactly \`n\` times, demonstrating linear growth.`
   },
-
-  // --- LESSON 2: SEARCHING ALGORITHMS ---
   {
     id: "l2-t1",
     templatePath: "activities/linear_search_act",
@@ -124,8 +119,6 @@ Explanation: 2 does not exist in nums so return -1.
 • \`arr\` is sorted in ascending order.
 • You **must** write an algorithm with $O(\\log n)$ runtime complexity.`
   },
-
-  // --- LESSON 3: SORTING ALGORITHMS ---
   {
     id: "l3-t1",
     templatePath: "activities/bubble_sort_act",
@@ -202,8 +195,6 @@ Output: [5, 6, 7, 11, 12, 13]
 • -50000 <= arr[i] <= 50000
 • You must write an algorithm with $O(n \\log n)$ runtime complexity.`
   },
-
-  // --- LESSON 4: RECURSION ---
   {
     id: "l4-t1",
     templatePath: "activities/factorial_recursive_act",
@@ -280,7 +271,6 @@ Output: [[0,1],[1,0]]
   }
 ];
 
-// Utility to render basic Markdown (bold and inline code)
 const renderFormattedTask = (text) => {
   if (!text) return null;
   const formattedHtml = text
@@ -308,17 +298,14 @@ const ActivityApp = () => {
         body: JSON.stringify({
           email: user.email,
           lesson_id: lessonId,
-          score: score // Passes the numerical score
+          score: score 
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-
-        // Updates local storage so LearningPath sees it instantly
         user.progress = data.progress;
         localStorage.setItem("user", JSON.stringify(user));
-
         console.log(`Progress saved! Lesson: ${lessonId}, Score: ${score}`);
       }
     } catch (error) {
@@ -326,34 +313,17 @@ const ActivityApp = () => {
     }
   };
 
-  // EXAMPLE USAGE: Call this when they click "Submit" or pass the lesson
-  const handleLessonComplete = () => {
-    const finalScore = 100;
-    const currentLesson = "bubble_sort_act";
-
-    // CHANGE THIS from saveLessonScore to saveLessonProgress
-    saveLessonProgress(currentLesson, finalScore);
-  };
-
   const handleSuccess = async () => {
-    // 1. Dynamically extract the activity ID from the template path
     const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act";
-
-    // 2. Calculate their score
     const finalScore = 100;
-
-    // 3. Call our unified function
     await saveLessonProgress(currentLessonId, finalScore);
 
-    // 4. Show a success message and redirect
     alert("Activity Completed!");
     setTimeout(() => navigate("/learning-path"), 1500);
   };
 
   const activityData = location.state?.activityData || null;
   const initialTemplate = location.state?.templatePath || "";
-
-  // Find the matching task from our static LeetCode list
   const currentTask = ACTIVITY_TASKS.find(t => t.templatePath === initialTemplate);
 
   const workspaceRef = useRef(null);
@@ -364,16 +334,16 @@ const ActivityApp = () => {
   const [passedTests, setPassedTests] = useState(0);
 
   const [isLeftPanelVisible, setIsLeftPanelVisible] = useState(true);
-
   const [expandedTests, setExpandedTests] = useState({ 0: true });
-
   const [bottomPanel, setBottomPanel] = useState(null);
-  const [activeTab, setActiveTab] = useState("time");
+  
+  // Set default active tab
+  const [activeTab, setActiveTab] = useState("local");
+  
   const [analysisResult, setAnalysisResult] = useState({
-    lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false
+    lines: [], total: "O(1)", space_total: "O(1)", is_recursive: false
   });
 
-  // --- CONFIRM MODAL STATE ---
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     title: "",
@@ -384,16 +354,12 @@ const ActivityApp = () => {
   });
 
   const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
-
-  // CHANGE THIS TO AN OBJECT:
   const [expandedLines, setExpandedLines] = useState({});
 
-  // ADD THIS TOGGLE FUNCTION:
   const toggleLine = (index) => {
     setExpandedLines(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
-  // HELPER: Close the modal
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
 
   const [panelHeight, setPanelHeight] = useState(300);
@@ -476,21 +442,16 @@ const ActivityApp = () => {
       if (data.status === "success") {
         setAnalysisResult({
           total: data.total,
-          total_recurrence: data.total_recurrence || data.total,
-          lines: data.lines,
-          recurrence_lines: data.recurrence_lines || [],
           space_total: data.space_total || "O(1)",
-          space_lines: data.space_lines || [],
+          lines: data.lines || [],
           is_recursive: data.is_recursive || false
         });
-        setActiveTab(prev => (prev === 'time_recurrence' && !data.is_recursive) ? 'time_asymptotic' : prev);
       }
     } catch (error) {
       console.error("Analysis Error:", error);
     }
   };
 
-  // --- NEW RUN CODE FUNCTION (NO TESTS) ---
   const runCode = async () => {
     setBottomPanel("console");
     setConsoleOutput("> Running Code...\n");
@@ -511,7 +472,6 @@ const ActivityApp = () => {
     }
   };
 
-  // --- RUN TEST CASES FUNCTION ---
   const runTestCases = async () => {
     if (!activityData.testCasesList) return;
 
@@ -555,7 +515,6 @@ except Exception as e:
         const passed = parseInt(match[1]);
         setPassedTests(passed);
 
-        // ✅ THIS IS THE CORRECT PLACE TO CHECK FOR SUCCESS
         const total = activityData.testCasesList.length;
         if (passed === total) {
           handleSuccess();
@@ -606,7 +565,6 @@ except Exception as e:
           </button>
         </div>
 
-        {/* ADDED RUN CODE BUTTON NEXT TO RUN TESTS */}
         <div className="activity-actions" style={{ display: 'flex', gap: '10px' }}>
           <button
             className="activity-action-btn"
@@ -714,65 +672,79 @@ except Exception as e:
                   <pre className="console-output">{consoleOutput}</pre>
                 ) : (
                   <div className="complexity-content">
-                    <div className="complexity-tabs">
-                      <button
-                        onClick={() => setActiveTab("time")}
-                        className={`tab-btn ${activeTab === 'time' ? 'active' : ''}`}>
-                        Time Complexity
-                      </button>
-                      <button
-                        onClick={() => setActiveTab("space")}
-                        className={`tab-btn ${activeTab === 'space' ? 'active' : ''}`}>
-                        Space Complexity
-                      </button>
-                      <span className="total-badge">
-                        <span className="total-label">Total:</span>{" "}
-                        {activeTab === "space" ? analysisResult.space_total : analysisResult.total}
-                      </span>
+                    <div className="complexity-tabs" style={{ justifyContent: 'space-between', padding: '0 15px' }}>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                          onClick={() => { setActiveTab("local"); setExpandedLines({}); }}
+                          className={`tab-btn ${activeTab === 'local' ? 'active' : ''}`}>
+                          Local Complexity
+                        </button>
+                        <button
+                          onClick={() => { setActiveTab("global"); setExpandedLines({}); }}
+                          className={`tab-btn ${activeTab === 'global' ? 'active' : ''}`}>
+                          Global Complexity
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <span className="total-badge">
+                          <span className="total-label">Total Time:</span> {analysisResult.total}
+                        </span>
+                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)'}}>
+                          <span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {analysisResult.space_total}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="complexity-table-wrapper">
-                      <table className="complexity-table">
+                    <div className="complexity-table-wrapper" style={{ overflowX: 'auto' }}>
+                      <table className="complexity-table" style={{ width: '100%', minWidth: '800px', textAlign: 'left' }}>
                         <thead>
                           <tr>
                             <th>Line of Code</th>
-                            <th className="right-align">Complexity</th>
+                            <th>Operation</th>
+                            <th>{activeTab === 'local' ? 'Local Time' : 'Global Time'}</th>
+                            <th>{activeTab === 'local' ? 'Local Space' : 'Global Space'}</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {(activeTab === 'time' ? analysisResult.lines : analysisResult.space_lines).map((row, i) => (
+                          {analysisResult.lines.map((row, i) => {
+                             const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
+                             return (
                             <React.Fragment key={i}>
                               <tr
                                 className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
                                 onClick={() => toggleLine(i)}
-                                style={{ cursor: row.explanation ? 'pointer' : 'default' }}
+                                style={{ cursor: explanationText ? 'pointer' : 'default' }}
                                 title="Click to view explanation"
                               >
                                 <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
                                   {row.lineOfCode}
                                 </td>
-                                <td className="complexity-cell" style={{ color: row.color || 'white' }}>
-                                  {row.complexity}
-                                  {row.explanation && (
-                                    <span className="dropdown-chevron">
+                                <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
+                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                    {activeTab === 'local' ? row.local_time : row.global_time}
+                                </td>
+                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                    {activeTab === 'local' ? row.local_space : row.global_space}
+                                    {explanationText && (
+                                    <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
                                       {expandedLines[i] ? '▼' : '▶'}
                                     </span>
                                   )}
                                 </td>
                               </tr>
 
-                              {expandedLines[i] && row.explanation && (
+                              {expandedLines[i] && explanationText && (
                                 <tr className="explanation-row">
-                                  <td colSpan="2">
+                                  <td colSpan="4">
                                     <div className="explanation-content">
-                                      <img src="/assets/lightbulb-icon.png" alt="Console" className="tab-icon" />
-                                      <p>{row.explanation}</p>
+                                      <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
+                                      <p>{explanationText}</p>
                                     </div>
                                   </td>
                                 </tr>
                               )}
                             </React.Fragment>
-                          ))}
+                          )})}
                         </tbody>
                       </table>
                     </div>
@@ -882,7 +854,6 @@ except Exception as e:
 
       </Split>
 
-      {/* RENDER THE CONFIRM MODAL */}
       <ConfirmModal
         isOpen={modalConfig.isOpen}
         title={modalConfig.title}
@@ -893,7 +864,6 @@ except Exception as e:
         onConfirm={modalConfig.onConfirmAction}
       />
 
-      {/* ADD THE BIG O MODAL HERE */}
       <BigOModal
         isOpen={isBigOModalOpen}
         onClose={() => setIsBigOModalOpen(false)}

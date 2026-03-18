@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Split from "react-split";
-import BigOModal from "../components/BigOModal.jsx"; // ADD THIS IMPORT
+import BigOModal from "../components/BigOModal.jsx";
 import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
-import ConfirmModal from "../components/ConfirmModal.jsx"; // IMPORT MODAL
+import ConfirmModal from "../components/ConfirmModal.jsx";
 import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
 import "../styles/MainApp.css";
 
@@ -17,19 +17,20 @@ const SIDEBAR_TEMPLATES = [
   { name: "Selection Sort", path: "sort/selection_sort", desc: "Finds the minimum element from the unsorted part and places it at the beginning." },
   { name: "Insertion Sort", path: "sort/insertion_sort", desc: "Builds the final sorted array one element at a time by inserting elements into their correct position." },
   { name: "Merge Sort", path: "sort/merge_sort", desc: "Divides the array into halves, sorts them, and merges them back." },
+  { name: "Quick Sort", path: "sort/quick_sort", desc: "Partitions elements around a pivot, then recursively sorts the subarrays." },
   { name: "Factorial (Recursive)", path: "recursive/recursive_factorial", desc: "Calculates the factorial of a number using recursion." },
   { name: "Fibonacci (Recursive)", path: "recursive/recursive_fibonacci", desc: "Generates the Fibonacci sequence using recursive calls." },
-  { name: "Permutation (Recursive)", path: "recursive/recursive_permutation", desc: "Generates all permutations of a string using backtracking." }
+  { name: "Permutation (Recursive)", path: "recursive/recursive_permutation", desc: "Generates all permutations of a string using backtracking." },
+  { name: "Tower of Hanoi (Recursive)", path: "recursive/recursive_tower_of_hanoi", desc: "Moves disks between rods following the Tower of Hanoi rules using recursion." },
 ];
 
 export default function MainApp() {
   const location = useLocation();
 
   const [analysisResult, setAnalysisResult] = useState({
-    lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false
+    lines: [], total: "O(1)", space_total: "O(1)", is_recursive: false
   });
 
-  const [activeTab, setActiveTab] = useState("time");
   const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
   const [consoleOutput, setConsoleOutput] = useState("Ready to run...");
   const [blocklyJson, setBlocklyJson] = useState(null);
@@ -41,8 +42,10 @@ export default function MainApp() {
 
   const [currentProjectId, setCurrentProjectId] = useState(null);
   const [currentProjectTitle, setCurrentProjectTitle] = useState("Untitled Project");
+  
+  // Update Initial Active Tab
+  const [activeTab, setActiveTab] = useState("local"); 
 
-  // --- CONFIRM MODAL STATE ---
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     title: "",
@@ -53,13 +56,9 @@ export default function MainApp() {
   });
 
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
-
   const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
-
-  // CHANGE THIS TO AN OBJECT:
   const [expandedLines, setExpandedLines] = useState({});
 
-  // ADD THIS TOGGLE FUNCTION:
   const toggleLine = (index) => {
     setExpandedLines(prev => ({ ...prev, [index]: !prev[index] }));
   };
@@ -99,7 +98,6 @@ export default function MainApp() {
     document.body.style.cursor = "ns-resize";
     document.body.style.userSelect = "none";
   };
-  // ----------------------------
 
   const workspaceRef = useRef(null);
 
@@ -116,23 +114,21 @@ export default function MainApp() {
       if (data.status === "success") {
         setAnalysisResult({
           total: data.total,
-          total_recurrence: data.total_recurrence || data.total,
-          lines: data.lines,
-          recurrence_lines: data.recurrence_lines || [],
           space_total: data.space_total || "O(1)",
-          space_lines: data.space_lines || [],
+          lines: data.lines || [],
           is_recursive: data.is_recursive || false
         });
-        setActiveTab(prev => (prev === 'time_recurrence' && !data.is_recursive) ? 'time_asymptotic' : prev);
       } else {
-        // 2. ADD THIS ELSE BLOCK TO HANDLE ERRORS
         setAnalysisResult({
           total: "Error",
-          total_recurrence: "Error",
           space_total: "Error",
-          lines: [{ lineOfCode: "Analysis Failed", complexity: "Error", explanation: data.message || "The backend analyzer encountered an error with this code." }],
-          recurrence_lines: [],
-          space_lines: [],
+          lines: [{ 
+            lineOfCode: "Analysis Failed", operation: "-", 
+            local_time: "Error", global_time: "Error", 
+            local_space: "Error", global_space: "Error", 
+            local_explanation: data.message || "Error", 
+            global_explanation: "Error" 
+          }],
           is_recursive: false
         });
       }
@@ -143,11 +139,8 @@ export default function MainApp() {
 
   const executeLoadTemplate = async (path) => {
     try {
-      // 1. ADD THIS TO RESET THE UI WHILE LOADING
       setAnalysisResult({
-        lines: [], recurrence_lines: [],
-        total: "Analyzing...", total_recurrence: "Analyzing...",
-        space_lines: [], space_total: "Analyzing...", is_recursive: false
+        lines: [], total: "Analyzing...", space_total: "Analyzing...", is_recursive: false
       });
 
       const response = await fetch(`/templates/${path}.json`);
@@ -184,43 +177,28 @@ export default function MainApp() {
   useEffect(() => {
     if (location.state) {
       setTimeout(() => {
-        // 1. Handle loading pre-made algorithm templates
         if (location.state.templatePath) {
           loadAlgorithmTemplate(location.state.templatePath, true);
         }
-
-        // 2. Handle loading saved projects from MongoDB
         if (location.state.projectToLoad && workspaceRef.current) {
           workspaceRef.current.loadTemplate(location.state.projectToLoad.data);
-          
-          // --- NEW ADDITIONS ---
           setCurrentProjectId(location.state.projectToLoad._id);
           setCurrentProjectTitle(location.state.projectToLoad.title);
-          // ---------------------
-          
           setViewMode("workspace");
         }
-
-        // Clear the state so refreshing doesn't trigger the load again
         window.history.replaceState({}, document.title);
-      }, 300); // Small delay ensures Blockly is fully mounted
+      }, 300); 
     }
   }, [location.state]);
 
-  // --- ADD THIS USEEFFECT FOR CTRL+S / CMD+S SHORTCUT ---
   useEffect(() => {
     const handleKeyDown = (event) => {
-      // Check for Ctrl + S (Windows/Linux) or Cmd + S (Mac)
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-        event.preventDefault(); // Prevent the default browser HTML save dialog
-        
-        // If the workspace is empty, do nothing to prevent empty saves
+        event.preventDefault(); 
         if (!blocklyJson) {
             alert("The workspace is empty. Nothing to save!");
             return;
         }
-
-        // Trigger the correct save function based on whether a project is already loaded
         if (currentProjectId) {
           handleUpdateDB();
         } else {
@@ -228,16 +206,11 @@ export default function MainApp() {
         }
       }
     };
-
-    // Attach the event listener to the window
     window.addEventListener('keydown', handleKeyDown);
-
-    // Cleanup function to remove the listener when the component unmounts
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [currentProjectId, blocklyJson]); // Re-bind when the project ID or workspace data changes
-  // ------------------------------------------------------
+  }, [currentProjectId, blocklyJson]);
 
   const handleClear = () => {
     setModalConfig({
@@ -252,8 +225,7 @@ export default function MainApp() {
           workspaceRef.current.clear();
           setGeneratedPython("# Drag blocks to generate Python code");
           setBlocklyJson(null);
-          setAnalysisResult({ lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false });
-          setActiveTab("time");
+          setAnalysisResult({ lines: [], total: "O(1)", space_total: "O(1)", is_recursive: false });
           setBottomPanel(null);
           setExpandedLines({});
           setCurrentProjectId(null);
@@ -307,9 +279,7 @@ export default function MainApp() {
             owner_id: user.email
           }),
         });
-
         const result = await response.json();
-
         if (response.ok) {
           alert("Project saved successfully!");
         } else {
@@ -324,20 +294,13 @@ export default function MainApp() {
 
   const handleUpdateDB = async () => {
     if (!blocklyJson || !currentProjectId) return;
-    
     try {
       const response = await fetch(`/api/projects/${currentProjectId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          data: blocklyJson
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: blocklyJson }),
       });
-
       const result = await response.json();
-      
       if (response.ok) {
         alert("Changes saved successfully!");
       } else {
@@ -370,15 +333,12 @@ export default function MainApp() {
 
   return (
     <div className="workspace-app-container">
-
       <WorkspaceHeader
         viewMode={viewMode}
         setViewMode={setViewMode}
         runCode={runCode}
         handleExport={handleExport}
         handleSaveToDB={handleSaveToDB}
-        
-        // --- NEW PROPS ---
         currentProjectId={currentProjectId}
         currentProjectTitle={currentProjectTitle}
         handleUpdateDB={handleUpdateDB}
@@ -415,7 +375,6 @@ export default function MainApp() {
         </aside>
 
         <main className="workspace-main">
-
           <button
             className={`sidebar-toggle-btn ${!isSidebarVisible ? 'closed' : ''}`}
             onClick={() => setIsSidebarVisible(!isSidebarVisible)}
@@ -464,84 +423,82 @@ export default function MainApp() {
                   <pre className="console-output">{consoleOutput}</pre>
                 ) : (
                   <div className="complexity-content">
-                    <div className="complexity-tabs">
-                      <button
-                        onClick={() => { 
-                          setActiveTab("time"); 
-                          setExpandedLines({}); // Closes all dropdowns when switching
-                        }}
-                        className={`tab-btn ${activeTab === 'time' ? 'active' : ''}`}>
-                        Time Complexity
-                      </button>
-                      
-                      <button
-                        onClick={() => { 
-                          setActiveTab("space"); 
-                          setExpandedLines({}); // Closes all dropdowns when switching
-                        }}
-                        className={`tab-btn ${activeTab === 'space' ? 'active' : ''}`}>
-                        Space Complexity
-                      </button>
-                      
-                      <span className="total-badge">
-                        <span className="total-label">Total:</span>{" "}
-                        {activeTab === "space"
-                          ? analysisResult.space_total
-                          : analysisResult.total}
-                      </span>
+                    <div className="complexity-tabs" style={{ justifyContent: 'space-between', padding: '0 15px' }}>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                          onClick={() => { setActiveTab("local"); setExpandedLines({}); }}
+                          className={`tab-btn ${activeTab === 'local' ? 'active' : ''}`}>
+                          Local Complexity
+                        </button>
+                        <button
+                          onClick={() => { setActiveTab("global"); setExpandedLines({}); }}
+                          className={`tab-btn ${activeTab === 'global' ? 'active' : ''}`}>
+                          Global Complexity
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <span className="total-badge">
+                          <span className="total-label">Total Time:</span> {analysisResult.total}
+                        </span>
+                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)'}}>
+                          <span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {analysisResult.space_total}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="complexity-table-wrapper">
-                      <table className="complexity-table">
+                    <div className="complexity-table-wrapper" style={{ overflowX: 'auto' }}>
+                      <table className="complexity-table" style={{ width: '100%', minWidth: '800px', textAlign: 'left' }}>
                         <thead>
                           <tr>
                             <th>Line of Code</th>
-                            <th className="right-align">Complexity</th>
+                            <th>Operation</th>
+                            <th>{activeTab === 'local' ? 'Local Time' : 'Global Time'}</th>
+                            <th>{activeTab === 'local' ? 'Local Space' : 'Global Space'}</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {(activeTab === 'time' ? analysisResult.lines
-                            : activeTab === 'time_recurrence' ? analysisResult.recurrence_lines
-                              : analysisResult.space_lines
-                          ).map((row, i) => (
+                          {analysisResult.lines.map((row, i) => {
+                             const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
+                             return (
                             <React.Fragment key={i}>
-                              {/* Main Clickable Row */}
                               <tr
                                 className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
                                 onClick={() => toggleLine(i)}
-                                style={{ cursor: row.explanation ? 'pointer' : 'default' }}
+                                style={{ cursor: explanationText ? 'pointer' : 'default' }}
                                 title="Click to view explanation"
                               >
                                 <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
                                   {row.lineOfCode}
                                 </td>
-                                <td className="complexity-cell" style={{ color: row.color || 'white' }}>
-                                  {row.complexity}
-                                  {row.explanation && (
-                                    <span className="dropdown-chevron">
-                                      ▶
+                                <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
+                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                    {activeTab === 'local' ? row.local_time : row.global_time}
+                                </td>
+                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                    {activeTab === 'local' ? row.local_space : row.global_space}
+                                    {explanationText && (
+                                    <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
+                                      {expandedLines[i] ? '▼' : '▶'}
                                     </span>
-                                  )}  
+                                  )}
                                 </td>
                               </tr>
 
-                              {/* Hidden Explanation Dropdown Row */}
-                              {expandedLines[i] && row.explanation && (
+                              {expandedLines[i] && explanationText && (
                                 <tr className="explanation-row">
-                                  <td colSpan="2">
+                                  <td colSpan="4">
                                     <div className="explanation-content">
-                                      <img src="/assets/lightbulb-icon.png" alt="Console" className="tab-icon" />
-                                      <p>{row.explanation}</p>
+                                      <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
+                                      <p>{explanationText}</p>
                                     </div>
                                   </td>
                                 </tr>
                               )}
                             </React.Fragment>
-                          ))}
+                          )})}
                         </tbody>
                       </table>
                     </div>
-
                   </div>
                 )}
               </div>
@@ -581,7 +538,6 @@ export default function MainApp() {
         </main>
       </Split>
 
-      {/* RENDER THE CONFIRM MODAL */}
       <ConfirmModal
         isOpen={modalConfig.isOpen}
         title={modalConfig.title}
