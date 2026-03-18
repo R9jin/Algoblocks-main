@@ -1,49 +1,22 @@
 # Import FastAPI framework to build REST API endpoints
 from fastapi import FastAPI, HTTPException
-
-# Import system and OS modules for path handling and runtime utilities
-import sys  # Used for stdout redirection and path adjustments
-import os   # Used to get absolute paths and directory information
-
-# StringIO allows capturing printed output from exec() calls
+import sys
+import os
 from io import StringIO
-
-# Middleware to enable Cross-Origin Resource Sharing (CORS)
 from fastapi.middleware.cors import CORSMiddleware
-
-# Pydantic's BaseModel used for request validation in FastAPI
 from pydantic import BaseModel
-
-# Abstract Syntax Tree module for analyzing Python source code programmatically
 import ast
-
-# Regular expression module for pattern matching in code analysis
 import re
 
-
-# -------------------------------
-# VERCEL IMPORT FIX
-# -------------------------------
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-
-# -------------------------------
-# DATABASE AND MODEL IMPORTS
-# -------------------------------
 from database import projects_collection, users_collection
 from models import ProjectModel, ProjectUpdate           
 from bson import ObjectId                 
 from collections import deque             
 
-# -------------------------------
-# CREATE FASTAPI APP INSTANCE
-# -------------------------------
 app = FastAPI()  
 
-
-# -------------------------------
-# ENABLE CORS
-# -------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],        
@@ -52,10 +25,6 @@ app.add_middleware(
     allow_headers=["*"],        
 )
 
-
-# -------------------------------
-# REQUEST MODELS
-# -------------------------------
 class CodePayload(BaseModel):
     code: str
 
@@ -73,42 +42,27 @@ class ProgressRequest(BaseModel):
     lesson_id: str
     score: int
 
-# ============================================================
-# CLASS: COMPLEXITY ANALYZER
-# ============================================================
 class ComplexityAnalyzer(ast.NodeVisitor):
 
     def __init__(self, source_code):
         self.source_lines = source_code.splitlines()
-
-        # Unified dictionary storing time and space complexity per line
         self.details = []
-
         self.current_depth = 0
-
-        # Track nesting depth of loops
         self.loop_depth = 0             
         self.log_loop_depth = 0         
         self.sqrt_loop_depth = 0        
-
-        # Track maximum observed complexity
         self.max_complexity = 0         
         self.max_poly = 0               
         self.max_log = 0                
         self.max_sqrt = 0               
-
         self.max_space_weight = 0
-
         self.custom_functions = {}
         self.custom_space = {}
-
         self.current_function_name = None
         self.recursive_calls_count = 0
         self.symbol_table = {}
-
         self.reachable_funcs = set()  
         self.in_dead_code = False     
-
         self.has_recursion_in_loop = False  
         self.has_slicing = False            
         self.has_division = False           
@@ -125,7 +79,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             'min': {'time': 'O(n)', 'space': 'O(1)'},          
             'sum': {'time': 'O(n)', 'space': 'O(1)'}           
         }
-
         self.aliases = {}
 
     def bfs_first_pass(self, tree):
@@ -135,15 +88,12 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         
         while queue:
             current_node, current_func = queue.popleft()  
-            
             if isinstance(current_node, ast.FunctionDef):
                 self.symbol_table[current_node.name] = current_node  
                 self.reachable_funcs.add(current_node.name) 
-                
                 current_func = current_node.name  
                 if current_func not in self.call_graph:
                     self.call_graph[current_func] = set()  
-                    
             elif isinstance(current_node, ast.Call) and isinstance(current_node.func, ast.Name):
                 called_func = current_node.func.id  
                 if current_func:
@@ -156,7 +106,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         
         reach_queue = deque(['__main__'])  
         reach_queue.extend(list(self.reachable_funcs)) 
-        
         visited = set(['__main__']).union(self.reachable_funcs)
         
         while reach_queue:
@@ -173,13 +122,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         
         self.detect_indirect_recursion()
 
-
     def detect_indirect_recursion(self):
         for func in self.call_graph:
             visited = set()
             if self._has_cycle(func, visited):
                 self.custom_functions[func] = "O(2^n)"  
-
 
     def _has_cycle(self, current_func, visited):
         if current_func in visited:  
@@ -190,13 +137,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 return True
         return False  
 
-
     def get_code_snippet(self, node):
         if hasattr(node, 'lineno'):
             line = self.source_lines[node.lineno - 1]  
             return line.strip()  
         return "Code Block"  
-
 
     def get_color(self, complexity_str):
         if complexity_str == "-": return "#7f8c8d"  
@@ -209,57 +154,42 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if "O(n)" in complexity_str or "T(n" in complexity_str: return "#e67e22"  
         return "#27ae60"  
 
-
     def _build_time_str(self, poly, log, sqrt=0):
         if poly == 0 and log == 0 and sqrt == 0: return "O(1)"  
-        
         parts = []
         if poly == 1: parts.append("n")
         elif poly > 1: parts.append(f"n^{poly}")  
-        
         if sqrt == 1: parts.append("√n")
         elif sqrt > 1: parts.append(f"(√n)^{sqrt}")  
-        
         if log == 1: parts.append("log n")
         elif log > 1: parts.append(f"log^{log} n")  
-        
         if not parts: return "O(1)"
         return f"O({' '.join(parts)})"  
 
-
     def _is_log_loop(self, node):
-        if not isinstance(node, ast.While):
-            return False
+        if not isinstance(node, ast.While): return False
         for child in ast.walk(node):  
             if isinstance(child, ast.BinOp):
-                if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.right, ast.Constant) and child.right.value == 2:
-                    return True
-                if isinstance(child.op, ast.RShift) and isinstance(child.right, ast.Constant) and child.right.value == 1:
-                    return True
+                if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.right, ast.Constant) and child.right.value == 2: return True
+                if isinstance(child.op, ast.RShift) and isinstance(child.right, ast.Constant) and child.right.value == 1: return True
             elif isinstance(child, ast.AugAssign):
-                if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.value, ast.Constant) and child.value.value == 2:
-                    return True
-                if isinstance(child.op, ast.RShift) and isinstance(child.value, ast.Constant) and child.value.value == 1:
-                    return True
+                if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.value, ast.Constant) and child.value.value == 2: return True
+                if isinstance(child.op, ast.RShift) and isinstance(child.value, ast.Constant) and child.value.value == 1: return True
         return False  
         
     def _is_sqrt_loop(self, node):
-        if not isinstance(node, ast.While):
-            return False  
-        
+        if not isinstance(node, ast.While): return False  
         test = node.test  
         if isinstance(test, ast.Compare):  
             if isinstance(test.left, ast.BinOp):  
                 if isinstance(test.left.op, ast.Mult):
                     if isinstance(test.left.left, ast.Name) and isinstance(test.left.right, ast.Name):
-                        if test.left.left.id == test.left.right.id:  
-                            return True
+                        if test.left.left.id == test.left.right.id: return True
                 elif isinstance(test.left.op, ast.Pow):
-                    if isinstance(test.left.right, ast.Constant) and test.left.right.value == 2:
-                        return True
+                    if isinstance(test.left.right, ast.Constant) and test.left.right.value == 2: return True
         return False  
 
-    def record_line(self, node, time_override=None, space_override=None, explanation=None):
+    def record_line(self, node, time_override=None, space_override=None):
         line_text = self.get_code_snippet(node)
         
         current_poly = self.loop_depth
@@ -304,12 +234,9 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             if isinstance(node, ast.For):
                 display_poly = 1
             elif isinstance(node, ast.While):
-                if self._is_log_loop(node):
-                    display_log = 1
-                elif self._is_sqrt_loop(node):
-                    display_sqrt = 1
-                else:
-                    display_poly = 1
+                if self._is_log_loop(node): display_log = 1
+                elif self._is_sqrt_loop(node): display_sqrt = 1
+                else: display_poly = 1
 
         if time_override == "Definition":
             local_time_str = "-"
@@ -364,11 +291,17 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         elif isinstance(node, ast.Subscript): operation = "array access"
         elif isinstance(node, ast.Expr): operation = "expression"
 
+        # DYNAMIC DEEP EXPLANATIONS
+        local_explanation = ""
+        global_explanation = ""
+
         if time_override == "Definition":
-            explanation = "Function definitions are purely declarations. They do not cost time or allocate active memory during runtime."
+            local_explanation = "Function definitions are purely declarations in Python. Parsing this definition takes O(1) time and minimal memory locally because the engine only registers the namespace, deferring execution."
+            global_explanation = "Declarations only occur once and act as blueprints. They do not repeatedly execute or scale with the input data, meaning they contribute zero weight to the asymptotic global time or space constraints."
         elif is_dead:
-            explanation = "This code is unreachable and will never execute, meaning it does not affect runtime or allocate memory."
-        elif not explanation:
+            local_explanation = "This operation is completely unreachable given the current control flow (e.g. it appears after a return statement)."
+            global_explanation = "Unreachable code has no global mathematical impact on the program's runtime or space allocation footprint."
+        else:
             outer_poly = total_poly - display_poly
             outer_log = total_log - display_log
             outer_sqrt = total_sqrt - display_sqrt
@@ -380,91 +313,76 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 return "a variable"
 
             if isinstance(node, ast.For):
-                iter_name = "its collection"
-                if isinstance(node.iter, ast.Name): iter_name = f"the collection '{node.iter.id}'"
-                elif isinstance(node.iter, ast.Call) and getattr(node.iter.func, 'id', '') == 'range': iter_name = "a generated sequence of numbers"
+                iter_name = "its target collection"
+                if isinstance(node.iter, ast.Name): iter_name = f"the data structure '{node.iter.id}'"
+                elif isinstance(node.iter, ast.Call) and getattr(node.iter.func, 'id', '') == 'range': iter_name = "a dynamically generated numerical sequence"
                 
+                local_explanation = f"Locally, setting up the loop header and tracking the iterator over {iter_name} operates in an isolated complexity of {local_time_str}. Managing the loop pointer and current index requires exactly {local_space_str} auxiliary space during iteration."
                 if has_outer:
-                    explanation = f"This 'for' loop iterates over {iter_name}. Nesting context: [Outer loop: {outer_str} × Local: {local_time_str} ➔ Global: {global_time_str}]. "
+                    global_explanation = f"Because this loop iterates within an outer enclosing environment ({outer_str}), its local {local_time_str} duration compounds across every parent cycle. This structural nesting exponentially scales the system's execution to a global time complexity of {global_time_str}. Peak concurrent memory scales dynamically to {global_space_str}."
                 else:
-                    explanation = f"This 'for' loop iterates sequentially over {iter_name}, running locally in {local_time_str} time. "
-                explanation += f"It uses {local_space_str} auxiliary space."
+                    global_explanation = f"As the highest level execution block, this loop establishes the baseline algorithm rhythm. Its local duration dictates the overall global time limit of {global_time_str}. The overarching system memory requirements peak at {global_space_str}."
 
             elif isinstance(node, ast.While):
                 if display_log > 0 or "log" in local_time_str:
-                    base_expl = f"This 'while' loop systematically cuts the search space, yielding {local_time_str} time locally. "
-                elif display_sqrt > 0 or "√n" in local_time_str:
-                    base_expl = f"The mathematical condition of this 'while' loop restricts its iterations to {local_time_str} time locally. "
+                    local_explanation = f"This 'while' loop divides or shifts its target state, systematically pruning the search space to yield an optimized local evaluation time of {local_time_str}. It utilizes {local_space_str} space to manage its state variables."
                 else:
-                    base_expl = f"This 'while' loop runs until a condition is met, locally contributing {local_time_str} time. "
+                    local_explanation = f"Evaluating the condition of this 'while' loop governs execution dynamically. Locally, each check limits execution bounds to {local_time_str} time while caching the evaluation state in {local_space_str} space."
                 
                 if has_outer:
-                    explanation = f"{base_expl}Nesting context: [Outer loop: {outer_str} × Local: {local_time_str} ➔ Global: {global_time_str}]. "
+                    global_explanation = f"Nesting this loop inside a parent cycle of {outer_str} transforms its local {local_time_str} evaluations into a compounded cascading effect. Consequently, the global algorithm slows to a runtime factor of {global_time_str}, demanding a peak active memory footprint of {global_space_str}."
                 else:
-                    explanation = base_expl
-                explanation += f"It uses {local_space_str} auxiliary space."
+                    global_explanation = f"Running freely at the root level, this loop forces the global time complexity directly to {global_time_str}. The total structural memory required to track the program state over time resolves to {global_space_str}."
 
             elif isinstance(node, ast.If):
-                explanation = f"Evaluating this conditional statement takes {local_time_str} time and {local_space_str} space."
+                local_explanation = f"Calculating the boolean expression to route control flow is an instant decision point locally costing {local_time_str} time. Temporarily holding the state in the memory register utilizes {local_space_str} space."
+                global_explanation = f"Though the conditional branch itself is rapidly evaluated, it occurs within a global cascading execution flow of {outer_str if has_outer else 'O(1)'}. This positions the conditional check to execute frequently enough to map its global time impact to {global_time_str}, with an overall space preservation of {global_space_str}."
 
             elif isinstance(node, ast.Assign):
                 targets = [get_name(t) for t in getattr(node, 'targets', [])]
                 target_str = ", ".join(targets) if targets else "a variable"
-                
                 if local_time_str == "O(1)":
-                    explanation = f"Assigning a value to {target_str} takes constant {local_time_str} time. "
+                    local_explanation = f"Assigning a fixed computed value to {target_str} represents a constant mathematical step taking {local_time_str} time locally. The memory bounds for this static allocation are restricted to {local_space_str} space."
                 elif self.has_slicing:
-                    explanation = f"Assigning {target_str} using array slicing copies elements, taking {local_time_str} time locally. "
+                    local_explanation = f"By physically partitioning data (array slicing), the operation forces the program to construct a brand new sequence for {target_str}. This deep copy heavily taxes the system locally with {local_time_str} time and allocates {local_space_str} dedicated memory space."
                 else:
-                    explanation = f"Assigning {target_str} involves a heavier evaluation taking {local_time_str} time locally. "
+                    local_explanation = f"Processing and assigning the right-side evaluation to {target_str} is computationally demanding, drawing {local_time_str} time and consuming {local_space_str} active local space to store the transient structures."
                 
-                if has_outer and local_time_str != "O(1)":
-                    explanation += f"Because it is nested: [Outer block: {outer_str} × Action: {local_time_str} ➔ Global: {global_time_str}]. "
-                
-                if local_space_str == "O(1)":
-                    explanation += f"It requires fixed memory ({local_space_str} space)."
+                if has_outer:
+                    global_explanation = f"Because this assignment is deeply nested ({outer_str}), a normally fast localized operation repeats countless times, driving the total global time computation up to {global_time_str}. The accumulated spatial complexity bounds hit {global_space_str}."
                 else:
-                    explanation += f"Allocating memory for this operation requires {local_space_str} space."
+                    global_explanation = f"This isolated assignment executes linearly. Without cyclic nesting, its global duration directly aligns to {global_time_str} time, stabilizing its structural resource consumption at a global peak of {global_space_str}."
 
             elif isinstance(node, ast.Return):
-                if local_time_str == "O(1)":
-                    explanation = f"Returning a value immediately exits the current scope in {local_time_str} time and {local_space_str} space."
-                else:
-                    explanation = f"Returning this value requires a complex evaluation taking {local_time_str} time and {local_space_str} space."
+                local_explanation = f"Yielding the processed value and gracefully terminating the current function's local frame is finalized in {local_time_str} time and requires {local_space_str} space for the return payload."
+                global_explanation = f"Closing the frame immediately finalizes this node in the execution tree. Globally, executing up to this point establishes the sequence at a time rating of {global_time_str} and locks in the overarching memory limit to {global_space_str}."
 
             elif isinstance(node, ast.Call):
-                func_name = "A function"
+                func_name = "The invoked algorithm"
                 if getattr(node, 'func', None):
-                    if isinstance(node.func, ast.Name): func_name = f"The function '{node.func.id}'"
-                    elif isinstance(node.func, ast.Attribute): func_name = f"The method '{node.func.attr}'"
+                    if isinstance(node.func, ast.Name): func_name = f"The native function '{node.func.id}'"
+                    elif isinstance(node.func, ast.Attribute): func_name = f"The object method '{node.func.attr}'"
 
                 if is_recurrence:
-                    explanation = f"{func_name} calls itself recursively here, establishing the relation {local_time_str}. "
-                elif "log" in local_time_str:
-                    explanation = f"{func_name} utilizes an optimized algorithm running in {local_time_str} time locally. "
+                    local_explanation = f"By triggering itself recursively, {func_name} sets up an expanding tree of execution bounds locally defined by {local_time_str}. Creating the next scope frame allocates new memory limits on the stack equal to {local_space_str}."
+                    global_explanation = f"The deep recursive calls map the system to an asymptotic recurrence relation of {global_time_str}. Because each frame remains open until the base case is hit, the global stack memory balloons dramatically to a complexity limit of {global_space_str}."
                 elif local_time_str != "O(1)":
-                    explanation = f"Executing {func_name} dictates {local_time_str} time locally. "
+                    local_explanation = f"Activating {func_name} outsources logic to an intense subroutine that locally requires {local_time_str} time to resolve, reserving {local_space_str} structural space inside its local scope."
+                    global_explanation = f"Because this high-cost call occurs inside a larger cascading boundary ({outer_str if has_outer else 'top-level execution'}), the multiplied global impact forces the overall program timeline to {global_time_str}. Its peak spatial demands scale to {global_space_str}."
                 else:
-                    explanation = f"{func_name} resolves instantly in {local_time_str} time. "
-                
-                if has_outer and local_time_str != "O(1)" and not is_recurrence:
-                    explanation += f"Nesting context: [Outer block: {outer_str} × Call: {local_time_str} ➔ Global: {global_time_str}]. "
-                    
-                if is_recurrence:
-                    explanation += f"Each call pushes a new frame onto the stack, requiring {global_space_str} global space."
-                else:
-                    explanation += f"This call allocates {local_space_str} space."
+                    local_explanation = f"Resolving {func_name} completes instantaneously under constant local bounds of {local_time_str} time and {local_space_str} space."
+                    global_explanation = f"Its low cost means the global constraints are dictated purely by its surrounding environment, stabilizing the global time at {global_time_str} and space at {global_space_str}."
 
             elif isinstance(node, ast.Subscript):
                 if isinstance(node.slice, ast.Slice):
-                    explanation = f"Slicing this array creates a brand new copy of elements in {local_time_str} time and {local_space_str} space."
+                    local_explanation = f"Extracting a subset of data creates a detached array clone in memory locally taking {local_time_str} time and exactly {local_space_str} space."
+                    global_explanation = f"Slicing in an iterative or recursive context is dangerous—this globally restricts the algorithmic performance to {global_time_str} time and heavily burdens the global heap memory with {global_space_str} limits."
                 else:
-                    explanation = f"Looking up a specific index in an array happens instantly in {local_time_str} time and {local_space_str} space."
+                    local_explanation = f"Querying an explicit index in a contiguous array executes instantly via memory offsets locally in {local_time_str} time and minimal {local_space_str} space."
+                    global_explanation = f"The instantaneous lookup doesn't compromise global scale limits. Governed strictly by context depth, the system maintains a global rating of {global_time_str} time and {global_space_str} space."
             else:
-                if local_time_str == "O(1)":
-                    explanation = f"This standard operation executes locally in {local_time_str} time and uses {local_space_str} space."
-                else:
-                    explanation = f"This operation dictates a local complexity of {local_time_str} and allocates {local_space_str} space."
+                local_explanation = f"This generic structural logic dictates an internal complexity bound of {local_time_str} time and handles its execution variables in {local_space_str} space locally."
+                global_explanation = f"Propagating up to the root sequence, its environmental exposure modifies the system's global trajectory to resolve in {global_time_str} time, holding maximum spatial capacity at {global_space_str}."
 
         entry = {
             "lineOfCode": line_text,
@@ -477,13 +395,13 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             "color": self.get_color(global_time_str),
             "weight": t_weight,
             "local_weight": local_weight,
-            "explanation": explanation
+            "local_explanation": local_explanation,
+            "global_explanation": global_explanation
         }
         
         if self.details and self.details[-1]["lineOfCode"] == line_text:
             existing_t_weight = self.details[-1].get("weight", -1)
             existing_local_weight = self.details[-1].get("local_weight", -1)
-            
             if t_weight > existing_t_weight or (t_weight == existing_t_weight and local_weight > existing_local_weight):
                 self.details[-1].update(entry)
         else:
@@ -496,10 +414,8 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     self.max_poly = total_poly
                     self.max_log = total_log
                     self.max_sqrt = total_sqrt
-                
             if s_weight > self.max_space_weight:
                 self.max_space_weight = s_weight
-
 
     def generic_visit(self, node):
         for field, value in ast.iter_fields(node):
@@ -518,7 +434,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                                 hit_terminal = True
             elif isinstance(value, ast.AST):
                 self.visit(value)
-
 
     def visit_FunctionDef(self, node):
         self.current_function_name = node.name
@@ -597,7 +512,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def visit_If(self, node):
             self.record_line(node)
-            
             prev_max_comp = self.max_complexity
             prev_max_poly = self.max_poly
             prev_max_log = self.max_log
@@ -605,15 +519,13 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             
             self.max_complexity, self.max_poly, self.max_log, self.max_sqrt = 0, 0, 0, 0
             self.current_depth += 1
-            for child in node.body:
-                self.visit(child)
+            for child in node.body: self.visit(child)
             self.current_depth -= 1
             if_comp, if_poly, if_log, if_sqrt = self.max_complexity, self.max_poly, self.max_log, self.max_sqrt
             
             self.max_complexity, self.max_poly, self.max_log, self.max_sqrt = 0, 0, 0, 0
             self.current_depth += 1
-            for child in node.orelse:
-                self.visit(child)
+            for child in node.orelse: self.visit(child)
             self.current_depth -= 1
             else_comp, else_poly, else_log, else_sqrt = self.max_complexity, self.max_poly, self.max_log, self.max_sqrt
             
@@ -639,87 +551,58 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     def visit_While(self, node):
         is_log = self._is_log_loop(node)
         is_sqrt = self._is_sqrt_loop(node)
-        
-        if is_log:
-            self.log_loop_depth += 1  
-        elif is_sqrt:
-            self.sqrt_loop_depth += 1  
-        else:
-            self.loop_depth += 1  
+        if is_log: self.log_loop_depth += 1  
+        elif is_sqrt: self.sqrt_loop_depth += 1  
+        else: self.loop_depth += 1  
         
         self.record_line(node)
-        
         self.current_depth += 1
         self.generic_visit(node)  
         self.current_depth -= 1  
         
-        if is_log:
-            self.log_loop_depth -= 1
-        elif is_sqrt:
-            self.sqrt_loop_depth -= 1
-        else:
-            self.loop_depth -= 1
-
+        if is_log: self.log_loop_depth -= 1
+        elif is_sqrt: self.sqrt_loop_depth -= 1
+        else: self.loop_depth -= 1
 
     def visit_Call(self, node):
         chain_time, chain_space = None, None
         chain_poly = 0  
-        
         for child in ast.walk(node):
             if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
                 attr = child.func.attr
                 if attr in self.builtin_complexities:
                     b = self.builtin_complexities[attr]
-                    if "n log n" in b['time']:
-                        chain_poly = max(chain_poly, 2)
-                    elif "n" in b['time']:
-                        chain_poly = max(chain_poly, 1)
-                    if "O(n)" in b['space']:
-                        chain_space = "O(n)"
+                    if "n log n" in b['time']: chain_poly = max(chain_poly, 2)
+                    elif "n" in b['time']: chain_poly = max(chain_poly, 1)
+                    if "O(n)" in b['space']: chain_space = "O(n)"
         
-        if chain_poly == 2:
-            chain_time = "O(n log n)"
-        elif chain_poly == 1:
-            chain_time = "O(n)"
+        if chain_poly == 2: chain_time = "O(n log n)"
+        elif chain_poly == 1: chain_time = "O(n)"
         
         if isinstance(node.func, ast.Name):
             f_id = self.aliases.get(node.func.id, node.func.id)
-            
             if f_id == self.current_function_name:
                 self.recursive_calls_count += 1
                 if self.loop_depth > 0 or self.log_loop_depth > 0:
                     self.has_recursion_in_loop = True  
-                
                 rel = self.custom_functions.get(f_id, "T(n-1)")
                 self.record_line(node, time_override=rel, space_override="O(n)")
-            
             elif f_id in self.builtin_complexities:
                 b = self.builtin_complexities[f_id]
                 self.record_line(node, time_override=b['time'], space_override=b['space'])
-            
             elif f_id in self.custom_functions:
                 call_comp = self.custom_functions[f_id]
-                if "T(n) = n * T(n-1)" in call_comp:
-                    call_comp = "O(n!)"
-                elif "2T(n/2)" in call_comp:
-                    call_comp = "O(n log n)"
-                elif "T(n-1) + T(n-2)" in call_comp:
-                    call_comp = "O(2^n)"
-                elif "T(n/2) + O(1)" in call_comp:     
-                    call_comp = "O(log n)"             
-                elif "T(n-1) + O(n)" in call_comp:     
-                    call_comp = "O(n^2)"               
-                elif "T(n/2) + O(n)" in call_comp:
-                    call_comp = "O(n)"
-                elif "2T(n/2) + O(1)" in call_comp:
-                    call_comp = "O(n)"
-                elif "T(n-1)" in call_comp:
-                    call_comp = "O(n)"
-                
+                if "T(n) = n * T(n-1)" in call_comp: call_comp = "O(n!)"
+                elif "2T(n/2)" in call_comp: call_comp = "O(n log n)"
+                elif "T(n-1) + T(n-2)" in call_comp: call_comp = "O(2^n)"
+                elif "T(n/2) + O(1)" in call_comp: call_comp = "O(log n)"             
+                elif "T(n-1) + O(n)" in call_comp: call_comp = "O(n^2)"               
+                elif "T(n/2) + O(n)" in call_comp: call_comp = "O(n)"
+                elif "2T(n/2) + O(1)" in call_comp: call_comp = "O(n)"
+                elif "T(n-1)" in call_comp: call_comp = "O(n)"
                 self.record_line(node, time_override=call_comp, space_override=self.custom_space.get(f_id, "O(1)"))
             else:
                 self.record_line(node)
-        
         elif isinstance(node.func, ast.Attribute):
             if node.func.attr in self.builtin_complexities:
                 t = chain_time if chain_time else self.builtin_complexities[node.func.attr]['time']
@@ -727,34 +610,27 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.record_line(node, time_override=t, space_override=s)
             else:
                 self.record_line(node, time_override=chain_time, space_override=chain_space)
-        
         self.generic_visit(node)
 
     def visit_Subscript(self, node):
-        if isinstance(node.slice, ast.Slice):
-            self.has_slicing = True  
+        if isinstance(node.slice, ast.Slice): self.has_slicing = True  
         self.generic_visit(node)  
 
     def visit_BinOp(self, node):
-        if isinstance(node.op, (ast.Div, ast.FloorDiv, ast.RShift)):
-            self.has_division = True  
+        if isinstance(node.op, (ast.Div, ast.FloorDiv, ast.RShift)): self.has_division = True  
         self.generic_visit(node)  
 
     def visit_Assign(self, node):
         space_override = "O(1)"
         time_override = None
-
         if isinstance(node.value, ast.Name):
             if node.value.id in self.custom_functions:  
                 for target in node.targets:
                     if isinstance(target, ast.Name):
                         self.aliases[target.id] = node.value.id  
-
         if node.value:
             if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
-                if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
-                    space_override = "O(n)"  
-
+                if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List): space_override = "O(n)"  
             elif isinstance(node.value, ast.ListComp):
                 gen_count = len(node.value.generators)  
                 if gen_count > 1:
@@ -763,14 +639,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 else:
                     space_override = "O(n)"
                     time_override = "O(n)"  
-
             elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
                 space_override = "O(n)"  
                 time_override = "O(n)"  
-
             elif isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == 'copy':
                 space_override = "O(n)"  
-
         self.record_line(node, time_override=time_override, space_override=space_override)
         self.generic_visit(node)  
 
@@ -781,12 +654,10 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     def visit_Return(self, node):
         space_override = "O(1)"
         time_override = None
-
         if node.value:
             if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
                 if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
                     space_override = "O(n)"
-
             elif isinstance(node.value, ast.ListComp):
                 gen_count = len(node.value.generators)
                 if gen_count > 1:
@@ -795,11 +666,9 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 else:
                     space_override = "O(n)"
                     time_override = "O(n)"
-
             elif isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice):
                 space_override = "O(n)"
                 time_override = "O(n)"  
-
         self.record_line(node, time_override=time_override, space_override=space_override)
         self.generic_visit(node)  
     
@@ -807,14 +676,12 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.record_line(node)        
         self.generic_visit(node)      
 
-
     def get_final_badge(self):
         for line in reversed(self.details):   
             comp = line.get('global_time', '')  
             if "T(n) =" in comp: return comp
             if comp in ["O(n!)", "O(2^n)", "O(n log n)"]: return comp
         return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
-
 
     def get_final_asymptotic_badge(self):
         for line in reversed(self.details):  
@@ -828,8 +695,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             elif "2T(n/2) + O(1)" in comp: return "O(n)"   
             elif "T(n-1)" in comp: return "O(n)"
         return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
-
-# ---------------------- FastAPI Endpoints ----------------------
 
 @app.post("/api/analyze")
 @app.post("/analyze")
@@ -876,7 +741,8 @@ def analyze_complexity(payload: CodePayload):
                 "indent": line.get("indent", 0),
                 "color": line.get("color", analyzer.get_color(to_asymp(line.get("global_time", "-")))),
                 "weight": line.get("weight", 0),
-                "explanation": line.get("explanation", "")
+                "local_explanation": line.get("local_explanation", ""),
+                "global_explanation": line.get("global_explanation", "")
             })
 
         return {
@@ -889,7 +755,6 @@ def analyze_complexity(payload: CodePayload):
         }
     except Exception as e:
         return {"status": "error", "total": "Error", "total_recurrence": "Error", "lines": [], "is_recursive": False}
-
 
 @app.post("/api/run")
 @app.post("/run")
@@ -906,7 +771,6 @@ def run_code(payload: CodePayload):
         sys.stdout = old_stdout                
     return {"status": "success", "output": output}
 
-
 @app.post("/api/projects")
 @app.post("/projects")
 def save_project(project: ProjectModel):
@@ -915,7 +779,6 @@ def save_project(project: ProjectModel):
     project_dict = project.model_dump()         
     result = projects_collection.insert_one(project_dict)  
     return {"status": "success", "message": "Project saved!", "id": str(result.inserted_id)}
-
 
 @app.get("/api/projects")
 @app.get("/projects")
@@ -926,7 +789,6 @@ def get_projects():
     for p in projects:
         p["_id"] = str(p["_id"])                 
     return {"status": "success", "projects": projects}
-
 
 @app.post("/api/login")
 def login_user(req: LoginRequest):
@@ -940,40 +802,29 @@ def login_user(req: LoginRequest):
         }
     raise HTTPException(status_code=401, detail="Invalid email or password")
 
-
 @app.post("/api/signup")
 @app.post("/signup")
 def signup_user(req: SignUpRequest):
     if users_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
-    
     existing_user = users_collection.find_one({"email": req.email})
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
     new_user = {
         "name": req.name,
         "email": req.email,
         "password": req.password
     }
-    
     users_collection.insert_one(new_user)
-    
     return {"status": "success", "message": "User created successfully"}
 
 @app.post("/api/update-progress")
 def update_progress(req: ProgressRequest):
-    update_query = {
-        "$set": {f"progress.{req.lesson_id}": req.score}
-    }
-    
+    update_query = {"$set": {f"progress.{req.lesson_id}": req.score}}
     result = users_collection.update_one({"email": req.email}, update_query)
-    
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
-        
     updated_user = users_collection.find_one({"email": req.email})
-    
     return {
         "status": "success", 
         "message": "Progress saved",
@@ -985,15 +836,12 @@ def update_progress(req: ProgressRequest):
 def delete_project(project_id: str):
     if projects_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
-    
     try:
         result = projects_collection.delete_one({"_id": ObjectId(project_id)})
-        
         if result.deleted_count == 1:
             return {"status": "success", "message": "Project deleted successfully"}
         else:
             raise HTTPException(status_code=404, detail="Project not found")
-            
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid project ID format")
 
@@ -1002,17 +850,14 @@ def delete_project(project_id: str):
 def update_project(project_id: str, payload: ProjectUpdate):
     if projects_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
-    
     try:
         result = projects_collection.update_one(
             {"_id": ObjectId(project_id)},
             {"$set": {"data": payload.data}}
         )
-        
         if result.matched_count == 1:
             return {"status": "success", "message": "Project updated successfully"}
         else:
             raise HTTPException(status_code=404, detail="Project not found")
-            
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid update request format")

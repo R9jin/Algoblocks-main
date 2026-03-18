@@ -706,24 +706,26 @@ except Exception as e:
                           </tr>
                         </thead>
                         <tbody>
-                          {analysisResult.lines.map((row, i) => (
+                          {analysisResult.lines.map((row, i) => {
+                             const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
+                             return (
                             <React.Fragment key={i}>
                               <tr
                                 className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
                                 onClick={() => toggleLine(i)}
-                                style={{ cursor: (activeTab === 'local' ? row.local_explanation : row.global_explanation) ? 'pointer' : 'default' }}
+                                style={{ cursor: explanationText ? 'pointer' : 'default' }}
                                 title="Click to view explanation"
                               >
                                 <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
                                   {row.lineOfCode}
                                 </td>
-                                <td style={{ color: '#B2BEC3' }}>{row.operation || '-'}</td>
+                                <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
                                 <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
                                     {activeTab === 'local' ? row.local_time : row.global_time}
                                 </td>
                                 <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
                                     {activeTab === 'local' ? row.local_space : row.global_space}
-                                    {(activeTab === 'local' ? row.local_explanation : row.global_explanation) && (
+                                    {explanationText && (
                                     <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
                                       {expandedLines[i] ? '▼' : '▶'}
                                     </span>
@@ -731,18 +733,18 @@ except Exception as e:
                                 </td>
                               </tr>
 
-                              {expandedLines[i] && (activeTab === 'local' ? row.local_explanation : row.global_explanation) && (
+                              {expandedLines[i] && explanationText && (
                                 <tr className="explanation-row">
                                   <td colSpan="4">
                                     <div className="explanation-content">
                                       <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
-                                      <p>{activeTab === 'local' ? row.local_explanation : row.global_explanation}</p>
+                                      <p>{explanationText}</p>
                                     </div>
                                   </td>
                                 </tr>
                               )}
                             </React.Fragment>
-                          ))}
+                          )})}
                         </tbody>
                       </table>
                     </div>
