@@ -28,6 +28,12 @@ const TEMPLATES = {
       path: "sort/merge_sort",
       desc: "A highly efficient divide-and-conquer algorithm that recursively splits the list into halves until each sublist contains one element, then merges those sublists to produce new sorted sublists.",
       icon: "/assets/sort-icon.png"
+    },
+    {
+      name: "Quick Sort",
+      path: "sort/quick_sort",
+      desc: "Uses a divide-and-conquer approach by selecting a pivot, partitioning elements around it, and recursively sorting the sublists.",
+      icon: "/assets/sort-icon.png"
     }
   ],
   searching: [
