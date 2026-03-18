@@ -43,7 +43,7 @@ export default function MainApp() {
   const [currentProjectId, setCurrentProjectId] = useState(null);
   const [currentProjectTitle, setCurrentProjectTitle] = useState("Untitled Project");
   
-  // Update Initial Active Tab to match the new local/global structure
+  // Update Initial Active Tab
   const [activeTab, setActiveTab] = useState("local"); 
 
   const [modalConfig, setModalConfig] = useState({
@@ -122,7 +122,13 @@ export default function MainApp() {
         setAnalysisResult({
           total: "Error",
           space_total: "Error",
-          lines: [{ lineOfCode: "Analysis Failed", operation: "-", local_time: "Error", global_time: "Error", local_space: "Error", global_space: "Error", local_explanation: data.message || "Error", global_explanation: "Error" }],
+          lines: [{ 
+            lineOfCode: "Analysis Failed", operation: "-", 
+            local_time: "Error", global_time: "Error", 
+            local_space: "Error", global_space: "Error", 
+            local_explanation: data.message || "Error", 
+            global_explanation: "Error" 
+          }],
           is_recursive: false
         });
       }
@@ -134,10 +140,7 @@ export default function MainApp() {
   const executeLoadTemplate = async (path) => {
     try {
       setAnalysisResult({
-        lines: [],
-        total: "Analyzing...",
-        space_total: "Analyzing...", 
-        is_recursive: false
+        lines: [], total: "Analyzing...", space_total: "Analyzing...", is_recursive: false
       });
 
       const response = await fetch(`/templates/${path}.json`);
@@ -276,7 +279,6 @@ export default function MainApp() {
             owner_id: user.email
           }),
         });
-
         const result = await response.json();
         if (response.ok) {
           alert("Project saved successfully!");
@@ -455,24 +457,26 @@ export default function MainApp() {
                           </tr>
                         </thead>
                         <tbody>
-                          {analysisResult.lines.map((row, i) => (
+                          {analysisResult.lines.map((row, i) => {
+                             const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
+                             return (
                             <React.Fragment key={i}>
                               <tr
                                 className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
                                 onClick={() => toggleLine(i)}
-                                style={{ cursor: (activeTab === 'local' ? row.local_explanation : row.global_explanation) ? 'pointer' : 'default' }}
+                                style={{ cursor: explanationText ? 'pointer' : 'default' }}
                                 title="Click to view explanation"
                               >
                                 <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
                                   {row.lineOfCode}
                                 </td>
-                                <td style={{ color: '#B2BEC3' }}>{row.operation || '-'}</td>
+                                <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
                                 <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
                                     {activeTab === 'local' ? row.local_time : row.global_time}
                                 </td>
                                 <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
                                     {activeTab === 'local' ? row.local_space : row.global_space}
-                                    {(activeTab === 'local' ? row.local_explanation : row.global_explanation) && (
+                                    {explanationText && (
                                     <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
                                       {expandedLines[i] ? '▼' : '▶'}
                                     </span>
@@ -480,18 +484,18 @@ export default function MainApp() {
                                 </td>
                               </tr>
 
-                              {expandedLines[i] && (activeTab === 'local' ? row.local_explanation : row.global_explanation) && (
+                              {expandedLines[i] && explanationText && (
                                 <tr className="explanation-row">
                                   <td colSpan="4">
                                     <div className="explanation-content">
                                       <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
-                                      <p>{activeTab === 'local' ? row.local_explanation : row.global_explanation}</p>
+                                      <p>{explanationText}</p>
                                     </div>
                                   </td>
                                 </tr>
                               )}
                             </React.Fragment>
-                          ))}
+                          )})}
                         </tbody>
                       </table>
                     </div>
