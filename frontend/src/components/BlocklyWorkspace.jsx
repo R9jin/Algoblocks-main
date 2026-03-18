@@ -139,7 +139,7 @@ const customBlocks = [
   // --- DICTIONARY BLOCKS (Perfect Visual & Connection Match) ---
   {
     type: "dict_create_empty",
-    message0: "create empty dictionary { }",
+    message0: "create empty dictionary",
     output: null, // Ensures it can plug into ANY variable block
     style: "list_blocks", // Perfectly matches your theme's 3D List style
     tooltip: "Creates a new, empty Python dictionary"
@@ -185,13 +185,13 @@ const customBlocks = [
   },
   {
     type: "dict_from_pairs",
-    message0: "create dictionary from pairs %1",
+    message0: "create dictionary with %1", // Changed text to show curly braces
     args0: [
       { type: "input_value", "name": "LIST", check: "Array" }
     ],
     output: null,
     style: "list_blocks",
-    tooltip: "Converts a list of key-value pairs into a dynamic dictionary"
+    tooltip: "Converts a list of key-value pairs into a dictionary literal"
   }
 ];
 
@@ -312,7 +312,6 @@ const toolbox = {
         }
       ]
     },
-
     // Lists and Dictionaries
     {
       kind: "category",
@@ -332,7 +331,7 @@ const toolbox = {
         { kind: "block", type: "lists_split" },
         { kind: "block", type: "lists_sort" },
 
-        // Dictionary blocks
+        // --- DICTIONARY BLOCKS ---
         { kind: "block", type: "dict_create_empty" },
         {
           kind: "block", type: "dict_set", inputs: {
@@ -345,9 +344,13 @@ const toolbox = {
             KEY: { shadow: { type: "text", fields: { TEXT: "key_name" } } }
           }
         },
+
+        // --- DYNAMIC DICTIONARY BLOCKS ---
         {
           kind: "block", type: "dict_from_pairs", inputs: {
-            PAIRS: { shadow: { type: "lists_create_with", extraState: { itemCount: 0 } } }
+            // FIX 1: The input name must be 'LIST', not 'PAIRS'
+            // FIX 2: Use 'block' instead of 'shadow' so the user can click the gear icon!
+            LIST: { block: { type: "lists_create_with", extraState: { itemCount: 2 } } }
           }
         },
         {
@@ -735,20 +738,45 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       };
 
       // --- DYNAMIC DICTIONARY GENERATORS ---
-      
-      // 1. Generate a Python Tuple: ('key', value)
-      pythonGenerator.forBlock['dict_pair'] = function(block) {
+
+      // --- DYNAMIC DICTIONARY GENERATORS (Literal {} Format) ---
+
+      // 1. Generate the raw pair without parentheses: 'key': value
+      pythonGenerator.forBlock['dict_pair'] = function (block) {
         const key = pythonGenerator.valueToCode(block, 'KEY', pythonGenerator.ORDER_NONE) || '""';
         const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
-        
-        return [`(${key}, ${value})`, pythonGenerator.ORDER_ATOMIC];
+
+        return [`${key}: ${value}`, pythonGenerator.ORDER_NONE];
       };
 
-      // 2. Generate the Dictionary Constructor: dict([...])
-      pythonGenerator.forBlock['dict_from_pairs'] = function(block) {
-        const list = pythonGenerator.valueToCode(block, 'LIST', pythonGenerator.ORDER_NONE) || '[]';
-        
-        return [`dict(${list})`, pythonGenerator.ORDER_FUNCTION_CALL];
+      // 2. Generate the Literal Dictionary: { \n 'A': 1 \n }
+      pythonGenerator.forBlock['dict_from_pairs'] = function (block) {
+        // Grab the list block that is plugged into this dictionary block
+        const listBlock = block.getInputTargetBlock('LIST');
+
+        // If there's no list block plugged in, return an empty dict
+        if (!listBlock || listBlock.type !== 'lists_create_with') {
+          return ['{}', pythonGenerator.ORDER_ATOMIC];
+        }
+
+        // Loop through the list block's slots and extract the pairs directly
+        let pairs = [];
+        for (let i = 0; i < listBlock.itemCount_; i++) {
+          let pairCode = pythonGenerator.valueToCode(listBlock, 'ADD' + i, pythonGenerator.ORDER_NONE);
+          if (pairCode) {
+            pairs.push(pairCode);
+          }
+        }
+
+        // If it's empty, return {}
+        if (pairs.length === 0) {
+          return ['{}', pythonGenerator.ORDER_ATOMIC];
+        }
+
+        // Wrap the pairs in curly braces with perfect multi-line indentation
+        const code = '{\n    ' + pairs.join(',\n    ') + '\n}';
+
+        return [code, pythonGenerator.ORDER_ATOMIC];
       };
 
       // --- WORKSPACE CHANGE LISTENER ---
