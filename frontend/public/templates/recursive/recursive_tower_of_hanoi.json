@@ -209,7 +209,7 @@
                                   "type": "text",
                                   "id": "`+N%(aIIdoFXJ$.i?qk)",
                                   "fields": {
-                                    "TEXT": "to "
+                                    "TEXT": " to "
                                   }
                                 }
                               },
@@ -337,6 +337,15 @@
                             "VAR": {
                               "id": "SaNDQRYXQ;J%3WEL~lH0"
                             }
+                          }
+                        }
+                      },
+                      "B": {
+                        "block": {
+                          "type": "math_number",
+                          "id": "L1xW^6mXtj44Ep(P:qW8",
+                          "fields": {
+                            "NUM": 1
                           }
                         }
                       }
@@ -685,8 +694,8 @@
       {
         "type": "variables_set",
         "id": "wvWnA%Yt|/%R@TDm7em=",
-        "x": 13,
-        "y": 1263,
+        "x": 888,
+        "y": 13,
         "fields": {
           "VAR": {
             "id": "NXZNiJl]%QS6Bd*k1cE}"
@@ -695,10 +704,346 @@
         "inputs": {
           "VALUE": {
             "block": {
-              "type": "lists_create_with",
-              "id": "-JpG52Uk.Fnc[f3S5C_9",
-              "extraState": {
-                "itemCount": 3
+              "type": "dict_from_pairs",
+              "id": "QTW$g;ML6QnLaLY8HcBi",
+              "inputs": {
+                "LIST": {
+                  "block": {
+                    "type": "lists_create_with",
+                    "id": "M3h3|RXT[~4exgghxgeV",
+                    "extraState": {
+                      "itemCount": 3
+                    },
+                    "inputs": {
+                      "ADD0": {
+                        "block": {
+                          "type": "dict_pair",
+                          "id": "tCJu/b)^a`{SP@-d2pZT",
+                          "inputs": {
+                            "KEY": {
+                              "shadow": {
+                                "type": "text",
+                                "id": "%96}F!rhnsn:AndQ?mPF",
+                                "fields": {
+                                  "TEXT": "key_name"
+                                }
+                              },
+                              "block": {
+                                "type": "text",
+                                "id": "9ji.^j+Rzo6X6,Wp+d]o",
+                                "fields": {
+                                  "TEXT": "A"
+                                }
+                              }
+                            },
+                            "VALUE": {
+                              "shadow": {
+                                "type": "text",
+                                "id": "+R}p4|_k%edF_f5$5UuW",
+                                "fields": {
+                                  "TEXT": "value"
+                                }
+                              },
+                              "block": {
+                                "type": "lists_create_with",
+                                "id": ".Uz7pVdt^`FZ!{}9a^cR",
+                                "extraState": {
+                                  "itemCount": 3
+                                },
+                                "inputs": {
+                                  "ADD0": {
+                                    "block": {
+                                      "type": "math_number",
+                                      "id": "DdFaieV8FH9X$ZLv!55g",
+                                      "fields": {
+                                        "NUM": 3
+                                      }
+                                    }
+                                  },
+                                  "ADD1": {
+                                    "block": {
+                                      "type": "math_number",
+                                      "id": "IJ!dhNiU^Hu;iV}M#l*]",
+                                      "fields": {
+                                        "NUM": 2
+                                      }
+                                    }
+                                  },
+                                  "ADD2": {
+                                    "block": {
+                                      "type": "math_number",
+                                      "id": "J]{IDeRu+d+nRN;6#Nx]",
+                                      "fields": {
+                                        "NUM": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "ADD1": {
+                        "block": {
+                          "type": "dict_pair",
+                          "id": "M$imno~.:1$/ofbaicH-",
+                          "inputs": {
+                            "KEY": {
+                              "shadow": {
+                                "type": "text",
+                                "id": "A*uCnNi)167*6xoezOod",
+                                "fields": {
+                                  "TEXT": "key_name"
+                                }
+                              },
+                              "block": {
+                                "type": "text",
+                                "id": "`oK*A5E$x):)l6~SQ81q",
+                                "fields": {
+                                  "TEXT": "B"
+                                }
+                              }
+                            },
+                            "VALUE": {
+                              "shadow": {
+                                "type": "text",
+                                "id": "lYw7ZmIHQ|VG5cQ*_dU4",
+                                "fields": {
+                                  "TEXT": "value"
+                                }
+                              },
+                              "block": {
+                                "type": "lists_create_with",
+                                "id": "%.-B}e}dhDndhHhN7:9|",
+                                "extraState": {
+                                  "itemCount": 0
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "ADD2": {
+                        "block": {
+                          "type": "dict_pair",
+                          "id": "b%*W-M#+q}JeZbN*ND):",
+                          "inputs": {
+                            "KEY": {
+                              "shadow": {
+                                "type": "text",
+                                "id": "jkVeal:J%6?zoq^iV.Ul",
+                                "fields": {
+                                  "TEXT": "key_name"
+                                }
+                              },
+                              "block": {
+                                "type": "text",
+                                "id": "F$!%gH1K;5Tg],4#;LC?",
+                                "fields": {
+                                  "TEXT": "C"
+                                }
+                              }
+                            },
+                            "VALUE": {
+                              "shadow": {
+                                "type": "text",
+                                "id": "|$+j`Us8o;:/6j~1N~aB",
+                                "fields": {
+                                  "TEXT": "value"
+                                }
+                              },
+                              "block": {
+                                "type": "lists_create_with",
+                                "id": "`oGk}B.!c-*xL;M94mHD",
+                                "extraState": {
+                                  "itemCount": 0
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "next": {
+          "block": {
+            "type": "text_print",
+            "id": "?_W{X|.70k(jV{fVSP4n",
+            "inputs": {
+              "TEXT": {
+                "block": {
+                  "type": "text_join",
+                  "id": "+x(BA}17LTOLY`B61:HF",
+                  "extraState": {
+                    "itemCount": 2
+                  },
+                  "inputs": {
+                    "ADD0": {
+                      "block": {
+                        "type": "text",
+                        "id": "W#4T[I{J_e4`?$2H,]F~",
+                        "fields": {
+                          "TEXT": "Original Configuration: "
+                        }
+                      }
+                    },
+                    "ADD1": {
+                      "block": {
+                        "type": "variables_get",
+                        "id": "R9eF-cN.1*cPPCwCzAE~",
+                        "fields": {
+                          "VAR": {
+                            "id": "NXZNiJl]%QS6Bd*k1cE}"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "next": {
+              "block": {
+                "type": "procedures_callnoreturn",
+                "id": "Ohe(N(dUYRZqZ6_*X$A)",
+                "extraState": {
+                  "name": "tower_of_hanoi",
+                  "params": [
+                    "n",
+                    "source",
+                    "auxiliary",
+                    "destination",
+                    "rods"
+                  ]
+                },
+                "inputs": {
+                  "ARG0": {
+                    "block": {
+                      "type": "lists_length",
+                      "id": "9`c9Ez+Ig!5MjP{LPB``",
+                      "inputs": {
+                        "VALUE": {
+                          "block": {
+                            "type": "dict_get",
+                            "id": "c+|@(mXE9-;2+u}XZ8oi",
+                            "inputs": {
+                              "DICT": {
+                                "block": {
+                                  "type": "variables_get",
+                                  "id": "`iHK-A*2uH+pdI`5Vo@|",
+                                  "fields": {
+                                    "VAR": {
+                                      "id": "NXZNiJl]%QS6Bd*k1cE}"
+                                    }
+                                  }
+                                }
+                              },
+                              "KEY": {
+                                "shadow": {
+                                  "type": "text",
+                                  "id": "_|tB|a78JXnEHU2[V-DD",
+                                  "fields": {
+                                    "TEXT": "key_name"
+                                  }
+                                },
+                                "block": {
+                                  "type": "text",
+                                  "id": "`#_/;Fut14Iv01cI6k01",
+                                  "fields": {
+                                    "TEXT": "A"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "ARG1": {
+                    "block": {
+                      "type": "text",
+                      "id": "%Nvp=Z[oLn4k|{KE[,YE",
+                      "fields": {
+                        "TEXT": "A"
+                      }
+                    }
+                  },
+                  "ARG2": {
+                    "block": {
+                      "type": "text",
+                      "id": "g{#/8=Xd(lzo^6?/XIxd",
+                      "fields": {
+                        "TEXT": "B"
+                      }
+                    }
+                  },
+                  "ARG3": {
+                    "block": {
+                      "type": "text",
+                      "id": "YyBtdqG`!P@L,;c/8`wt",
+                      "fields": {
+                        "TEXT": "C"
+                      }
+                    }
+                  },
+                  "ARG4": {
+                    "block": {
+                      "type": "variables_get",
+                      "id": "J3@fB@lWD6%iKL~,egF@",
+                      "fields": {
+                        "VAR": {
+                          "id": "NXZNiJl]%QS6Bd*k1cE}"
+                        }
+                      }
+                    }
+                  }
+                },
+                "next": {
+                  "block": {
+                    "type": "text_print",
+                    "id": "P1[pFg@|*^W3q)dvZHas",
+                    "inputs": {
+                      "TEXT": {
+                        "block": {
+                          "type": "text_join",
+                          "id": "S!tc;SGvl:AVpz#EaQ1v",
+                          "extraState": {
+                            "itemCount": 2
+                          },
+                          "inputs": {
+                            "ADD0": {
+                              "block": {
+                                "type": "text",
+                                "id": "Vb1-}^G8+F6727k7RULa",
+                                "fields": {
+                                  "TEXT": "FInal Configuration: "
+                                }
+                              }
+                            },
+                            "ADD1": {
+                              "block": {
+                                "type": "variables_get",
+                                "id": "KiJFzOE^r*U!}$wP@?#y",
+                                "fields": {
+                                  "VAR": {
+                                    "id": "NXZNiJl]%QS6Bd*k1cE}"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
