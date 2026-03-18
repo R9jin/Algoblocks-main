@@ -68,6 +68,12 @@ const TEMPLATES = {
       path: "recursive/recursive_permutation",
       desc: "Generates all possible arrangements of a given set of characters or items. Uses a recursive backtracking algorithm to systematically explore and build different permutations.",
       icon: "/assets/recursive-icon.png"
+    },
+    {
+      name: "Tower of Hanoi",
+      path: "recursive/recursive_tower_of_hanoi",
+      desc: "Moves disks between rods following the Tower of Hanoi rules using recursion.",
+      icon: "/assets/recursive-icon.png"
     }
   ]
 };
