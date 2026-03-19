@@ -193,7 +193,6 @@ const customBlocks = [
     output: null,
     style: "list_blocks",
     tooltip: "Converts a list of key-value pairs into a dictionary literal"
-<<<<<<< HEAD
   },
   {
     type: "multi_line_comment",
@@ -208,8 +207,6 @@ const customBlocks = [
     nextStatement: null,
     colour: "#999999",
     tooltip: "Adds a multi-line comment (docstring) to the Python code"
-=======
->>>>>>> 75c8f8bb81c98c3735a4bcd52dc1c5481e34bb3c
   }
 ];
 
@@ -756,16 +753,12 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return [`${dict}[${key}]`, pythonGenerator.ORDER_MEMBER];
       };
 
-<<<<<<< HEAD
       // multi_line_comment: Convert block text into Python multi-line docstring/comment
       pythonGenerator.forBlock['multi_line_comment'] = function (block) {
         const text = block.getFieldValue('TEXT') || '';
         // Wraps the text in triple quotes and ensures it's on its own lines
         return `"""\n${text}\n"""\n`;
       };
-=======
-      // --- DYNAMIC DICTIONARY GENERATORS ---
->>>>>>> 75c8f8bb81c98c3735a4bcd52dc1c5481e34bb3c
 
       // --- DYNAMIC DICTIONARY GENERATORS (Literal {} Format) ---
 
