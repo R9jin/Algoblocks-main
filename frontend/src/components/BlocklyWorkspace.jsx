@@ -6,6 +6,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 // --- STABLE PLUGIN IMPORTS ---
 // These imports are stable Blockly plugins that enhance the workspace with additional functionality
+import { registerFieldMultilineInput } from '@blockly/field-multilineinput';
 import { Modal } from "@blockly/plugin-modal"; // Provides modal dialogs within Blockly
 import { WorkspaceSearch } from "@blockly/plugin-workspace-search"; // Adds a search interface for blocks
 import { shadowBlockConversionChangeListener } from "@blockly/shadow-block-converter"; // Handles automatic shadow block updates
@@ -15,8 +16,8 @@ import "@blockly/toolbox-search"; // Toolbox search support
 import { Backpack } from "@blockly/workspace-backpack"; // Drag-and-drop workspace "backpack"
 import { ContentHighlight } from "@blockly/workspace-content-highlight"; // Highlights blocks when interacted with
 import { PositionedMinimap } from "@blockly/workspace-minimap"; // Adds a minimap overview of the workspace
-
 // Set Blockly interface language to English
+registerFieldMultilineInput();
 Blockly.setLocale(En);
 
 // --- DEFINE CUSTOM PASTEL THEME ---
@@ -135,6 +136,77 @@ const customBlocks = [
     output: "Number",
     colour: "#4C97FF",
     tooltip: "Returns the maximum or minimum of two numbers"
+  },
+  // --- DICTIONARY BLOCKS (Perfect Visual & Connection Match) ---
+  {
+    type: "dict_create_empty",
+    message0: "create empty dictionary",
+    output: null, // Ensures it can plug into ANY variable block
+    style: "list_blocks", // Perfectly matches your theme's 3D List style
+    tooltip: "Creates a new, empty Python dictionary"
+  },
+  {
+    type: "dict_set",
+    message0: "in dictionary %1 set key %2 to %3",
+    args0: [
+      { type: "input_value", name: "DICT" },
+      { type: "input_value", name: "KEY" },
+      { type: "input_value", name: "VALUE" }
+    ],
+    inputsInline: true,
+    previousStatement: null, // Notch on top to stack below variables
+    nextStatement: null,     // Notch on bottom to continue the code
+    style: "list_blocks",
+    tooltip: "Sets a key-value pair in a dictionary (e.g., dict['key'] = value)"
+  },
+  {
+    type: "dict_get",
+    message0: "in dictionary %1 get key %2",
+    args0: [
+      { type: "input_value", name: "DICT" },
+      { type: "input_value", name: "KEY" }
+    ],
+    inputsInline: true,
+    output: null, // Puzzle tab on the left to plug into variables
+    style: "list_blocks",
+    tooltip: "Retrieves the value for a specific key in a dictionary"
+  },
+  // --- DYNAMIC DICTIONARY CONSTRUCTOR BLOCKS ---
+  {
+    type: "dict_pair",
+    message0: "key %1 : value %2",
+    args0: [
+      { type: "input_value", "name": "KEY" },
+      { type: "input_value", "name": "VALUE" }
+    ],
+    inputsInline: true,
+    output: "DictPair", // Custom output type so it snaps cleanly
+    style: "list_blocks",
+    tooltip: "Creates a single Key-Value pair (e.g., 'A': 1)"
+  },
+  {
+    type: "dict_from_pairs",
+    message0: "create dictionary with %1", // Changed text to show curly braces
+    args0: [
+      { type: "input_value", "name": "LIST", check: "Array" }
+    ],
+    output: null,
+    style: "list_blocks",
+    tooltip: "Converts a list of key-value pairs into a dictionary literal"
+  },
+  {
+    type: "multi_line_comment",
+    message0: 'comment %1', // Added \n so the quotes sit nicely above and below the box
+    args0: [{
+      type: "field_multilinetext", // <--- EXACT SPELLING REQUIRED
+      name: "TEXT",
+      text: "Write multi-line note here",
+      spellcheck: false
+    }],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#999999",
+    tooltip: "Adds a multi-line comment (docstring) to the Python code"
   }
 ];
 
@@ -207,6 +279,7 @@ const toolbox = {
       categorystyle: "text_category",
       contents: [
         { kind: "block", type: "comment_block" },
+        { kind: "block", type: "multi_line_comment" },
         { kind: "block", type: "text" },
         { kind: "block", type: "custom_string_join" },
         { kind: "block", type: "text_join" },
@@ -513,6 +586,105 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       pythonGenerator.forBlock['comment_block'] = function(block) {
         const text = block.getFieldValue('TEXT') || '';
         return `# ${text}\n`;
+      };
+
+      // Override default text_join to produce clean Python f-strings
+      pythonGenerator.forBlock['text_join'] = function (block) {
+        // Check how many inputs the block has
+        const itemCount = block.itemCount_;
+        let fStringContent = "";
+
+        for (let i = 0; i < itemCount; i++) {
+          // Get the raw code for each connected block
+          let elementCode = pythonGenerator.valueToCode(block, 'ADD' + i, pythonGenerator.ORDER_NONE);
+
+          if (!elementCode) {
+            continue;
+          }
+
+          // If it's a raw string (wrapped in quotes), remove the quotes and add it directly
+          if (elementCode.startsWith("'") && elementCode.endsWith("'")) {
+            fStringContent += elementCode.slice(1, -1);
+          }
+          // If it's a variable or number, wrap it in curly braces for the f-string
+          else {
+            fStringContent += `{${elementCode}}`;
+          }
+        }
+
+        // Return the formatted f-string
+        return [`f"${fStringContent}"`, pythonGenerator.ORDER_ATOMIC];
+      };
+
+      // --- DICTIONARY GENERATORS ---
+
+      // 1. Create Empty Dictionary: {}
+      pythonGenerator.forBlock['dict_create_empty'] = function (block) {
+        return ['{}', pythonGenerator.ORDER_ATOMIC];
+      };
+
+      // 2. Set Dictionary Key: dict['key'] = value
+      pythonGenerator.forBlock['dict_set'] = function (block) {
+        const dict = pythonGenerator.valueToCode(block, 'DICT', pythonGenerator.ORDER_MEMBER) || '{}';
+        const key = pythonGenerator.valueToCode(block, 'KEY', pythonGenerator.ORDER_NONE) || '""';
+        const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
+
+        return `${dict}[${key}] = ${value}\n`;
+      };
+
+      // 3. Get Dictionary Value: dict['key']
+      pythonGenerator.forBlock['dict_get'] = function (block) {
+        const dict = pythonGenerator.valueToCode(block, 'DICT', pythonGenerator.ORDER_MEMBER) || '{}';
+        const key = pythonGenerator.valueToCode(block, 'KEY', pythonGenerator.ORDER_NONE) || '""';
+
+        return [`${dict}[${key}]`, pythonGenerator.ORDER_MEMBER];
+      };
+
+      // multi_line_comment: Convert block text into Python multi-line docstring/comment
+      pythonGenerator.forBlock['multi_line_comment'] = function (block) {
+        const text = block.getFieldValue('TEXT') || '';
+        // Wraps the text in triple quotes and ensures it's on its own lines
+        return `"""\n${text}\n"""\n`;
+      };
+
+      // --- DYNAMIC DICTIONARY GENERATORS (Literal {} Format) ---
+
+      // 1. Generate the raw pair without parentheses: 'key': value
+      pythonGenerator.forBlock['dict_pair'] = function (block) {
+        const key = pythonGenerator.valueToCode(block, 'KEY', pythonGenerator.ORDER_NONE) || '""';
+        const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
+
+        return [`${key}: ${value}`, pythonGenerator.ORDER_NONE];
+      };
+
+      // 2. Generate the Literal Dictionary: { \n 'A': 1 \n }
+      pythonGenerator.forBlock['dict_from_pairs'] = function (block) {
+        // Grab the list block that is plugged into this dictionary block
+        const listBlock = block.getInputTargetBlock('LIST');
+
+        // If there's no list block plugged in, return an empty dict
+        if (!listBlock || listBlock.type !== 'lists_create_with') {
+          return ['{}', pythonGenerator.ORDER_ATOMIC];
+        }
+
+        // Loop through the list block's slots and extract the pairs directly
+        let pairs = [];
+        for (let i = 0; i < listBlock.itemCount_; i++) {
+          let pairCode = pythonGenerator.valueToCode(listBlock, 'ADD' + i, pythonGenerator.ORDER_NONE);
+          if (pairCode) {
+            pairs.push(pairCode);
+          }
+        }
+
+        // If it's empty, return {}
+        if (pairs.length === 0) {
+          return ['{}', pythonGenerator.ORDER_ATOMIC];
+        }
+
+        // Wrap the pairs in curly braces with perfect multi-line indentation
+        const code = '{\n    ' + pairs.join(',\n    ') + '\n}';
+
+        return [code, pythonGenerator.ORDER_ATOMIC];
       };
 
       // --- WORKSPACE CHANGE LISTENER ---
