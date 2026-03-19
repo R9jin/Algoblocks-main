@@ -15,13 +15,13 @@ export default function Projects() {
         setLoading(false);
         return; // User is not signed in
       }
-      
+
       const user = JSON.parse(storedUser);
 
       try {
         const response = await fetch("/api/projects");
         const result = await response.json();
-        
+
         if (response.ok && result.status === "success") {
           // Filter projects so the user only sees their own
           const userProjects = result.projects.filter(p => p.owner_id === user.email);
@@ -68,7 +68,7 @@ export default function Projects() {
   return (
     <div className="page-container">
       <DashboardHeader />
-      
+
       <div className="page-body">
         <main className="page-main">
           <div className="page-header-row">

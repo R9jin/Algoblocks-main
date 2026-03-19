@@ -1,4 +1,3 @@
-
 /* ... (keep existing top section) ... */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600&display=swap');
 
@@ -56,8 +55,9 @@ body {
 }
 
 .save-button:hover {
-  background-color: #2980b9; 
+  background-color: #2980b9;
 }
+
 /* ---------------------------- */
 
 .complexity-badge {
@@ -89,8 +89,8 @@ body {
 
 .workspace-area {
   position: relative;
-  min-height: 0; 
-  overflow: hidden; 
+  min-height: 0;
+  overflow: hidden;
 }
 
 .code-area {
@@ -169,10 +169,11 @@ td {
   padding: 8px;
   border-bottom: 1px solid #eee;
   font-family: monospace;
+  color: #4b4b4b;
 }
 
 .gutter {
-  background-color: #4f008b; 
+  background-color: #4f008b;
   background-repeat: no-repeat;
   background-position: 50%;
 }
@@ -184,7 +185,7 @@ td {
 
 .gutter.gutter-vertical {
   cursor: row-resize;
-  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAFAQMAAABo7865AAAABlBMVEVHcEzMzMzyAv2sAAAAAXRSTlMAQObYZgAAABBJREFUeF5jOAMEEAIEEFwAn3kMwcB6I2AAAAAASUVORK5CYII='); 
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAFAQMAAABo7865AAAABlBMVEVHcEzMzMzyAv2sAAAAAXRSTlMAQObYZgAAABBJREFUeF5jOAMEEAIEEFwAn3kMwcB6I2AAAAAASUVORK5CYII=');
 }
 
 .split {
@@ -192,9 +193,10 @@ td {
   flex-direction: row;
 }
 
-.left-column, .right-column {
-  display: flex; 
-  flex-direction: column; 
+.left-column,
+.right-column {
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  overflow: hidden; 
+  overflow: hidden;
 }

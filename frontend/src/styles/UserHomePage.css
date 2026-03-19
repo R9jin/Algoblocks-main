@@ -10,12 +10,12 @@
   overflow-x: hidden;
   background: linear-gradient(135deg, #1F1443 0%, #4A0784 100%);
   color: #F5F5F5;
-  -ms-overflow-style: none;  
-  scrollbar-width: none;     
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .user-homepage.landing-container::-webkit-scrollbar {
-  display: none;             
+  display: none;
 }
 
 .user-homepage .landing-main {
@@ -25,8 +25,8 @@
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
-  -ms-overflow-style: none;  
-  scrollbar-width: none;     
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .user-homepage .landing-main::-webkit-scrollbar {
@@ -66,7 +66,9 @@
   font-weight: bold;
 }
 
-.user-homepage .user-menu { position: relative; }
+.user-homepage .user-menu {
+  position: relative;
+}
 
 .user-homepage .user-dropdown {
   position: absolute;
@@ -165,9 +167,17 @@
   transition: background 0.2s;
 }
 
-.user-homepage .user-dd-item:hover { background: #F7F2FF; }
-.user-homepage .user-dd-item.danger { color: #A93A60; }
-.user-homepage .user-dd-divider { border-top: 1px solid #E8E0FA; }
+.user-homepage .user-dd-item:hover {
+  background: #F7F2FF;
+}
+
+.user-homepage .user-dd-item.danger {
+  color: #A93A60;
+}
+
+.user-homepage .user-dd-divider {
+  border-top: 1px solid #E8E0FA;
+}
 
 /* ========================================================= */
 /* HERO SECTION                                              */
@@ -177,45 +187,45 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4rem; 
-  max-width: 1350px; 
-  margin: 4rem auto 8rem auto; 
+  gap: 4rem;
+  max-width: 1350px;
+  margin: 4rem auto 8rem auto;
   min-height: 60vh;
 }
 
 .user-homepage .home-hero-copy {
-  flex: 0 0 500px; 
+  flex: 0 0 500px;
 }
 
 .user-homepage .welcome-text {
   color: #C994FF;
-  font-size: 1.6rem; 
+  font-size: 1.6rem;
   font-weight: bold;
-  margin: 0 0 0.5rem 0; 
+  margin: 0 0 0.5rem 0;
 }
 
 .user-homepage .slogan-text {
   color: white;
   font-size: 4.2rem;
   font-weight: bold;
-  margin: 0 0 1.2rem 0; 
-  line-height: 1.15; 
+  margin: 0 0 1.2rem 0;
+  line-height: 1.15;
 }
 
 .user-homepage .hero-subtitle {
   font-size: 1.15rem;
-  color: #E8E0FA; 
+  color: #E8E0FA;
   margin: 0 0 2.5rem 0;
   line-height: 1.6;
-  max-width: 100%; 
+  max-width: 100%;
 }
 
 /* BUTTONS */
 .user-homepage .hero-buttons {
   display: flex;
   gap: 1rem;
-  justify-content: flex-start; 
-  flex-wrap: nowrap; 
+  justify-content: flex-start;
+  flex-wrap: nowrap;
   white-space: nowrap;
 }
 
@@ -275,7 +285,7 @@
 
 .user-homepage .home-hero-image {
   width: 100%;
-  max-width: 800px; 
+  max-width: 800px;
   height: auto;
   filter: drop-shadow(0 26px 34px rgba(0, 0, 0, 0.32));
 }
@@ -319,7 +329,9 @@
   transition: transform 0.2s;
 }
 
-.user-homepage .card:hover { transform: translateY(-5px); }
+.user-homepage .card:hover {
+  transform: translateY(-5px);
+}
 
 .user-homepage .card-icon {
   margin-bottom: 1rem;
@@ -337,7 +349,7 @@
 }
 
 .user-homepage .card h3 {
-  color: #5A1398; 
+  color: #5A1398;
   margin-bottom: 0.5rem;
   font-size: 1.3rem;
 }
@@ -411,7 +423,9 @@
   line-height: 1.5;
 }
 
-.user-homepage .code-snippet code { color: #F5F5F5; }
+.user-homepage .code-snippet code {
+  color: #F5F5F5;
+}
 
 /* ========================================================= */
 /* LOGOUT POPUP MODAL                                        */
@@ -423,7 +437,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(22, 12, 51, 0.85); 
+  background: rgba(22, 12, 51, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -431,7 +445,7 @@
 }
 
 .user-homepage .logout-modal {
-  background: linear-gradient(135deg, #FDFBFF 0%, #DFCCFC 100%); 
+  background: linear-gradient(135deg, #FDFBFF 0%, #DFCCFC 100%);
   padding: 3.5rem 4rem;
   border-radius: 16px;
   text-align: center;
@@ -442,8 +456,15 @@
 }
 
 @keyframes popIn {
-  0% { opacity: 0; transform: scale(0.9); }
-  100% { opacity: 1; transform: scale(1); }
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .user-homepage .logout-modal h2 {
@@ -454,7 +475,7 @@
 }
 
 .user-homepage .logout-modal p {
-  color: #5A487A; 
+  color: #5A487A;
   font-size: 1.1rem;
   margin-bottom: 2.5rem;
 }
@@ -472,7 +493,7 @@
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  background: #501F99; 
+  background: #501F99;
   color: white;
   transition: background 0.2s, transform 0.2s;
 }
@@ -487,13 +508,37 @@
 /* ========================================================= */
 
 @media (max-width: 1024px) {
-  .user-homepage .landing-main { padding: 1.5rem; }
-  .user-homepage .home-hero { gap: 2rem; flex-direction: column; text-align: center; }
-  .user-homepage .home-hero-copy { flex: auto; width: 100%; max-width: 100%; }
-  .user-homepage .home-hero-image { width: min(480px, 100%); }
-  .user-homepage .slogan-text { font-size: 3rem; }
-  .user-homepage .hero-buttons { justify-content: center; }
-  .user-homepage .features-list { gap: 2rem; }
+  .user-homepage .landing-main {
+    padding: 1.5rem;
+  }
+
+  .user-homepage .home-hero {
+    gap: 2rem;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .user-homepage .home-hero-copy {
+    flex: auto;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .user-homepage .home-hero-image {
+    width: min(480px, 100%);
+  }
+
+  .user-homepage .slogan-text {
+    font-size: 3rem;
+  }
+
+  .user-homepage .hero-buttons {
+    justify-content: center;
+  }
+
+  .user-homepage .features-list {
+    gap: 2rem;
+  }
 }
 
 @media (max-width: 768px) {
@@ -503,24 +548,62 @@
     padding: 1rem;
     text-align: center;
   }
+
   .user-homepage .home-hero {
     margin-bottom: 3rem;
   }
-  .user-homepage .home-hero-media { width: 100%; justify-content: center; }
-  .user-homepage .home-hero-image { max-width: 420px; }
-  .user-homepage .slogan-text { font-size: 2.5rem; }
-  .user-homepage .hero-subtitle { font-size: 1rem; }
-  .user-homepage .features-list { flex-direction: column; gap: 2rem; }
+
+  .user-homepage .home-hero-media {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .user-homepage .home-hero-image {
+    max-width: 420px;
+  }
+
+  .user-homepage .slogan-text {
+    font-size: 2.5rem;
+  }
+
+  .user-homepage .hero-subtitle {
+    font-size: 1rem;
+  }
+
+  .user-homepage .features-list {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
   .user-homepage .features-content,
-  .user-homepage .code-snippet { min-width: 100%; }
+  .user-homepage .code-snippet {
+    min-width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
-  .user-homepage .landing-main { padding: 1rem; }
-  .user-homepage .logo-img { width: 40px; height: 40px; }
-  .user-homepage .logo-text { font-size: 1.2rem; }
-  .user-homepage .slogan-text { font-size: 2rem; line-height: 1.2; }
-  .user-homepage .home-hero-image { max-width: 320px; }
+  .user-homepage .landing-main {
+    padding: 1rem;
+  }
+
+  .user-homepage .logo-img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .user-homepage .logo-text {
+    font-size: 1.2rem;
+  }
+
+  .user-homepage .slogan-text {
+    font-size: 2rem;
+    line-height: 1.2;
+  }
+
+  .user-homepage .home-hero-image {
+    max-width: 320px;
+  }
+
   .user-homepage .btn-primary,
   .user-homepage .btn-secondary {
     width: 100%;
@@ -528,11 +611,30 @@
     font-size: 1rem;
     padding: 0.7rem 1.2rem;
   }
-  .user-homepage .cards-grid { grid-template-columns: 1fr; gap: 1.5rem; }
-  .user-homepage .card { padding: 1.5rem; }
+
+  .user-homepage .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .user-homepage .card {
+    padding: 1.5rem;
+  }
+
   .user-homepage .feature-cards h2,
-  .user-homepage .features-content h2 { font-size: 1.5rem; }
-  .user-homepage .features-content li { font-size: 1rem; }
-  .user-homepage .code-snippet pre { font-size: 0.8rem; }
-  .user-homepage .logout-modal { padding: 2.5rem 2rem; }
+  .user-homepage .features-content h2 {
+    font-size: 1.5rem;
+  }
+
+  .user-homepage .features-content li {
+    font-size: 1rem;
+  }
+
+  .user-homepage .code-snippet pre {
+    font-size: 0.8rem;
+  }
+
+  .user-homepage .logout-modal {
+    padding: 2.5rem 2rem;
+  }
 }

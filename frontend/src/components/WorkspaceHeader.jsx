@@ -15,10 +15,10 @@
 
 import { useNavigate } from "react-router-dom";
 
-export default function WorkspaceHeader({ 
-  viewMode, 
-  setViewMode, 
-  runCode, 
+export default function WorkspaceHeader({
+  viewMode,
+  setViewMode,
+  runCode,
   handleExport,
   handleSaveToDB,
   currentProjectId,       // NEW
@@ -32,15 +32,39 @@ export default function WorkspaceHeader({
     <header className="workspace-header">
       <div className="header-left">
         <button className="back-btn" onClick={() => navigate('/dashboard')}>
-          <img src="/assets/back-icon.png" alt="Back" className="btn-icon" /> 
+          <img src="/assets/back-icon.png" alt="Back" className="btn-icon" />
           Back to Dashboard
         </button>
         {/* Update this span to use the dynamic title */}
-        <span className="project-name">{currentProjectTitle}</span> 
+        <span className="project-name">{currentProjectTitle}</span>
       </div>
 
       <div className="header-center">
-         {/* ... (Keep your existing view-toggle buttons here) ... */}
+        <div className="view-toggle">
+
+          {/*
+            Workspace view toggle button.
+            Highlights as active when the current viewMode matches.
+          */}
+          <button
+            className={`toggle-btn ${viewMode === 'workspace' ? 'active' : ''}`}
+            onClick={() => setViewMode("workspace")}
+          >
+            Workspace
+          </button>
+
+          {/*
+            Python Code view toggle button.
+            Highlights as active when the current viewMode matches.
+          */}
+          <button
+            className={`toggle-btn ${viewMode === 'python' ? 'active' : ''}`}
+            onClick={() => setViewMode("python")}
+          >
+            Python Code
+          </button>
+
+        </div>
       </div>
 
       <div className="header-right">

@@ -81,7 +81,7 @@ const customBlocks = [
     args0: [{ type: "input_value", name: "VALUE" }],
     previousStatement: null,
     nextStatement: null,
-    colour: "#7a6b66", 
+    colour: "#7a6b66",
     tooltip: "Returns the value from this function"
   },
   {
@@ -193,6 +193,7 @@ const customBlocks = [
     output: null,
     style: "list_blocks",
     tooltip: "Converts a list of key-value pairs into a dictionary literal"
+<<<<<<< HEAD
   },
   {
     type: "multi_line_comment",
@@ -207,6 +208,8 @@ const customBlocks = [
     nextStatement: null,
     colour: "#999999",
     tooltip: "Adds a multi-line comment (docstring) to the Python code"
+=======
+>>>>>>> 75c8f8bb81c98c3735a4bcd52dc1c5481e34bb3c
   }
 ];
 
@@ -223,6 +226,8 @@ const toolbox = {
   kind: "categoryToolbox",
   contents: [
     { kind: "search", name: "Search", contents: [] },
+
+    // Logic
     {
       kind: "category",
       name: "Logic",
@@ -238,6 +243,8 @@ const toolbox = {
         { kind: "block", type: "procedure_return_value" }
       ]
     },
+
+    // Loops
     {
       kind: "category",
       name: "Loops",
@@ -245,18 +252,31 @@ const toolbox = {
       contents: [
         { kind: "block", type: "controls_repeat_ext", inputs: { TIMES: { shadow: { type: "math_number", fields: { NUM: 10 } } } } },
         { kind: "block", type: "controls_whileUntil" },
-        { kind: "block", type: "controls_for", inputs: { FROM: { shadow: { type: "math_number", fields: { NUM: 1 } } }, TO: { shadow: { type: "math_number", fields: { NUM: 10 } } }, BY: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
+        {
+          kind: "block", type: "controls_for", inputs: {
+            FROM: { shadow: { type: "math_number", fields: { NUM: 1 } } },
+            TO: { shadow: { type: "math_number", fields: { NUM: 10 } } },
+            BY: { shadow: { type: "math_number", fields: { NUM: 1 } } }
+          }
+        },
         { kind: "block", type: "controls_forEach" },
         { kind: "block", type: "controls_flow_statements" }
       ]
     },
+
+    // Math
     {
       kind: "category",
       name: "Math",
       categorystyle: "math_category",
       contents: [
-        { kind: "block", type: "math_number", fields: { NUM: 123 } },
-        { kind: "block", type: "math_arithmetic", inputs: { A: { shadow: { type: "math_number", fields: { NUM: 1 } } }, B: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
+        { kind: "block", type: "math_number", fields: { NUM: 1 } },
+        {
+          kind: "block", type: "math_arithmetic", inputs: {
+            A: { shadow: { type: "math_number", fields: { NUM: 1 } } },
+            B: { shadow: { type: "math_number", fields: { NUM: 1 } } }
+          }
+        },
         { kind: "block", type: "math_advanced_operators" },
         { kind: "block", type: "math_assignment", inputs: { DELTA: { shadow: { type: "math_number", fields: { NUM: 1 } } } } },
         { kind: "block", type: "type_cast_int" },
@@ -268,11 +288,23 @@ const toolbox = {
         { kind: "block", type: "math_round" },
         { kind: "block", type: "math_on_list" },
         { kind: "block", type: "math_modulo" },
-        { kind: "block", type: "math_constrain", inputs: { LOW: { shadow: { type: "math_number", fields: { NUM: 1 } } }, HIGH: { shadow: { type: "math_number", fields: { NUM: 100 } } } } },
-        { kind: "block", type: "math_random_int", inputs: { FROM: { shadow: { type: "math_number", fields: { NUM: 1 } } }, TO: { shadow: { type: "math_number", fields: { NUM: 100 } } } } },
+        {
+          kind: "block", type: "math_constrain", inputs: {
+            LOW: { shadow: { type: "math_number", fields: { NUM: 1 } } },
+            HIGH: { shadow: { type: "math_number", fields: { NUM: 100 } } }
+          }
+        },
+        {
+          kind: "block", type: "math_random_int", inputs: {
+            FROM: { shadow: { type: "math_number", fields: { NUM: 1 } } },
+            TO: { shadow: { type: "math_number", fields: { NUM: 100 } } }
+          }
+        },
         { kind: "block", type: "math_random_float" }
       ]
     },
+
+    // Text
     {
       kind: "category",
       name: "Text",
@@ -292,9 +324,14 @@ const toolbox = {
         { kind: "block", type: "text_changeCase" },
         { kind: "block", type: "text_trim" },
         { kind: "block", type: "text_print" },
-        { kind: "block", type: "text_prompt_ext", inputs: { TEXT: { shadow: { type: "text", fields: { TEXT: "abc" } } } } }
+        {
+          kind: "block", type: "text_prompt_ext", inputs: {
+            TEXT: { shadow: { type: "text", fields: { TEXT: "abc" } } }
+          }
+        }
       ]
     },
+    // Lists and Dictionaries
     {
       kind: "category",
       name: "Lists",
@@ -311,9 +348,40 @@ const toolbox = {
         { kind: "block", type: "lists_setIndex" },
         { kind: "block", type: "lists_getSublist" },
         { kind: "block", type: "lists_split" },
-        { kind: "block", type: "lists_sort" }
+        { kind: "block", type: "lists_sort" },
+
+        // --- DICTIONARY BLOCKS ---
+        { kind: "block", type: "dict_create_empty" },
+        {
+          kind: "block", type: "dict_set", inputs: {
+            KEY: { shadow: { type: "text", fields: { TEXT: "key_name" } } },
+            VALUE: { shadow: { type: "text", fields: { TEXT: "value" } } }
+          }
+        },
+        {
+          kind: "block", type: "dict_get", inputs: {
+            KEY: { shadow: { type: "text", fields: { TEXT: "key_name" } } }
+          }
+        },
+
+        // --- DYNAMIC DICTIONARY BLOCKS ---
+        {
+          kind: "block", type: "dict_from_pairs", inputs: {
+            // FIX 1: The input name must be 'LIST', not 'PAIRS'
+            // FIX 2: Use 'block' instead of 'shadow' so the user can click the gear icon!
+            LIST: { block: { type: "lists_create_with", extraState: { itemCount: 2 } } }
+          }
+        },
+        {
+          kind: "block", type: "dict_pair", inputs: {
+            KEY: { shadow: { type: "text", fields: { TEXT: "key_name" } } },
+            VALUE: { shadow: { type: "text", fields: { TEXT: "value" } } }
+          }
+        }
       ]
     },
+
+    // Variables & Functions
     { kind: "category", name: "Variables", categorystyle: "variable_category", custom: "VARIABLE" },
     { kind: "category", name: "Functions", categorystyle: "procedure_category", custom: "PROCEDURE" }
   ]
@@ -333,15 +401,15 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
   // onChangeRef: persistent reference to the onChange callback
   // This avoids stale closures when the onChange prop changes
   const onChangeRef = useRef(onChange);
-  
+
   // --- LOADING FLAG ---
   // isLoading: flag to tell the change listener to ignore events temporarily
   // Useful when loading a template to prevent unwanted triggers
-  const isLoading = useRef(false); 
+  const isLoading = useRef(false);
 
   // --- EXPOSE METHODS TO PARENT USING REF ---
   useImperativeHandle(ref, () => ({
-    
+
     // Clears the workspace by removing all blocks
     clear: () => {
       if (workspace.current) {
@@ -355,13 +423,13 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
     loadTemplate: (json) => {
       if (workspace.current) {
         isLoading.current = true; // temporarily disable listener
-        
+
         // Clear the workspace and load new JSON blocks
         workspace.current.clear();
         Blockly.serialization.workspaces.load(json, workspace.current);
-        
+
         isLoading.current = false; // re-enable listener
-        
+
         // Generate Python code and save workspace state after loading
         setTimeout(() => {
           const code = pythonGenerator.workspaceToCode(workspace.current);
@@ -377,7 +445,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
     // Dynamically change the workspace theme between dark and pastel
     setTheme: (themeName) => {
       if (workspace.current) {
-        workspace.current.setTheme(themeName === 'dark' ? DarkTheme : pastelTheme); 
+        workspace.current.setTheme(themeName === 'dark' ? DarkTheme : pastelTheme);
       }
     }
   }));
@@ -396,7 +464,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
     let searchPlugin, minimapPlugin, modalPlugin, backpackPlugin, highlightPlugin;
 
     if (blocklyDiv.current) {
-      
+
       // Unregister default Blockly search shortcut if it exists
       if (Blockly.ShortcutRegistry.registry.getRegistry()['startSearch']) {
         Blockly.ShortcutRegistry.registry.unregister('startSearch');
@@ -418,19 +486,19 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         // Each plugin enhances the workspace with extra features
         searchPlugin = new WorkspaceSearch(workspace.current); // search blocks
         searchPlugin.init();
-        
+
         minimapPlugin = new PositionedMinimap(workspace.current); // minimap overview
         minimapPlugin.init();
-        
+
         modalPlugin = new Modal(workspace.current); // modal dialogs
         modalPlugin.init();
-        
+
         backpackPlugin = new Backpack(workspace.current); // drag-and-drop block backpack
         backpackPlugin.init();
-        
+
         highlightPlugin = new ContentHighlight(workspace.current); // highlight blocks on interaction
         highlightPlugin.init();
-        
+
         // Add custom listener to convert shadow blocks to regular blocks
         workspace.current.addChangeListener(shadowBlockConversionChangeListener);
       } catch (e) {
@@ -441,7 +509,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       // Customize Blockly Python generator to remove default globals and docstrings
       if (!pythonGenerator.__originalInit) {
         pythonGenerator.__originalInit = pythonGenerator.init;
-        pythonGenerator.init = function(workspace) {
+        pythonGenerator.init = function (workspace) {
           pythonGenerator.__originalInit.call(this, workspace);
           if (this.definitions_['variables']) {
             delete this.definitions_['variables']; // remove default variable declarations
@@ -451,111 +519,159 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
 
       if (!pythonGenerator.__originalFinish) {
         pythonGenerator.__originalFinish = pythonGenerator.finish;
-        pythonGenerator.finish = function(code) {
+        pythonGenerator.finish = function (code) {
           let finalCode = pythonGenerator.__originalFinish.call(this, code);
-          
+
           // Remove global variables
           finalCode = finalCode.replace(/^[ \t]*global[ \t]+.*\n?/gm, '');
-          
+
           // Remove default docstring descriptions
           finalCode = finalCode.replace(/^[ \t]*"""Describe this function\.\.\."""\n?/gm, '');
-          
+
           // Remove default comment descriptions
           finalCode = finalCode.replace(/^[ \t]*# Describe this function\.\.\.\n?/gm, '');
-          
+
           return finalCode.trim();
         };
       }
 
       // --- CUSTOM BLOCK PYTHON GENERATORS ---
       // math_assignment: handles variable assignment with operators
-      pythonGenerator.forBlock['math_assignment'] = function(block) {
+      pythonGenerator.forBlock['math_assignment'] = function (block) {
         const variable = pythonGenerator.getVariableName(block.getFieldValue('VAR'));
         const operator = block.getFieldValue('OP');
         const value = pythonGenerator.valueToCode(block, 'DELTA', pythonGenerator.ORDER_ATOMIC) || '0';
-        
+
         let symbol = "+=";
         if (operator === "MINUS") symbol = "-=";
         else if (operator === "MULTIPLY") symbol = "*=";
         else if (operator === "DIVIDE") symbol = "/=";
-        
+
         return `${variable} ${symbol} ${value}\n`;
       };
 
       // controls_for: Python for-loop with from/to/by support
-      pythonGenerator.forBlock['controls_for'] = function(block) {
+      pythonGenerator.forBlock['controls_for'] = function (block) {
         const variable = pythonGenerator.getVariableName(block.getFieldValue('VAR'));
         const from = pythonGenerator.valueToCode(block, 'FROM', pythonGenerator.ORDER_NONE) || '0';
         const to = pythonGenerator.valueToCode(block, 'TO', pythonGenerator.ORDER_NONE) || '0';
         const step = pythonGenerator.valueToCode(block, 'BY', pythonGenerator.ORDER_NONE) || '1';
-        
+
         let rangeCode;
         if (step.trim() === '1') {
           rangeCode = from.trim() === '0' ? `range(${to})` : `range(${from}, ${to})`;
         } else {
           rangeCode = `range(${from}, ${to}, ${step})`;
         }
-        
+
         let branch = pythonGenerator.statementToCode(block, 'DO') || pythonGenerator.PASS;
         return `for ${variable} in ${rangeCode}:\n${branch}`;
       };
 
-      // lists_getIndex: Access list elements by index
-      pythonGenerator.forBlock['lists_getIndex'] = function(block) {
+      // lists_getIndex: Access list elements by index (FULLY PATCHED)
+      pythonGenerator.forBlock['lists_getIndex'] = function (block) {
         const mode = block.getFieldValue('MODE') || 'GET';
         const where = block.getFieldValue('WHERE') || 'FROM_START';
-        const listOrder = (where === 'RANDOM') ? pythonGenerator.ORDER_NONE : pythonGenerator.ORDER_MEMBER;
-        const list = pythonGenerator.valueToCode(block, 'VALUE', listOrder) || '[]';
+        const list = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_MEMBER) || '[]';
 
-        if (where === 'FROM_START') {
-          const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
-          return [list + '[' + at + ']', pythonGenerator.ORDER_MEMBER];
+        // 1. Determine the exact index string based on the dropdown
+        let indexCode = '0';
+        if (where === 'FIRST') {
+          indexCode = '0';
+        } else if (where === 'LAST') {
+          indexCode = '-1';
+        } else if (where === 'FROM_START') {
+          indexCode = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
+        } else if (where === 'FROM_END') {
+          const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '1';
+          indexCode = '-' + at;
         }
-        return [list, pythonGenerator.ORDER_MEMBER];
+
+        // 2. GET AND REMOVE (pop)
+        if (mode === 'GET_REMOVE') {
+          if (where === 'LAST') {
+            return [`${list}.pop()`, pythonGenerator.ORDER_FUNCTION_CALL];
+          }
+          return [`${list}.pop(${indexCode})`, pythonGenerator.ORDER_FUNCTION_CALL];
+        }
+
+        // 3. REMOVE ONLY (deletes item without returning it)
+        if (mode === 'REMOVE') {
+          if (where === 'LAST') {
+            return `${list}.pop()\n`;
+          }
+          return `${list}.pop(${indexCode})\n`;
+        }
+
+        // 4. GET ONLY (standard index lookup like list[0] or list[-1])
+        return [`${list}[${indexCode}]`, pythonGenerator.ORDER_MEMBER];
       };
 
-      // lists_setIndex: Modify list elements by index
-      pythonGenerator.forBlock['lists_setIndex'] = function(block) {
+      // lists_setIndex: Modify list elements by index (FULLY PATCHED)
+      pythonGenerator.forBlock['lists_setIndex'] = function (block) {
         const list = pythonGenerator.valueToCode(block, 'LIST', pythonGenerator.ORDER_MEMBER) || '[]';
         const mode = block.getFieldValue('MODE') || 'SET';
         const where = block.getFieldValue('WHERE') || 'FROM_START';
         const value = pythonGenerator.valueToCode(block, 'TO', pythonGenerator.ORDER_NONE) || 'None';
 
-        if (where === 'FROM_START') {
-          const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
-          if (mode === 'SET') return list + '[' + at + '] = ' + value + '\n';
-          else if (mode === 'INSERT') return list + '.insert(' + at + ', ' + value + ')\n';
+        // 1. INSERT MODE (append to end, or insert at specific index)
+        if (mode === 'INSERT') {
+          if (where === 'LAST') {
+            return `${list}.append(${value})\n`;
+          } else if (where === 'FIRST') {
+            return `${list}.insert(0, ${value})\n`;
+          } else if (where === 'FROM_START') {
+            const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
+            return `${list}.insert(${at}, ${value})\n`;
+          } else if (where === 'FROM_END') {
+            const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '1';
+            return `${list}.insert(-${at}, ${value})\n`;
+          }
         }
-        return ''; 
+
+        // 2. SET MODE (standard assignment like list[0] = x)
+        let indexCode = '0';
+        if (where === 'FIRST') {
+          indexCode = '0';
+        } else if (where === 'LAST') {
+          indexCode = '-1'; // Python shortcut for last element
+        } else if (where === 'FROM_START') {
+          indexCode = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
+        } else if (where === 'FROM_END') {
+          const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '1';
+          indexCode = '-' + at;
+        }
+
+        return `${list}[${indexCode}] = ${value}\n`;
       };
 
       // procedure_return_value: Return a value from function
-      pythonGenerator.forBlock['procedure_return_value'] = function(block) {
+      pythonGenerator.forBlock['procedure_return_value'] = function (block) {
         const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
         return `return ${value}\n`;
       };
 
       // custom_string_join: Join list of strings with a delimiter
-      pythonGenerator.forBlock['custom_string_join'] = function(block) {
+      pythonGenerator.forBlock['custom_string_join'] = function (block) {
         const list = pythonGenerator.valueToCode(block, 'LIST', pythonGenerator.ORDER_NONE) || '[]';
         const delimiter = pythonGenerator.valueToCode(block, 'DELIMITER', pythonGenerator.ORDER_MEMBER) || "''";
         return [`${delimiter}.join(${list})`, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
       // string_to_list: Convert string to list of characters
-      pythonGenerator.forBlock['string_to_list'] = function(block) {
+      pythonGenerator.forBlock['string_to_list'] = function (block) {
         const stringVal = pythonGenerator.valueToCode(block, 'STRING', pythonGenerator.ORDER_NONE) || "''";
         return [`list(${stringVal})`, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
       // type_cast_int: Convert value to integer
-      pythonGenerator.forBlock['type_cast_int'] = function(block) {
+      pythonGenerator.forBlock['type_cast_int'] = function (block) {
         const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || '0';
         return [`int(${value})`, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
       // math_advanced_operators: Floor division, power, bitwise shifts, and operators
-      pythonGenerator.forBlock['math_advanced_operators'] = function(block) {
+      pythonGenerator.forBlock['math_advanced_operators'] = function (block) {
         const operator = block.getFieldValue('OP');
         let opSymbol = '';
         let order = pythonGenerator.ORDER_NONE;
@@ -575,7 +691,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       };
 
       // math_min_max: Generate min() or max() function calls
-      pythonGenerator.forBlock['math_min_max'] = function(block) {
+      pythonGenerator.forBlock['math_min_max'] = function (block) {
         const op = block.getFieldValue('OP') === 'MAX' ? 'max' : 'min';
         const a = pythonGenerator.valueToCode(block, 'A', pythonGenerator.ORDER_NONE) || '0';
         const b = pythonGenerator.valueToCode(block, 'B', pythonGenerator.ORDER_NONE) || '0';
@@ -583,7 +699,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       };
 
       // comment_block: Convert block text into Python comment
-      pythonGenerator.forBlock['comment_block'] = function(block) {
+      pythonGenerator.forBlock['comment_block'] = function (block) {
         const text = block.getFieldValue('TEXT') || '';
         return `# ${text}\n`;
       };
@@ -640,12 +756,16 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return [`${dict}[${key}]`, pythonGenerator.ORDER_MEMBER];
       };
 
+<<<<<<< HEAD
       // multi_line_comment: Convert block text into Python multi-line docstring/comment
       pythonGenerator.forBlock['multi_line_comment'] = function (block) {
         const text = block.getFieldValue('TEXT') || '';
         // Wraps the text in triple quotes and ensures it's on its own lines
         return `"""\n${text}\n"""\n`;
       };
+=======
+      // --- DYNAMIC DICTIONARY GENERATORS ---
+>>>>>>> 75c8f8bb81c98c3735a4bcd52dc1c5481e34bb3c
 
       // --- DYNAMIC DICTIONARY GENERATORS (Literal {} Format) ---
 
@@ -726,7 +846,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
 
       if (workspace.current) {
         workspace.current.dispose();
-        workspace.current = null;    
+        workspace.current = null;
       }
 
       if (blocklyDiv.current?.resizeObserver) {

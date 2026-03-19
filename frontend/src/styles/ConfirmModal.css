@@ -78,7 +78,8 @@
 }
 
 .btn-modal-confirm {
-  background: #6C5CE7; /* Default Primary Purple */
+  background: #6C5CE7;
+  /* Default Primary Purple */
   color: #fff;
 }
 
@@ -88,7 +89,8 @@
 }
 
 .btn-modal-danger {
-  background: #e74c3c; /* Red for destructive actions */
+  background: #e74c3c;
+  /* Red for destructive actions */
 }
 
 .btn-modal-danger:hover {

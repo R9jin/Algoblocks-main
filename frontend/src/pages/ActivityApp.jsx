@@ -6,13 +6,10 @@ import "../styles/ActivityApp.css";
 import Split from "react-split";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import BigOModal from "../components/BigOModal.jsx"; // ADD THIS LINE
-import ConfirmModal from "../components/ConfirmModal.jsx"; // IMPORT MODAL
+import BigOModal from "../components/BigOModal.jsx";
+import ConfirmModal from "../components/ConfirmModal.jsx";
 
-
-// --- LEETCODE STYLE ACTIVITY TASKS (EXPANDED) ---
 const ACTIVITY_TASKS = [
-  // --- LESSON 1: INTRO ---
   {
     id: "l1-t1",
     templatePath: "intro/what_is_algo",
@@ -72,8 +69,6 @@ Output:
 • 0 <= n <= 10
 • You must use a Loop block that executes exactly \`n\` times, demonstrating linear growth.`
   },
-
-  // --- LESSON 2: SEARCHING ALGORITHMS ---
   {
     id: "l2-t1",
     templatePath: "activities/linear_search_act",
@@ -124,8 +119,6 @@ Explanation: 2 does not exist in nums so return -1.
 • \`arr\` is sorted in ascending order.
 • You **must** write an algorithm with $O(\\log n)$ runtime complexity.`
   },
-
-  // --- LESSON 3: SORTING ALGORITHMS ---
   {
     id: "l3-t1",
     templatePath: "activities/bubble_sort_act",
@@ -202,8 +195,6 @@ Output: [5, 6, 7, 11, 12, 13]
 • -50000 <= arr[i] <= 50000
 • You must write an algorithm with $O(n \\log n)$ runtime complexity.`
   },
-
-  // --- LESSON 4: RECURSION ---
   {
     id: "l4-t1",
     templatePath: "activities/factorial_recursive_act",
@@ -280,14 +271,13 @@ Output: [[0,1],[1,0]]
   }
 ];
 
-// Utility to render basic Markdown (bold and inline code)
 const renderFormattedTask = (text) => {
   if (!text) return null;
   const formattedHtml = text
     .replace(/\n/g, '<br/>')
     .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #26004a;">$1</strong>')
     .replace(/`([^`]+)`/g, '<code style="background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 4px; font-family: monospace; color: #4400ff;">$1</code>');
-  
+
   return <div dangerouslySetInnerHTML={{ __html: formattedHtml }} />;
 };
 
@@ -308,17 +298,14 @@ const ActivityApp = () => {
         body: JSON.stringify({
           email: user.email,
           lesson_id: lessonId,
-          score: score // Passes the numerical score
+          score: score 
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        
-        // Updates local storage so LearningPath sees it instantly
         user.progress = data.progress;
         localStorage.setItem("user", JSON.stringify(user));
-        
         console.log(`Progress saved! Lesson: ${lessonId}, Score: ${score}`);
       }
     } catch (error) {
@@ -326,54 +313,37 @@ const ActivityApp = () => {
     }
   };
 
-  // EXAMPLE USAGE: Call this when they click "Submit" or pass the lesson
-  const handleLessonComplete = () => {
-    const finalScore = 100; 
-    const currentLesson = "bubble_sort_act"; 
-    
-    // CHANGE THIS from saveLessonScore to saveLessonProgress
-    saveLessonProgress(currentLesson, finalScore); 
-  };
-
   const handleSuccess = async () => {
-    // 1. Dynamically extract the activity ID from the template path
-    const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act"; 
-    
-    // 2. Calculate their score
+    const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act";
     const finalScore = 100;
-    
-    // 3. Call our unified function
     await saveLessonProgress(currentLessonId, finalScore);
-    
-    // 4. Show a success message and redirect
+
     alert("Activity Completed!");
     setTimeout(() => navigate("/learning-path"), 1500);
   };
-  
+
   const activityData = location.state?.activityData || null;
   const initialTemplate = location.state?.templatePath || "";
-
-  // Find the matching task from our static LeetCode list
   const currentTask = ACTIVITY_TASKS.find(t => t.templatePath === initialTemplate);
 
   const workspaceRef = useRef(null);
 
   const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
-  const [consoleOutput, setConsoleOutput] = useState(""); 
+  const [consoleOutput, setConsoleOutput] = useState("");
   const [viewMode, setViewMode] = useState("workspace");
   const [passedTests, setPassedTests] = useState(0);
 
   const [isLeftPanelVisible, setIsLeftPanelVisible] = useState(true);
-
   const [expandedTests, setExpandedTests] = useState({ 0: true });
-
   const [bottomPanel, setBottomPanel] = useState(null);
-  const [activeTab, setActiveTab] = useState("time");
+  
+  // Set default active tab
+  const [activeTab, setActiveTab] = useState("local");
+  
   const [analysisResult, setAnalysisResult] = useState({
-    lines: [], recurrence_lines: [], total: "O(1)", total_recurrence: "O(1)", space_lines: [], space_total: "O(1)", is_recursive: false
+    lines: [], total: "O(1)", space_total: "O(1)", is_recursive: false
   });
 
-  // --- CONFIRM MODAL STATE ---
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
     title: "",
@@ -384,25 +354,21 @@ const ActivityApp = () => {
   });
 
   const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
-  
-  // CHANGE THIS TO AN OBJECT:
-  const [expandedLines, setExpandedLines] = useState({}); 
+  const [expandedLines, setExpandedLines] = useState({});
 
-  // ADD THIS TOGGLE FUNCTION:
   const toggleLine = (index) => {
     setExpandedLines(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
-  // HELPER: Close the modal
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
-  
+
   const [panelHeight, setPanelHeight] = useState(300);
   const isDragging = useRef(false);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isDragging.current) return;
-      const newHeight = window.innerHeight - e.clientY - 48; 
+      const newHeight = window.innerHeight - e.clientY - 48;
       if (newHeight >= 150 && newHeight <= window.innerHeight - 150) {
         setPanelHeight(newHeight);
       }
@@ -426,7 +392,7 @@ const ActivityApp = () => {
   }, []);
 
   const handleDragStart = (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     isDragging.current = true;
     document.body.style.cursor = "ns-resize";
     document.body.style.userSelect = "none";
@@ -438,15 +404,15 @@ const ActivityApp = () => {
 
   const loadActivityTemplate = async (path) => {
     try {
-      const fetchUrl = path.startsWith("activities/") 
-        ? `/${path}.json` 
+      const fetchUrl = path.startsWith("activities/")
+        ? `/${path}.json`
         : `/templates/${path}.json`;
-        
+
       const response = await fetch(fetchUrl);
       if (!response.ok) throw new Error(`Template not found at ${fetchUrl}`);
-      
+
       const json = await response.json();
-      
+
       if (workspaceRef.current) {
         workspaceRef.current.loadTemplate(json);
       }
@@ -465,32 +431,27 @@ const ActivityApp = () => {
 
   const handleWorkspaceChange = async (json, pythonCode) => {
     setGeneratedPython(pythonCode);
-    
+
     try {
-      const response = await fetch('/api/analyze', { 
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: pythonCode })
       });
       const data = await response.json();
       if (data.status === "success") {
-        setAnalysisResult({ 
-          total: data.total, 
-          total_recurrence: data.total_recurrence || data.total,
-          lines: data.lines,
-          recurrence_lines: data.recurrence_lines || [],
+        setAnalysisResult({
+          total: data.total,
           space_total: data.space_total || "O(1)",
-          space_lines: data.space_lines || [],
+          lines: data.lines || [],
           is_recursive: data.is_recursive || false
         });
-        setActiveTab(prev => (prev === 'time_recurrence' && !data.is_recursive) ? 'time_asymptotic' : prev);
       }
     } catch (error) {
       console.error("Analysis Error:", error);
     }
   };
 
-  // --- NEW RUN CODE FUNCTION (NO TESTS) ---
   const runCode = async () => {
     setBottomPanel("console");
     setConsoleOutput("> Running Code...\n");
@@ -503,7 +464,7 @@ const ActivityApp = () => {
         body: JSON.stringify({ code: generatedPython }),
       });
       const data = await response.json();
-      
+
       const outputText = data.status === "success" ? data.output : "> Error: " + data.output;
       setConsoleOutput(outputText);
     } catch {
@@ -511,19 +472,18 @@ const ActivityApp = () => {
     }
   };
 
-  // --- RUN TEST CASES FUNCTION ---
   const runTestCases = async () => {
     if (!activityData.testCasesList) return;
-    
+
     setBottomPanel("console");
     setConsoleOutput("> Running Tests...\n");
     setPassedTests(0);
     setExpandedLines({});
-  
+
     let testHarness = `\n\n# --- System Test Cases ---\nprint("\\n--- Running Test Cases ---")\n`;
     testHarness += `passed = 0\ntotal = ${activityData.testCasesList.length}\n`;
-    
-activityData.testCasesList.forEach((tc, index) => {
+
+    activityData.testCasesList.forEach((tc, index) => {
       testHarness += `
 try:
     assert ${tc.call} == ${tc.expected}
@@ -536,9 +496,9 @@ except Exception as e:
 `;
     });
     testHarness += `print(f"\\nResult: {passed}/{total} Tests Passed")\n`;
-  
+
     const codeToRun = generatedPython + testHarness;
-  
+
     try {
       const response = await fetch("/api/run", {
         method: "POST",
@@ -546,7 +506,7 @@ except Exception as e:
         body: JSON.stringify({ code: codeToRun }),
       });
       const data = await response.json();
-      
+
       const outputText = data.status === "success" ? data.output : "> Error: " + data.output;
       setConsoleOutput(outputText);
 
@@ -555,7 +515,6 @@ except Exception as e:
         const passed = parseInt(match[1]);
         setPassedTests(passed);
 
-        // ✅ THIS IS THE CORRECT PLACE TO CHECK FOR SUCCESS
         const total = activityData.testCasesList.length;
         if (passed === total) {
           handleSuccess();
@@ -585,31 +544,30 @@ except Exception as e:
 
   return (
     <div className="activity-app-container">
-      
+
       <header className="activity-topbar">
         <div className="activity-back-btn" onClick={() => navigate('/learning-path')}>
           <span>›</span> Back to Dashboard
         </div>
-        
+
         <div className="activity-toggle-group">
-          <button 
-            className={`activity-toggle-btn ${viewMode === 'workspace' ? 'active' : ''}`} 
+          <button
+            className={`activity-toggle-btn ${viewMode === 'workspace' ? 'active' : ''}`}
             onClick={() => setViewMode('workspace')}
           >
             Workspace
           </button>
-          <button 
-            className={`activity-toggle-btn ${viewMode === 'python' ? 'active' : ''}`} 
+          <button
+            className={`activity-toggle-btn ${viewMode === 'python' ? 'active' : ''}`}
             onClick={() => setViewMode('python')}
           >
             Python Code
           </button>
         </div>
-        
-        {/* ADDED RUN CODE BUTTON NEXT TO RUN TESTS */}
+
         <div className="activity-actions" style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            className="activity-action-btn" 
+          <button
+            className="activity-action-btn"
             onClick={runCode}
             style={{ backgroundColor: '#2D234A', border: '1px solid #6C5CE7', color: '#EBE4FF' }}
             title="Run code in console without submitting to test cases"
@@ -622,45 +580,45 @@ except Exception as e:
         </div>
       </header>
 
-      <Split 
+      <Split
         className={`activity-main-layout ${!isLeftPanelVisible ? 'left-hidden' : ''}`}
         sizes={[25, 50, 25]}
-        minSize={[isLeftPanelVisible ? 250 : 0, 400, 250]} 
+        minSize={[isLeftPanelVisible ? 250 : 0, 400, 250]}
         gutterSize={8}
       >
-        
+
         <aside className="activity-left-panel">
           <div className="activity-panel-header">
             <h2>
-              <img src="/assets/console-icon.png" alt="Icon" style={{ width: '24px' }}/>
+              <img src="/assets/console-icon.png" alt="Icon" style={{ width: '24px' }} />
               Description
             </h2>
           </div>
-          
+
           <div className="activity-panel-content">
             <div className="activity-task-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', marginTop: '10px' }}>
-                <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#2b005c', fontWeight: 'bold' }}>
-                  {currentTask?.title || activityData.title}
-                </h2>
-                <span style={{
-                    padding: '4px 10px', 
-                    borderRadius: '12px', 
-                    fontSize: '0.8rem', 
-                    fontWeight: 'bold',
-                    backgroundColor: currentTask?.difficulty === 'Easy' ? 'rgba(0, 184, 163, 0.15)' : currentTask?.difficulty === 'Medium' ? 'rgba(255, 192, 30, 0.15)' : 'rgba(255, 55, 95, 0.15)',
-                    color: currentTask?.difficulty === 'Easy' ? '#00b8a3' : currentTask?.difficulty === 'Medium' ? '#ffc01e' : '#ff375f'
-                }}>
-                    {currentTask?.difficulty || "Easy"}
-                </span>
+              <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#2b005c', fontWeight: 'bold' }}>
+                {currentTask?.title || activityData.title}
+              </h2>
+              <span style={{
+                padding: '4px 10px',
+                borderRadius: '12px',
+                fontSize: '0.8rem',
+                fontWeight: 'bold',
+                backgroundColor: currentTask?.difficulty === 'Easy' ? 'rgba(0, 184, 163, 0.15)' : currentTask?.difficulty === 'Medium' ? 'rgba(255, 192, 30, 0.15)' : 'rgba(255, 55, 95, 0.15)',
+                color: currentTask?.difficulty === 'Easy' ? '#00b8a3' : currentTask?.difficulty === 'Medium' ? '#ffc01e' : '#ff375f'
+              }}>
+                {currentTask?.difficulty || "Easy"}
+              </span>
             </div>
 
-            <div className="activity-card" style={{ 
-                lineHeight: '1.7', 
-                fontSize: '0.95rem',
-                backgroundColor: 'transparent',
-                border: 'none',
-                padding: '0',
-                color: '#2f2f2f'
+            <div className="activity-card" style={{
+              lineHeight: '1.7',
+              fontSize: '0.95rem',
+              backgroundColor: 'transparent',
+              border: 'none',
+              padding: '0',
+              color: '#2f2f2f'
             }}>
               {renderFormattedTask(currentTask?.task || activityData.task)}
             </div>
@@ -668,8 +626,8 @@ except Exception as e:
         </aside>
 
         <main className="workspace-main activity-center-panel">
-          
-          <button 
+
+          <button
             className={`sidebar-toggle-btn ${!isLeftPanelVisible ? 'closed' : ''}`}
             onClick={() => setIsLeftPanelVisible(!isLeftPanelVisible)}
             title={isLeftPanelVisible ? "Hide Instructions" : "Show Instructions"}
@@ -681,10 +639,10 @@ except Exception as e:
             <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
               <BlocklyWorkspace ref={workspaceRef} onChange={handleWorkspaceChange} templatePath={initialTemplate} />
             </div>
-            
+
             <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#1C1236', overflow: 'auto' }}>
-              <SyntaxHighlighter 
-                language="python" 
+              <SyntaxHighlighter
+                language="python"
                 style={shadesOfPurple}
                 showLineNumbers={true}
                 customStyle={{
@@ -703,76 +661,90 @@ except Exception as e:
               <div className="panel-resizer" onMouseDown={handleDragStart}>
                 <div className="resizer-dash"></div>
               </div>
-              
+
               <div className="panel-header">
                 <span className="panel-title">{bottomPanel === 'console' ? 'Console Output' : 'Complexity Analysis'}</span>
                 <button onClick={() => setBottomPanel(null)} className="panel-close-btn">✕</button>
               </div>
-              
+
               <div className="panel-body">
                 {bottomPanel === 'console' ? (
                   <pre className="console-output">{consoleOutput}</pre>
                 ) : (
                   <div className="complexity-content">
-                    <div className="complexity-tabs">
-                      <button
-                        onClick={() => setActiveTab("time")}
-                        className={`tab-btn ${activeTab === 'time' ? 'active' : ''}`}>
-                        Time Complexity
-                      </button>
-                      <button
-                        onClick={() => setActiveTab("space")}
-                        className={`tab-btn ${activeTab === 'space' ? 'active' : ''}`}>
-                        Space Complexity
-                      </button>
-                      <span className="total-badge">
-                        <span className="total-label">Total:</span>{" "}
-                        {activeTab === "space" ? analysisResult.space_total : analysisResult.total}
-                      </span>
+                    <div className="complexity-tabs" style={{ justifyContent: 'space-between', padding: '0 15px' }}>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                          onClick={() => { setActiveTab("local"); setExpandedLines({}); }}
+                          className={`tab-btn ${activeTab === 'local' ? 'active' : ''}`}>
+                          Local Complexity
+                        </button>
+                        <button
+                          onClick={() => { setActiveTab("global"); setExpandedLines({}); }}
+                          className={`tab-btn ${activeTab === 'global' ? 'active' : ''}`}>
+                          Global Complexity
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <span className="total-badge">
+                          <span className="total-label">Total Time:</span> {analysisResult.total}
+                        </span>
+                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)'}}>
+                          <span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {analysisResult.space_total}
+                        </span>
+                      </div>
                     </div>
-                    
-                    <div className="complexity-table-wrapper">
-                      <table className="complexity-table">
+
+                    <div className="complexity-table-wrapper" style={{ overflowX: 'auto' }}>
+                      <table className="complexity-table" style={{ width: '100%', minWidth: '800px', textAlign: 'left' }}>
                         <thead>
                           <tr>
                             <th>Line of Code</th>
-                            <th className="right-align">Complexity</th>
+                            <th>Operation</th>
+                            <th>{activeTab === 'local' ? 'Local Time' : 'Global Time'}</th>
+                            <th>{activeTab === 'local' ? 'Local Space' : 'Global Space'}</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {(activeTab === 'time' ? analysisResult.lines : analysisResult.space_lines).map((row, i) => (
+                          {analysisResult.lines.map((row, i) => {
+                             const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
+                             return (
                             <React.Fragment key={i}>
-                              <tr 
+                              <tr
                                 className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
                                 onClick={() => toggleLine(i)}
-                                style={{ cursor: row.explanation ? 'pointer' : 'default' }}
+                                style={{ cursor: explanationText ? 'pointer' : 'default' }}
                                 title="Click to view explanation"
                               >
                                 <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
                                   {row.lineOfCode}
                                 </td>
-                                <td className="complexity-cell" style={{ color: row.color || 'white' }}>
-                                  {row.complexity}
-                                  {row.explanation && (
-                                    <span className="dropdown-chevron">
+                                <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
+                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                    {activeTab === 'local' ? row.local_time : row.global_time}
+                                </td>
+                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                    {activeTab === 'local' ? row.local_space : row.global_space}
+                                    {explanationText && (
+                                    <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
                                       {expandedLines[i] ? '▼' : '▶'}
                                     </span>
                                   )}
                                 </td>
                               </tr>
-                              
-                              {expandedLines[i] && row.explanation && (
+
+                              {expandedLines[i] && explanationText && (
                                 <tr className="explanation-row">
-                                  <td colSpan="2">
+                                  <td colSpan="4">
                                     <div className="explanation-content">
-                                      <img src="/assets/lightbulb-icon.png" alt="Console" className="tab-icon" />
-                                      <p>{row.explanation}</p>
+                                      <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
+                                      <p>{explanationText}</p>
                                     </div>
                                   </td>
                                 </tr>
                               )}
                             </React.Fragment>
-                          ))}
+                          )})}
                         </tbody>
                       </table>
                     </div>
@@ -784,19 +756,19 @@ except Exception as e:
 
           <footer className="workspace-footer">
             <div className="footer-left">
-              <button 
+              <button
                 className={`footer-tab ${bottomPanel === 'console' ? 'active' : ''}`}
                 onClick={() => setBottomPanel(bottomPanel === 'console' ? null : 'console')}
               >
                 <img src="/assets/console-icon.png" alt="Console" className="tab-icon" /> Console
               </button>
-              <button 
+              <button
                 className={`footer-tab ${bottomPanel === 'complexity' ? 'active' : ''}`}
                 onClick={() => setBottomPanel(bottomPanel === 'complexity' ? null : 'complexity')}
               >
                 <img src="/assets/complexity-icon.png" alt="Complexity" className="tab-icon" /> Complexity
               </button>
-              <button 
+              <button
                 className="footer-tab"
                 onClick={() => setIsBigOModalOpen(true)}
                 style={{ color: '#ffffff', fontWeight: 'bold' }}
@@ -804,22 +776,22 @@ except Exception as e:
                 <img src="/assets/table-icon.png" alt="Reference" className="tab-icon" /> Big O Reference
               </button>
             </div>
-            
+
             <div className="footer-right">
-                <button className="footer-action-icon" onClick={() => {
-                  setModalConfig({
-                    isOpen: true,
-                    title: "Restart Activity?",
-                    message: "Are you sure you want to restart this activity? Your progress will be lost.",
-                    confirmText: "Restart",
-                    isDanger: true,
-                    onConfirmAction: () => {
-                      window.location.reload();
-                    }
-                  });
-                }} title="Restart Activity">
-                  <img src="/assets/recursive-icon.png" alt="Restart" />
-                </button>
+              <button className="footer-action-icon" onClick={() => {
+                setModalConfig({
+                  isOpen: true,
+                  title: "Restart Activity?",
+                  message: "Are you sure you want to restart this activity? Your progress will be lost.",
+                  confirmText: "Restart",
+                  isDanger: true,
+                  onConfirmAction: () => {
+                    window.location.reload();
+                  }
+                });
+              }} title="Restart Activity">
+                <img src="/assets/recursive-icon.png" alt="Restart" />
+              </button>
             </div>
           </footer>
 
@@ -830,20 +802,20 @@ except Exception as e:
             <h3>Test Cases</h3>
             <span className="test-cases-counter">{passedTests}/{totalTests} passed</span>
           </div>
-          
+
           <div className="activity-panel-content">
             {activityData.testCasesList?.map((tc, i) => {
               const testIdentifier = `Test ${i + 1}`;
               const isPassing = consoleOutput.includes(`${testIdentifier} Passed`);
               const isFailing = consoleOutput.includes(`${testIdentifier} Failed`);
               const isError = consoleOutput.includes(`${testIdentifier} Error`);
-              
+
               const isExpanded = expandedTests[i];
               const statusClass = isPassing ? 'passing' : (isFailing || isError) ? 'failing' : '';
 
               return (
                 <div key={i} className={`test-case-card ${statusClass}`}>
-                  
+
                   <div className="test-case-header" onClick={() => toggleTest(i)}>
                     <div className="test-case-header-left">
                       <div className={`test-case-indicator ${statusClass}`}></div>
@@ -851,7 +823,7 @@ except Exception as e:
                     </div>
                     <span className={`test-case-chevron ${isExpanded ? 'open' : ''}`}>❯</span>
                   </div>
-                  
+
                   {isExpanded && (
                     <div className="test-case-details">
                       <div className="test-case-row">
@@ -862,7 +834,7 @@ except Exception as e:
                         <span className="test-case-label">Expected Output:</span>
                         <code className="test-case-code">{tc.expected}</code>
                       </div>
-                      
+
                       {(isPassing || isFailing || isError) && (
                         <div className="test-case-status-row">
                           <span className="test-case-label">Result:</span>
@@ -873,7 +845,7 @@ except Exception as e:
                       )}
                     </div>
                   )}
-                  
+
                 </div>
               );
             })}
@@ -882,8 +854,7 @@ except Exception as e:
 
       </Split>
 
-    {/* RENDER THE CONFIRM MODAL */}
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={modalConfig.isOpen}
         title={modalConfig.title}
         message={modalConfig.message}
@@ -893,10 +864,9 @@ except Exception as e:
         onConfirm={modalConfig.onConfirmAction}
       />
 
-      {/* ADD THE BIG O MODAL HERE */}
-      <BigOModal 
-        isOpen={isBigOModalOpen} 
-        onClose={() => setIsBigOModalOpen(false)} 
+      <BigOModal
+        isOpen={isBigOModalOpen}
+        onClose={() => setIsBigOModalOpen(false)}
       />
 
     </div>
