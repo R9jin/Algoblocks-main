@@ -9,7 +9,7 @@ import { LuBookOpen, LuChartBar, LuCirclePlay, LuFolder } from "react-icons/lu";
 
 export default function UserHomePage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [user, setUser] = useState(null); 
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
   // Load the user from the database session on mount
@@ -28,7 +28,7 @@ export default function UserHomePage() {
   };
 
   // ADD THIS LINE: Prevent rendering before the user data is loaded
-  if (!user) return null; 
+  if (!user) return null;
 
   return (
     <div className="landing-container user-homepage">
@@ -38,7 +38,7 @@ export default function UserHomePage() {
         <section className="hero home-hero">
           <div className="home-hero-copy">
             <p className="welcome-text">Welcome Back, {user.name}!</p>
-            
+
             <h1 className="slogan-text">
               Think in <span className="accent">Steps</span>.<br />
               <span className="accent">Analyze</span> in Depth.
@@ -61,7 +61,7 @@ export default function UserHomePage() {
               </button>
             </div>
           </div>
-          
+
           <div className="home-hero-media" aria-hidden="true">
             <img
               src="/assets/programming-code-editor-illustration-design-vector-removebg-preview.png"
@@ -80,9 +80,9 @@ export default function UserHomePage() {
 
           <div className="cards-grid">
             {/* Updated: Made the card clickable to navigate to /projects */}
-            <div 
-              className="card" 
-              onClick={() => navigate("/projects")} 
+            <div
+              className="card"
+              onClick={() => navigate("/projects")}
               style={{ cursor: "pointer" }}
             >
               <div className="card-icon">
@@ -96,9 +96,9 @@ export default function UserHomePage() {
               </p>
             </div>
 
-            <div 
-              className="card" 
-              onClick={() => navigate("/learning-path")} 
+            <div
+              className="card"
+              onClick={() => navigate("/learning-path")}
               style={{ cursor: "pointer" }}
             >
               <div className="card-icon">
@@ -112,9 +112,9 @@ export default function UserHomePage() {
               </p>
             </div>
 
-            <div 
-              className="card" 
-              onClick={() => navigate("/app")} 
+            <div
+              className="card"
+              onClick={() => navigate("/app")}
               style={{ cursor: "pointer" }}
             >
               <div className="card-icon">
@@ -145,7 +145,7 @@ export default function UserHomePage() {
           <div className="code-snippet">
             <pre>
               <code>
-                    {`# Example output with feedback
+                {`# Example output with feedback
                     def bubble_sort(arr):
                         n = len(arr)              # O(1)
                         for i in range(n):        # O(n)
