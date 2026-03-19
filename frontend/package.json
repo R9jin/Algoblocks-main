@@ -13,6 +13,7 @@
     "@blockly/block-dynamic-connection": "^0.8.8",
     "@blockly/block-plus-minus": "^9.0.9",
     "@blockly/continuous-toolbox": "^7.0.8",
+    "@blockly/field-multilineinput": "^6.0.8",
     "@blockly/plugin-cross-tab-copy-paste": "^8.0.7",
     "@blockly/plugin-modal": "^8.0.8",
     "@blockly/plugin-scroll-options": "^7.0.8",
