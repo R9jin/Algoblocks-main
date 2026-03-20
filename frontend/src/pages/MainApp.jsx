@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import Split from "react-split";
 import BigOModal from "../components/BigOModal.jsx";
 import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
+import ComplexityGraph from '../components/ComplexityGraph.jsx';
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
 import "../styles/MainApp.css";
@@ -43,9 +44,9 @@ export default function MainApp() {
 
   const [currentProjectId, setCurrentProjectId] = useState(null);
   const [currentProjectTitle, setCurrentProjectTitle] = useState("Untitled Project");
-  
+
   // Update Initial Active Tab
-  const [activeTab, setActiveTab] = useState("local"); 
+  const [activeTab, setActiveTab] = useState("local");
 
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
@@ -123,12 +124,12 @@ export default function MainApp() {
         setAnalysisResult({
           total: "Error",
           space_total: "Error",
-          lines: [{ 
-            lineOfCode: "Analysis Failed", operation: "-", 
-            local_time: "Error", global_time: "Error", 
-            local_space: "Error", global_space: "Error", 
-            local_explanation: data.message || "Error", 
-            global_explanation: "Error" 
+          lines: [{
+            lineOfCode: "Analysis Failed", operation: "-",
+            local_time: "Error", global_time: "Error",
+            local_space: "Error", global_space: "Error",
+            local_explanation: data.message || "Error",
+            global_explanation: "Error"
           }],
           is_recursive: false
         });
@@ -188,17 +189,17 @@ export default function MainApp() {
           setViewMode("workspace");
         }
         window.history.replaceState({}, document.title);
-      }, 300); 
+      }, 300);
     }
   }, [location.state]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-        event.preventDefault(); 
+        event.preventDefault();
         if (!blocklyJson) {
-            alert("The workspace is empty. Nothing to save!");
-            return;
+          alert("The workspace is empty. Nothing to save!");
+          return;
         }
         if (currentProjectId) {
           handleUpdateDB();
@@ -441,7 +442,7 @@ export default function MainApp() {
                         <span className="total-badge">
                           <span className="total-label">Total Time:</span> {analysisResult.total}
                         </span>
-                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)'}}>
+                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)' }}>
                           <span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {analysisResult.space_total}
                         </span>
                       </div>
@@ -459,44 +460,49 @@ export default function MainApp() {
                         </thead>
                         <tbody>
                           {analysisResult.lines.map((row, i) => {
-                             const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
-                             return (
-                            <React.Fragment key={i}>
-                              <tr
-                                className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
-                                onClick={() => toggleLine(i)}
-                                style={{ cursor: explanationText ? 'pointer' : 'default' }}
-                                title="Click to view explanation"
-                              >
-                                <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
-                                  {row.lineOfCode}
-                                </td>
-                                <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
-                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                            const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
+                            return (
+                              <React.Fragment key={i}>
+                                <tr
+                                  className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
+                                  onClick={() => toggleLine(i)}
+                                  style={{ cursor: explanationText ? 'pointer' : 'default' }}
+                                  title="Click to view explanation"
+                                >
+                                  <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
+                                    {row.lineOfCode}
+                                  </td>
+                                  <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
+                                  <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
                                     {activeTab === 'local' ? row.local_time : row.global_time}
-                                </td>
-                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                  </td>
+                                  <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
                                     {activeTab === 'local' ? row.local_space : row.global_space}
                                     {explanationText && (
-                                    <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
-                                      {expandedLines[i] ? '▼' : '▶'}
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-
-                              {expandedLines[i] && explanationText && (
-                                <tr className="explanation-row">
-                                  <td colSpan="4">
-                                    <div className="explanation-content">
-                                      <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
-                                      <p>{explanationText}</p>
-                                    </div>
+                                      <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
+                                        {expandedLines[i] ? '▼' : '▶'}
+                                      </span>
+                                    )}
                                   </td>
                                 </tr>
-                              )}
-                            </React.Fragment>
-                          )})}
+
+                                {expandedLines[i] && explanationText && (
+                                  <tr className="explanation-row">
+                                    <td colSpan="4">
+                                      <div className="explanation-content">
+                                        <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
+                                        <p>{explanationText}</p>
+                                        <ComplexityGraph
+                                          complexity={row.global_time}
+                                          color={row.color}
+                                        />
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            )
+                          })}
                         </tbody>
                       </table>
                     </div>
