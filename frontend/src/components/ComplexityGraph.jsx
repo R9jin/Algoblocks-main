@@ -1,93 +1,68 @@
 import { useMemo } from 'react';
-import {
-    CartesianGrid,
-    Line,
-    LineChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis
-} from 'recharts';
+import { Line, LineChart, ResponsiveContainer, YAxis } from 'recharts';
 
-// Mathematical curves for the different Big-O notation types
-const generateGraphData = (complexity) => {
+const generateSparklineData = (complexity) => {
   const data = [];
-  
-  for (let n = 1; n <= 10; n++) {
+  // 30 points for a high-definition smooth curve
+  for (let n = 1; n <= 30; n++) {
     let yValue = 0;
-    
-    if (complexity.includes("O(1)")) {
-      yValue = 1;
-    } else if (complexity.includes("O(log n)")) {
-      yValue = Math.log2(n + 1); // +1 to avoid dropping to 0
-    } else if (complexity.includes("O(n^2)")) {
-      yValue = Math.pow(n, 2);
-    } else if (complexity.includes("O(n log n)")) {
-      yValue = n * Math.log2(n + 1);
-    } else if (complexity.includes("O(2^n)")) {
-      yValue = Math.pow(2, n);
-    } else if (complexity.includes("O(n!)")) {
-      let fact = 1;
-      for (let i = 2; i <= n; i++) fact *= i;
-      yValue = fact;
-    } else {
-      // Default to O(n) for "O(n)", "T(n)", or fallback
-      yValue = n; 
-    }
+    const cleanComp = complexity.toLowerCase();
 
-    data.push({ 
-      n: n, 
-      operations: parseFloat(yValue.toFixed(2)) 
-    });
+    if (cleanComp.includes("o(1)")) yValue = 10; 
+    else if (cleanComp.includes("log n")) yValue = Math.log2(n + 1) * 10;
+    else if (cleanComp.includes("n^2")) yValue = Math.pow(n, 2);
+    else if (cleanComp.includes("n log n")) yValue = n * Math.log2(n + 1);
+    else if (cleanComp.includes("2^n")) yValue = Math.pow(1.3, n) * 5;
+    else if (cleanComp.includes("n!")) yValue = n > 10 ? 1000 : [1,2,6,24,120,720,5040,40320,362880,3628800][n-1];
+    else yValue = n * 5; // O(n) default
+    
+    data.push({ operations: yValue });
   }
   return data;
 };
 
-const ComplexityGraph = ({ complexity, color = "#e67e22" }) => {
-  const data = useMemo(() => generateGraphData(complexity), [complexity]);
+const ComplexityGraph = ({ complexity, color = "#e67e22", label = "" }) => {
+  const data = useMemo(() => generateSparklineData(complexity), [complexity]);
 
-  // Don't render a graph for empty, dead code, or definitions
-  if (!complexity || complexity === "-" || complexity.includes("Dead Code") || complexity === "Definition") {
-    return null;
-  }
+  if (!complexity || complexity === "-" || complexity === "Definition") return null;
 
   return (
-    <div style={{ width: '100%', height: '180px', marginTop: '15px' }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" opacity={0.3} vertical={false} />
-          
-          <XAxis 
-            dataKey="n" 
-            tick={{ fontSize: 12, fill: '#666' }} 
-            tickFormatter={(val) => `n=${val}`} 
-            axisLine={false}
-            tickLine={false}
-          />
-          
-          <YAxis 
-            tick={{ fontSize: 12, fill: '#666' }} 
-            axisLine={false}
-            tickLine={false}
-          />
-          
-          <Tooltip 
-            formatter={(value) => [value, 'Operations']}
-            labelFormatter={(label) => `Input Size (n): ${label}`}
-            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-          />
-          
-          <Line 
-            type="monotone" 
-            dataKey="operations" 
-            stroke={color} 
-            strokeWidth={3}
-            dot={{ r: 3, fill: color, strokeWidth: 0 }}
-            activeDot={{ r: 6 }}
-            animationDuration={1000}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+    <div style={{ 
+      flex: 1,
+      minWidth: '200px',
+      backgroundColor: 'rgba(255,255,255,0.05)', 
+      borderRadius: '12px',
+      padding: '15px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px',
+      border: `1px solid ${color}33` // Faint border matching complexity color
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#888', textTransform: 'uppercase' }}>
+          {label}
+        </span>
+        <span style={{ fontSize: '16px', fontWeight: 'bold', color: color }}>
+          {complexity}
+        </span>
+      </div>
+      
+      <div style={{ width: '100%', height: '80px' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <YAxis hide={true} domain={['dataMin', 'dataMax']} />
+            <Line 
+              type="basis" 
+              dataKey="operations" 
+              stroke={color} 
+              strokeWidth={4} 
+              dot={false}
+              isAnimationActive={true}
+              animationDuration={1500}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };
