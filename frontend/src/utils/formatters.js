@@ -1,5 +1,8 @@
 export function formatComplexity(str) {
-  if (!str) return str;
+  // BULLETPROOF CHECK: If it's missing or not a string, return it safely without crashing
+  if (!str || typeof str !== 'string') {
+    return str;
+  }
   
   const superscripts = {
     '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
