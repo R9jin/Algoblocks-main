@@ -21,8 +21,9 @@ export default function Header() {
 
       <div className="nav-links">
         {user ? (
-          <Link to="/home" className="nav-btn signup">
-            Go to Dashboard
+          <Link to={user ? "/dashboard" : "/signup"} className="btn-primary">
+            {user ? "Continue Learning" : "Start for Free"}
+            <IoArrowForward className="btn-icon-inline" aria-hidden="true" />
           </Link>
         ) : (
           <>
