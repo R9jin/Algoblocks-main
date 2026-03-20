@@ -9,6 +9,7 @@ import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import BigOModal from "../components/BigOModal.jsx";
 import ComplexityGraph from '../components/ComplexityGraph.jsx';
 import ConfirmModal from "../components/ConfirmModal.jsx";
+import { formatComplexity } from "../utils/formatters";
 
 const ACTIVITY_TASKS = [
   {
@@ -688,10 +689,10 @@ except Exception as e:
                       </div>
                       <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                         <span className="total-badge">
-                          <span className="total-label">Total Time:</span> {analysisResult.total}
+                          <span className="total-label">Total Time:</span> {formatComplexity(analysisResult.total)}
                         </span>
                         <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)' }}>
-                          <span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {analysisResult.space_total}
+                          <span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {formatComplexity(analysisResult.space_total)}
                         </span>
                       </div>
                     </div>
@@ -722,10 +723,10 @@ except Exception as e:
                                   </td>
                                   <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
                                   <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
-                                    {activeTab === 'local' ? row.local_time : row.global_time}
+                                    {formatComplexity(activeTab === 'local' ? row.local_time : row.global_time)}
                                   </td>
                                   <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
-                                    {activeTab === 'local' ? row.local_space : row.global_space}
+                                    {formatComplexity(activeTab === 'local' ? row.local_space : row.global_space)}
                                     {explanationText && (
                                       <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
                                         {expandedLines[i] ? '▼' : '▶'}

@@ -7,6 +7,7 @@ import ComplexityGraph from '../components/ComplexityGraph.jsx';
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
 import "../styles/MainApp.css";
+import { formatComplexity } from "../utils/formatters";
 
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -461,6 +462,9 @@ export default function MainApp() {
                         <tbody>
                           {analysisResult.lines.map((row, i) => {
                             const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
+                            const graphComplexity = activeTab === 'local' ? row.local_time : row.global_time;
+                            const graphLabel = activeTab === 'local' ? 'Local Complexity' : 'Global Complexity';
+
                             return (
                               <React.Fragment key={i}>
                                 <tr
@@ -474,10 +478,10 @@ export default function MainApp() {
                                   </td>
                                   <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
                                   <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
-                                    {activeTab === 'local' ? row.local_time : row.global_time}
+                                    {formatComplexity(activeTab === 'local' ? row.local_time : row.global_time)}
                                   </td>
                                   <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
-                                    {activeTab === 'local' ? row.local_space : row.global_space}
+                                    {formatComplexity(activeTab === 'local' ? row.local_space : row.global_space)}
                                     {explanationText && (
                                       <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
                                         {expandedLines[i] ? '▼' : '▶'}
@@ -489,13 +493,18 @@ export default function MainApp() {
                                 {expandedLines[i] && explanationText && (
                                   <tr className="explanation-row">
                                     <td colSpan="4">
-                                      <div className="explanation-content">
-                                        <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
-                                        <p>{explanationText}</p>
-                                        <ComplexityGraph
-                                          complexity={row.global_time}
-                                          color={row.color}
-                                        />
+                                      <div className="explanation-content" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                                        <div style={{ flex: 1 }}>
+                                          <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
+                                          <p>{explanationText}</p>
+                                        </div>
+                                        <div style={{ minWidth: '200px' }}>
+                                          <ComplexityGraph
+                                            complexity={graphComplexity}
+                                            color={row.color}
+                                            label={graphLabel}
+                                          />
+                                        </div>
                                       </div>
                                     </td>
                                   </tr>
