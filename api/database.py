@@ -13,7 +13,7 @@ if not MONGO_URI:
 # Connect to MongoDB
 try:
     client = MongoClient(MONGO_URI)
-    db = client.get_database("AlgoBlocksCluster")  # Replace with your DB name
+    db = client.get_database("algoblocks_db")  # Replace with your DB name
 
     # Define your collections
     projects_collection = db["projects"]

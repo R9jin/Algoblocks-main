@@ -807,14 +807,14 @@ def get_projects():
 
 @app.post("/api/login")
 def login_user(req: LoginRequest):
+    print(f"Trying to log in with email: '{req.email}' and password: '{req.password}'")
+    
     user = users_collection.find_one({"email": req.email})
+    print(f"MongoDB returned: {user}") # <--- Check your terminal for this!
+    
     if user and user.get("password") == req.password:
-        return {
-            "status": "success", 
-            "email": req.email, 
-            "name": user.get("name"),
-            "progress": user.get("progress", {}) 
-        }
+        return {"status": "success", "email": req.email, "name": user.get("name"), "progress": user.get("progress", {})}
+    
     raise HTTPException(status_code=401, detail="Invalid email or password")
 
 @app.post("/api/signup")
