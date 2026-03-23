@@ -334,6 +334,12 @@ export default function MainApp() {
 
   const filteredTemplates = SIDEBAR_TEMPLATES.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
+  useEffect(() => {
+    if (location.state?.initialCodingMode) {
+      setCodingMode(location.state.initialCodingMode);
+    }
+  }, [location.state]);
+
   return (
     <div className="workspace-app-container">
       <WorkspaceHeader
