@@ -454,16 +454,23 @@ const ActivityApp = () => {
     }
   };
 
+  // Determine which code to execute
+  const getActiveCode = () => {
+    return codingMode === "manual" ? manualPythonCode : generatedPython;
+  };
+
   const runCode = async () => {
     setBottomPanel("console");
     setConsoleOutput("> Running Code...\n");
     setExpandedLines({});
 
+    const codeToRun = getActiveCode(); // Use the active code
+
     try {
       const response = await fetch("/api/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: generatedPython }),
+        body: JSON.stringify({ code: codeToRun }),
       });
       const data = await response.json();
 
@@ -499,7 +506,8 @@ except Exception as e:
     });
     testHarness += `print(f"\\nResult: {passed}/{total} Tests Passed")\n`;
 
-    const codeToRun = generatedPython + testHarness;
+    const baseCode = getActiveCode(); // Use the active code
+    const codeToRun = baseCode + testHarness;
 
     try {
       const response = await fetch("/api/run", {
@@ -544,6 +552,17 @@ except Exception as e:
 
   if (!activityData) return null;
 
+  const [codingMode, setCodingMode] = useState("blocks"); // "blocks" or "manual"
+  const [manualPythonCode, setManualPythonCode] = useState("# Write your Python code here\n");
+
+  const handleModeChange = (mode) => {
+    setCodingMode(mode);
+    // Optional: If switching to manual, copy the generated blockly code over as a starting point
+    if (mode === "manual" && manualPythonCode.trim() === "# Write your Python code here") {
+      setManualPythonCode(generatedPython !== "# Drag blocks to generate Python code" ? generatedPython : "");
+    }
+  };
+
   return (
     <div className="activity-app-container">
 
@@ -554,18 +573,35 @@ except Exception as e:
 
         <div className="activity-toggle-group">
           <button
-            className={`activity-toggle-btn ${viewMode === 'workspace' ? 'active' : ''}`}
-            onClick={() => setViewMode('workspace')}
+            className={`activity-toggle-btn ${codingMode === 'blocks' ? 'active' : ''}`}
+            onClick={() => handleModeChange('blocks')}
           >
-            Workspace
+            Block Mode
           </button>
           <button
-            className={`activity-toggle-btn ${viewMode === 'python' ? 'active' : ''}`}
-            onClick={() => setViewMode('python')}
+            className={`activity-toggle-btn ${codingMode === 'manual' ? 'active' : ''}`}
+            onClick={() => handleModeChange('manual')}
           >
-            Python Code
+            Manual Code IDE
           </button>
         </div>
+
+        {codingMode === 'blocks' && (
+          <div className="activity-toggle-group" style={{ marginLeft: '10px' }}>
+            <button
+              className={`activity-toggle-btn ${viewMode === 'workspace' ? 'active' : ''}`}
+              onClick={() => setViewMode('workspace')}
+            >
+              Blocks
+            </button>
+            <button
+              className={`activity-toggle-btn ${viewMode === 'python' ? 'active' : ''}`}
+              onClick={() => setViewMode('python')}
+            >
+              View Code
+            </button>
+          </div>
+        )}
 
         <div className="activity-actions" style={{ display: 'flex', gap: '10px' }}>
           <button
@@ -638,24 +674,45 @@ except Exception as e:
           </button>
 
           <div className="editor-container" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
-              <BlocklyWorkspace ref={workspaceRef} onChange={handleWorkspaceChange} templatePath={initialTemplate} />
-            </div>
+            {codingMode === 'blocks' ? (
+              <>
+                <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
+                  <BlocklyWorkspace ref={workspaceRef} onChange={handleWorkspaceChange} templatePath={initialTemplate} />
+                </div>
 
-            <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#1C1236', overflow: 'auto' }}>
-              <SyntaxHighlighter
-                language="python"
-                style={shadesOfPurple}
-                showLineNumbers={true}
-                customStyle={{
-                  margin: 0, padding: '20px', fontSize: '0.95rem',
-                  fontFamily: "'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
-                  background: '#1C1236', color: '#EBE4FF', minHeight: '100%'
-                }}
-              >
-                {generatedPython}
-              </SyntaxHighlighter>
-            </div>
+                <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#1C1236', overflow: 'auto' }}>
+                  <SyntaxHighlighter
+                    language="python"
+                    style={shadesOfPurple}
+                    showLineNumbers={true}
+                    customStyle={{
+                      margin: 0, padding: '20px', fontSize: '0.95rem',
+                      fontFamily: "'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+                      background: '#1C1236', color: '#EBE4FF', minHeight: '100%'
+                    }}
+                  >
+                    {generatedPython}
+                  </SyntaxHighlighter>
+                </div>
+              </>
+            ) : (
+              <div style={{ height: '100%', width: '100%' }}>
+                <Editor
+                  height="100%"
+                  defaultLanguage="python"
+                  theme="vs-dark" // Standard dark IDE theme
+                  value={manualPythonCode}
+                  onChange={(value) => setManualPythonCode(value || "")}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    fontFamily: "'Fira Code', Consolas, monospace",
+                    wordWrap: "on",
+                    padding: { top: 20 }
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {bottomPanel && (
