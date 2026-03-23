@@ -13,6 +13,7 @@
     "@blockly/block-dynamic-connection": "^0.8.8",
     "@blockly/block-plus-minus": "^9.0.9",
     "@blockly/continuous-toolbox": "^7.0.8",
+    "@blockly/field-multilineinput": "^6.0.8",
     "@blockly/plugin-cross-tab-copy-paste": "^8.0.7",
     "@blockly/plugin-modal": "^8.0.8",
     "@blockly/plugin-scroll-options": "^7.0.8",
@@ -34,7 +35,8 @@
     "react-icons": "^5.6.0",
     "react-router-dom": "^7.13.1",
     "react-split": "^2.0.14",
-    "react-syntax-highlighter": "^16.1.1"
+    "react-syntax-highlighter": "^16.1.1",
+    "recharts": "^3.8.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

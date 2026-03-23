@@ -7,7 +7,9 @@ import Split from "react-split";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import BigOModal from "../components/BigOModal.jsx";
+import ComplexityGraph from '../components/ComplexityGraph.jsx';
 import ConfirmModal from "../components/ConfirmModal.jsx";
+import { formatComplexity } from "../utils/formatters";
 
 const ACTIVITY_TASKS = [
   {
@@ -298,7 +300,7 @@ const ActivityApp = () => {
         body: JSON.stringify({
           email: user.email,
           lesson_id: lessonId,
-          score: score 
+          score: score
         })
       });
 
@@ -336,10 +338,10 @@ const ActivityApp = () => {
   const [isLeftPanelVisible, setIsLeftPanelVisible] = useState(true);
   const [expandedTests, setExpandedTests] = useState({ 0: true });
   const [bottomPanel, setBottomPanel] = useState(null);
-  
+
   // Set default active tab
   const [activeTab, setActiveTab] = useState("local");
-  
+
   const [analysisResult, setAnalysisResult] = useState({
     lines: [], total: "O(1)", space_total: "O(1)", is_recursive: false
   });
@@ -687,10 +689,10 @@ except Exception as e:
                       </div>
                       <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                         <span className="total-badge">
-                          <span className="total-label">Total Time:</span> {analysisResult.total}
+                          <span className="total-label">Total Time:</span> {formatComplexity(analysisResult.total)}
                         </span>
-                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)'}}>
-                          <span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {analysisResult.space_total}
+                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)' }}>
+                          <span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {formatComplexity(analysisResult.space_total)}
                         </span>
                       </div>
                     </div>
@@ -707,44 +709,49 @@ except Exception as e:
                         </thead>
                         <tbody>
                           {analysisResult.lines.map((row, i) => {
-                             const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
-                             return (
-                            <React.Fragment key={i}>
-                              <tr
-                                className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
-                                onClick={() => toggleLine(i)}
-                                style={{ cursor: explanationText ? 'pointer' : 'default' }}
-                                title="Click to view explanation"
-                              >
-                                <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
-                                  {row.lineOfCode}
-                                </td>
-                                <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
-                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
-                                    {activeTab === 'local' ? row.local_time : row.global_time}
-                                </td>
-                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
-                                    {activeTab === 'local' ? row.local_space : row.global_space}
+                            const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
+                            return (
+                              <React.Fragment key={i}>
+                                <tr
+                                  className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
+                                  onClick={() => toggleLine(i)}
+                                  style={{ cursor: explanationText ? 'pointer' : 'default' }}
+                                  title="Click to view explanation"
+                                >
+                                  <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
+                                    {row.lineOfCode}
+                                  </td>
+                                  <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
+                                  <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                    {formatComplexity(activeTab === 'local' ? row.local_time : row.global_time)}
+                                  </td>
+                                  <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                    {formatComplexity(activeTab === 'local' ? row.local_space : row.global_space)}
                                     {explanationText && (
-                                    <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
-                                      {expandedLines[i] ? '▼' : '▶'}
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-
-                              {expandedLines[i] && explanationText && (
-                                <tr className="explanation-row">
-                                  <td colSpan="4">
-                                    <div className="explanation-content">
-                                      <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
-                                      <p>{explanationText}</p>
-                                    </div>
+                                      <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
+                                        {expandedLines[i] ? '▼' : '▶'}
+                                      </span>
+                                    )}
                                   </td>
                                 </tr>
-                              )}
-                            </React.Fragment>
-                          )})}
+
+                                {expandedLines[i] && explanationText && (
+                                  <tr className="explanation-row">
+                                    <td colSpan="4">
+                                      <div className="explanation-content">
+                                        <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
+                                        <p>{explanationText}</p>
+                                        <ComplexityGraph
+                                          complexity={row.global_time}
+                                          color={row.color}
+                                        />
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            )
+                          })}
                         </tbody>
                       </table>
                     </div>

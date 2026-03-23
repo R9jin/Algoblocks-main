@@ -172,9 +172,15 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             if isinstance(child, ast.BinOp):
                 if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.right, ast.Constant) and child.right.value == 2: return True
                 if isinstance(child.op, ast.RShift) and isinstance(child.right, ast.Constant) and child.right.value == 1: return True
+                # FIXED: Detect O(log n) via variable multiplication (* 2) and left shift (<< 1) seen in Exponential Search
+                if isinstance(child.op, ast.Mult) and ((isinstance(child.right, ast.Constant) and child.right.value == 2) or (isinstance(child.left, ast.Constant) and child.left.value == 2)): return True
+                if isinstance(child.op, ast.LShift) and isinstance(child.right, ast.Constant) and child.right.value == 1: return True
             elif isinstance(child, ast.AugAssign):
                 if isinstance(child.op, (ast.Div, ast.FloorDiv)) and isinstance(child.value, ast.Constant) and child.value.value == 2: return True
                 if isinstance(child.op, ast.RShift) and isinstance(child.value, ast.Constant) and child.value.value == 1: return True
+                # FIXED: Augmented Assignment checks for (*= 2) and (<<= 1) 
+                if isinstance(child.op, ast.Mult) and isinstance(child.value, ast.Constant) and child.value.value == 2: return True
+                if isinstance(child.op, ast.LShift) and isinstance(child.value, ast.Constant) and child.value.value == 1: return True
         return False  
         
     def _is_sqrt_loop(self, node):
@@ -511,34 +517,43 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.current_function_name = None
 
     def visit_If(self, node):
-            self.record_line(node)
-            prev_max_comp = self.max_complexity
-            prev_max_poly = self.max_poly
-            prev_max_log = self.max_log
-            prev_max_sqrt = getattr(self, 'max_sqrt', 0)
-            
-            self.max_complexity, self.max_poly, self.max_log, self.max_sqrt = 0, 0, 0, 0
-            self.current_depth += 1
-            for child in node.body: self.visit(child)
-            self.current_depth -= 1
-            if_comp, if_poly, if_log, if_sqrt = self.max_complexity, self.max_poly, self.max_log, self.max_sqrt
-            
-            self.max_complexity, self.max_poly, self.max_log, self.max_sqrt = 0, 0, 0, 0
-            self.current_depth += 1
-            for child in node.orelse: self.visit(child)
-            self.current_depth -= 1
-            else_comp, else_poly, else_log, else_sqrt = self.max_complexity, self.max_poly, self.max_log, self.max_sqrt
-            
-            if if_comp >= else_comp:
-                self.max_complexity = max(prev_max_comp, if_comp)
-                self.max_poly = max(prev_max_poly, if_poly)
-                self.max_log = max(prev_max_log, if_log)
-                self.max_sqrt = max(prev_max_sqrt, if_sqrt)
-            else:
-                self.max_complexity = max(prev_max_comp, else_comp)
-                self.max_poly = max(prev_max_poly, else_poly)
-                self.max_log = max(prev_max_log, else_log)
-                self.max_sqrt = max(prev_max_sqrt, else_sqrt)
+        self.record_line(node)
+        prev_max_comp = self.max_complexity
+        prev_max_poly = self.max_poly
+        prev_max_log = self.max_log
+        prev_max_sqrt = getattr(self, 'max_sqrt', 0)
+        # FIXED: Track state of recursive call count before entering branch to avoid aggregating mutually exclusive calls 
+        prev_rec_count = self.recursive_calls_count 
+        
+        self.max_complexity, self.max_poly, self.max_log, self.max_sqrt = 0, 0, 0, 0
+        self.recursive_calls_count = 0 
+        self.current_depth += 1
+        for child in node.body: self.visit(child)
+        self.current_depth -= 1
+        if_comp, if_poly, if_log, if_sqrt = self.max_complexity, self.max_poly, self.max_log, self.max_sqrt
+        if_rec = self.recursive_calls_count 
+        
+        self.max_complexity, self.max_poly, self.max_log, self.max_sqrt = 0, 0, 0, 0
+        self.recursive_calls_count = 0
+        self.current_depth += 1
+        for child in node.orelse: self.visit(child)
+        self.current_depth -= 1
+        else_comp, else_poly, else_log, else_sqrt = self.max_complexity, self.max_poly, self.max_log, self.max_sqrt
+        else_rec = self.recursive_calls_count 
+        
+        # FIXED: Mutually exclusive branches should use max() instead of accumulating to prevent Binary Search appearing as Merge Sort
+        self.recursive_calls_count = prev_rec_count + max(if_rec, else_rec)
+        
+        if if_comp >= else_comp:
+            self.max_complexity = max(prev_max_comp, if_comp)
+            self.max_poly = max(prev_max_poly, if_poly)
+            self.max_log = max(prev_max_log, if_log)
+            self.max_sqrt = max(prev_max_sqrt, if_sqrt)
+        else:
+            self.max_complexity = max(prev_max_comp, else_comp)
+            self.max_poly = max(prev_max_poly, else_poly)
+            self.max_log = max(prev_max_log, else_log)
+            self.max_sqrt = max(prev_max_sqrt, else_sqrt)
 
     def visit_For(self, node):
         self.loop_depth += 1

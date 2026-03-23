@@ -6,6 +6,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 // --- STABLE PLUGIN IMPORTS ---
 // These imports are stable Blockly plugins that enhance the workspace with additional functionality
+import { registerFieldMultilineInput } from '@blockly/field-multilineinput';
 import { Modal } from "@blockly/plugin-modal"; // Provides modal dialogs within Blockly
 import { WorkspaceSearch } from "@blockly/plugin-workspace-search"; // Adds a search interface for blocks
 import { shadowBlockConversionChangeListener } from "@blockly/shadow-block-converter"; // Handles automatic shadow block updates
@@ -15,8 +16,8 @@ import "@blockly/toolbox-search"; // Toolbox search support
 import { Backpack } from "@blockly/workspace-backpack"; // Drag-and-drop workspace "backpack"
 import { ContentHighlight } from "@blockly/workspace-content-highlight"; // Highlights blocks when interacted with
 import { PositionedMinimap } from "@blockly/workspace-minimap"; // Adds a minimap overview of the workspace
-
 // Set Blockly interface language to English
+registerFieldMultilineInput();
 Blockly.setLocale(En);
 
 // --- DEFINE CUSTOM PASTEL THEME ---
@@ -192,6 +193,20 @@ const customBlocks = [
     output: null,
     style: "list_blocks",
     tooltip: "Converts a list of key-value pairs into a dictionary literal"
+  },
+  {
+    type: "multi_line_comment",
+    message0: 'comment %1', // Added \n so the quotes sit nicely above and below the box
+    args0: [{
+      type: "field_multilinetext", // <--- EXACT SPELLING REQUIRED
+      name: "TEXT",
+      text: "Write multi-line note here",
+      spellcheck: false
+    }],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#999999",
+    tooltip: "Adds a multi-line comment (docstring) to the Python code"
   }
 ];
 
@@ -293,6 +308,7 @@ const toolbox = {
       categorystyle: "text_category",
       contents: [
         { kind: "block", type: "comment_block" },
+        { kind: "block", type: "multi_line_comment" },
         { kind: "block", type: "text" },
         { kind: "block", type: "custom_string_join" },
         { kind: "block", type: "text_join" },
@@ -737,7 +753,12 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return [`${dict}[${key}]`, pythonGenerator.ORDER_MEMBER];
       };
 
-      // --- DYNAMIC DICTIONARY GENERATORS ---
+      // multi_line_comment: Convert block text into Python multi-line docstring/comment
+      pythonGenerator.forBlock['multi_line_comment'] = function (block) {
+        const text = block.getFieldValue('TEXT') || '';
+        // Wraps the text in triple quotes and ensures it's on its own lines
+        return `"""\n${text}\n"""\n`;
+      };
 
       // --- DYNAMIC DICTIONARY GENERATORS (Literal {} Format) ---
 
