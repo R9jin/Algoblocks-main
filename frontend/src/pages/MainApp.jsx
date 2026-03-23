@@ -149,7 +149,7 @@ export default function MainApp() {
       alert("Templates are currently designed for Block-based mode. Switching to manual will clear the visual template.");
       return;
     }
-    
+
     try {
       setAnalysisResult({ lines: [], total: "Analyzing...", space_total: "Analyzing...", is_recursive: false });
       const response = await fetch(`/templates/${path}.json`);
@@ -195,10 +195,10 @@ export default function MainApp() {
             setCurrentProjectTitle(pendingLoad.projectToLoad.title);
             setViewMode("workspace");
           } else if (codingMode === 'manual') {
-             alert("This project was saved in Block mode and cannot be loaded directly into the Manual Python IDE yet.");
+            alert("This project was saved in Block mode and cannot be loaded directly into the Manual Python IDE yet.");
           }
         }
-        
+
         // Clear pending actions and browser history state so it doesn't loop
         setPendingLoad({ templatePath: null, projectToLoad: null });
         window.history.replaceState({}, document.title);
@@ -316,7 +316,7 @@ export default function MainApp() {
                 border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem',
                 display: 'flex', alignItems: 'center', gap: '8px'
               }}>
-                <img src="/assets/blocks-icon.png" alt="Blocks" style={{width: '20px', filter: 'brightness(0) invert(1)'}}/> 
+                <img src="/assets/blocks-icon.png" alt="Blocks" style={{ width: '20px', filter: 'brightness(0) invert(1)' }} />
                 Block Workspace
               </button>
               <button onClick={() => setCodingMode('manual')} style={{
@@ -324,7 +324,7 @@ export default function MainApp() {
                 border: '2px solid #6C5CE7', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem',
                 display: 'flex', alignItems: 'center', gap: '8px'
               }}>
-                <img src="/assets/python-icon.png" alt="Python" style={{width: '20px'}}/> 
+                <img src="/assets/python-icon.png" alt="Python" style={{ width: '20px' }} />
                 Manual Coding
               </button>
             </div>
@@ -341,7 +341,7 @@ export default function MainApp() {
         currentProjectId={currentProjectId}
         currentProjectTitle={currentProjectTitle}
         handleUpdateDB={handleUpdateDB}
-        codingMode={codingMode} 
+        codingMode={codingMode}
       />
 
       <Split
@@ -392,15 +392,43 @@ export default function MainApp() {
                 <Editor
                   height="100%"
                   defaultLanguage="python"
-                  theme="vs-dark"
+                  theme="shadesOfPurpleCustom"
                   value={manualPythonCode}
                   onChange={handleManualCodeChange}
+                  beforeMount={(monaco) => {
+                    monaco.editor.defineTheme('shadesOfPurpleCustom', {
+                      base: 'vs-dark',
+                      inherit: true,
+                      rules: [
+                        { token: 'comment', foreground: 'B362FF', fontStyle: 'italic' },
+                        { token: 'keyword', foreground: 'FF9D00' },
+                        { token: 'string', foreground: 'A5FF90' },
+                        { token: 'number', foreground: 'FF628C' },
+                        { token: 'operator', foreground: 'FF9D00' },
+                        { token: 'function', foreground: '9EFFFF' },
+                        { token: 'type', foreground: '9EFFFF' },
+                        { token: 'variable', foreground: 'FFFFFF' },
+                      ],
+                      colors: {
+                        'editor.background': '#1C1236', // Matches your MainApp/ActivityApp container
+                        'editor.foreground': '#FFFFFF',
+                        'editorLineNumber.foreground': '#A599E9',
+                        'editorCursor.foreground': '#FAD000',
+                        'editor.selectionBackground': '#B362FF44',
+                        'editor.lineHighlightBackground': '#2D2B55',
+                        'editorIndentGuide.background': '#A599E944',
+                        'editorWhitespace.foreground': '#A599E922',
+                      }
+                    });
+                  }}
                   options={{
                     minimap: { enabled: false },
                     fontSize: 14,
                     fontFamily: "'Fira Code', Consolas, Monaco, monospace",
                     padding: { top: 20 },
-                    wordWrap: "on"
+                    wordWrap: "on",
+                    cursorSmoothCaretAnimation: "on",
+                    smoothScrolling: true
                   }}
                 />
               </div>
