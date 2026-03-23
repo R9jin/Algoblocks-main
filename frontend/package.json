@@ -26,7 +26,7 @@
     "@blockly/workspace-backpack": "^7.0.9",
     "@blockly/workspace-content-highlight": "^6.0.8",
     "@blockly/workspace-minimap": "^0.3.8",
-    "@monaco-editor/react": "^4.6.0",
+    "@monaco-editor/react": "^4.7.0",
     "axios": "^1.13.5",
     "blockly": "^12.3.1",
     "mongodb": "^7.1.0",

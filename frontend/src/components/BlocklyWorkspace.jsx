@@ -10,8 +10,6 @@ import { registerFieldMultilineInput } from '@blockly/field-multilineinput';
 import { Modal } from "@blockly/plugin-modal"; // Provides modal dialogs within Blockly
 import { WorkspaceSearch } from "@blockly/plugin-workspace-search"; // Adds a search interface for blocks
 import { shadowBlockConversionChangeListener } from "@blockly/shadow-block-converter"; // Handles automatic shadow block updates
-import DarkTheme from "@blockly/theme-dark"; // Dark color theme for Blockly
-import ModernTheme from "@blockly/theme-modern"; // Modern base theme for customization
 import "@blockly/toolbox-search"; // Toolbox search support
 import { Backpack } from "@blockly/workspace-backpack"; // Drag-and-drop workspace "backpack"
 import { ContentHighlight } from "@blockly/workspace-content-highlight"; // Highlights blocks when interacted with
@@ -19,6 +17,9 @@ import { PositionedMinimap } from "@blockly/workspace-minimap"; // Adds a minima
 // Set Blockly interface language to English
 registerFieldMultilineInput();
 Blockly.setLocale(En);
+
+const DarkTheme = Blockly.Themes.Dark;
+const ModernTheme = Blockly.Themes.Modern;
 
 // --- DEFINE CUSTOM PASTEL THEME ---
 // Create a pastel-themed Blockly workspace using ModernTheme as a base
