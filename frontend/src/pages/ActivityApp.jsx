@@ -367,8 +367,8 @@ export default function MainApp() {
                   </SyntaxHighlighter>
                 </div>
               </>
-            ) : (
-              <div style={{ height: '100%', width: '100%' }}>
+            ) : codingMode === 'manual' ? (     /* <--- ADD THIS EXPLICIT CHECK */
+              <div style={{ height: '100%', width: '100%', flex: 1 }}>
                 <Editor
                   height="100%"
                   defaultLanguage="python"
@@ -384,6 +384,9 @@ export default function MainApp() {
                   }}
                 />
               </div>
+            ) : (                               /* <--- ADD THIS FALLBACK STATE */
+              /* Empty state while the prompt is active */
+              <div style={{ height: '100%', width: '100%', background: '#1C1236' }}></div>
             )}
           </div>
 
