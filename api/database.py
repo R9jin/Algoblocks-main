@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Get the MongoDB URI. If not found, fallback to an empty string
-MONGO_URI = os.getenv("MONGODB_URI", "")
+MONGO_URI = os.getenv("MONGODB_URI")
 
 # Define variables globally so index.py can always import them
 client = None
