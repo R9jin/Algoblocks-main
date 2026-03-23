@@ -1,19 +1,26 @@
-# database.py
 import os
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
+# Load environment variables from .env
 load_dotenv()
 
+# Get MongoDB URI from environment
 MONGO_URI = os.getenv("MONGODB_URI")
 if not MONGO_URI:
     raise ValueError("No MONGODB_URI found in environment variables. Please check your .env file.")
 
-client = MongoClient(MONGO_URI)
-db = client.get_database("AlgoBlocksCluster")
+# Connect to MongoDB
+try:
+    client = MongoClient(MONGO_URI)
+    db = client.get_database("AlgoBlocksCluster")  # Replace with your DB name
 
-# Define collections
-projects_collection = db["projects"]
-users_collection = db["users"]
+    # Define your collections
+    projects_collection = db["projects"]
+    users_collection = db["users"]
 
-print("Successfully connected to MongoDB.")
+    print("Successfully connected to MongoDB.")
+
+except Exception as e:
+    print(f"Error connecting to MongoDB: {e}")
+    raise  # Reraise to stop app startup if DB connection fails
