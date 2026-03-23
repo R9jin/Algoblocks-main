@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "../styles/BigOModal.css";
+import { formatComplexity } from "../utils/formatters"; // <-- 1. Add this import
 
 const BIG_O_DATA = [
   { 
@@ -87,7 +88,7 @@ export default function BigOModal({ isOpen, onClose }) {
           {BIG_O_DATA.map((item, idx) => (
             <div key={idx} className={`big-o-row ${expandedRow === idx ? 'expanded' : ''}`}>
               <div className="big-o-row-trigger" onClick={() => toggleRow(idx)}>
-                <span className={`o-badge o-${item.color}`}>{item.complexity}</span>
+                <span className={`o-badge o-${item.color}`}>{formatComplexity(item.complexity)}</span>
                 <span className="o-name">{item.name}</span>
                 {/* Updated chevron to work with the CSS rotation animation */}
                 <span className="o-chevron dropdown-chevron">▶</span>

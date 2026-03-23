@@ -48,6 +48,12 @@ const TEMPLATES = {
       path: "search/binary_search",
       desc: "Finds the position of a target value within a sorted array by repeatedly dividing the search interval in half. Very efficient with an O(log n) time complexity, but requires the array to be sorted first.",
       icon: "/assets/search-icon.png"
+    },
+    {
+      name: "Exponential Search",
+      path: "search/exponential_search",
+      desc: "Locates a range where the target element may exist by repeatedly doubling the index, then performs a binary search within that range. Efficient for unbounded or large sorted arrays.",
+      icon: "/assets/search-icon.png"
     }
   ],
   recursive: [

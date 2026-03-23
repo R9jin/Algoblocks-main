@@ -3,9 +3,11 @@ import { useLocation } from "react-router-dom";
 import Split from "react-split";
 import BigOModal from "../components/BigOModal.jsx";
 import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
+import ComplexityGraph from '../components/ComplexityGraph.jsx';
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
 import "../styles/MainApp.css";
+import { formatComplexity } from "../utils/formatters";
 
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -13,6 +15,7 @@ import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
 const SIDEBAR_TEMPLATES = [
   { name: "Linear Search", path: "search/linear_search", desc: "Sequentially checks each element until the target is found or the list is exhausted." },
   { name: "Binary Search", path: "search/binary_search", desc: "Finds the position of a target value within a sorted array by repeatedly dividing the search interval in half." },
+  { name: "Exponential Search", path: "search/exponential_search", desc: "Finds the range where the target may exist by repeated doubling, then performs binary search within that range." },
   { name: "Bubble Sort", path: "sort/bubble_sort", desc: "Repeatedly swaps adjacent elements if they are in the wrong order." },
   { name: "Selection Sort", path: "sort/selection_sort", desc: "Finds the minimum element from the unsorted part and places it at the beginning." },
   { name: "Insertion Sort", path: "sort/insertion_sort", desc: "Builds the final sorted array one element at a time by inserting elements into their correct position." },
@@ -42,9 +45,9 @@ export default function MainApp() {
 
   const [currentProjectId, setCurrentProjectId] = useState(null);
   const [currentProjectTitle, setCurrentProjectTitle] = useState("Untitled Project");
-  
+
   // Update Initial Active Tab
-  const [activeTab, setActiveTab] = useState("local"); 
+  const [activeTab, setActiveTab] = useState("local");
 
   const [modalConfig, setModalConfig] = useState({
     isOpen: false,
@@ -122,12 +125,12 @@ export default function MainApp() {
         setAnalysisResult({
           total: "Error",
           space_total: "Error",
-          lines: [{ 
-            lineOfCode: "Analysis Failed", operation: "-", 
-            local_time: "Error", global_time: "Error", 
-            local_space: "Error", global_space: "Error", 
-            local_explanation: data.message || "Error", 
-            global_explanation: "Error" 
+          lines: [{
+            lineOfCode: "Analysis Failed", operation: "-",
+            local_time: "Error", global_time: "Error",
+            local_space: "Error", global_space: "Error",
+            local_explanation: data.message || "Error",
+            global_explanation: "Error"
           }],
           is_recursive: false
         });
@@ -187,17 +190,17 @@ export default function MainApp() {
           setViewMode("workspace");
         }
         window.history.replaceState({}, document.title);
-      }, 300); 
+      }, 300);
     }
   }, [location.state]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-        event.preventDefault(); 
+        event.preventDefault();
         if (!blocklyJson) {
-            alert("The workspace is empty. Nothing to save!");
-            return;
+          alert("The workspace is empty. Nothing to save!");
+          return;
         }
         if (currentProjectId) {
           handleUpdateDB();
@@ -440,7 +443,7 @@ export default function MainApp() {
                         <span className="total-badge">
                           <span className="total-label">Total Time:</span> {analysisResult.total}
                         </span>
-                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)'}}>
+                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)' }}>
                           <span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {analysisResult.space_total}
                         </span>
                       </div>
@@ -458,44 +461,57 @@ export default function MainApp() {
                         </thead>
                         <tbody>
                           {analysisResult.lines.map((row, i) => {
-                             const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
-                             return (
-                            <React.Fragment key={i}>
-                              <tr
-                                className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
-                                onClick={() => toggleLine(i)}
-                                style={{ cursor: explanationText ? 'pointer' : 'default' }}
-                                title="Click to view explanation"
-                              >
-                                <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
-                                  {row.lineOfCode}
-                                </td>
-                                <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
-                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
-                                    {activeTab === 'local' ? row.local_time : row.global_time}
-                                </td>
-                                <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
-                                    {activeTab === 'local' ? row.local_space : row.global_space}
-                                    {explanationText && (
-                                    <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
-                                      {expandedLines[i] ? '▼' : '▶'}
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
+                            const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
+                            const graphComplexity = activeTab === 'local' ? row.local_time : row.global_time;
+                            const graphLabel = activeTab === 'local' ? 'Local Complexity' : 'Global Complexity';
 
-                              {expandedLines[i] && explanationText && (
-                                <tr className="explanation-row">
-                                  <td colSpan="4">
-                                    <div className="explanation-content">
-                                      <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
-                                      <p>{explanationText}</p>
-                                    </div>
+                            return (
+                              <React.Fragment key={i}>
+                                <tr
+                                  className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`}
+                                  onClick={() => toggleLine(i)}
+                                  style={{ cursor: explanationText ? 'pointer' : 'default' }}
+                                  title="Click to view explanation"
+                                >
+                                  <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>
+                                    {row.lineOfCode}
+                                  </td>
+                                  <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
+                                  <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                    {formatComplexity(activeTab === 'local' ? row.local_time : row.global_time)}
+                                  </td>
+                                  <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                    {formatComplexity(activeTab === 'local' ? row.local_space : row.global_space)}
+                                    {explanationText && (
+                                      <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>
+                                        {expandedLines[i] ? '▼' : '▶'}
+                                      </span>
+                                    )}
                                   </td>
                                 </tr>
-                              )}
-                            </React.Fragment>
-                          )})}
+
+                                {expandedLines[i] && explanationText && (
+                                  <tr className="explanation-row">
+                                    <td colSpan="4">
+                                      <div className="explanation-content" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                                        <div style={{ flex: 1 }}>
+                                          <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
+                                          <p>{explanationText}</p>
+                                        </div>
+                                        <div style={{ minWidth: '200px' }}>
+                                          <ComplexityGraph
+                                            complexity={graphComplexity}
+                                            color={row.color}
+                                            label={graphLabel}
+                                          />
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            )
+                          })}
                         </tbody>
                       </table>
                     </div>
