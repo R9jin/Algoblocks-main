@@ -404,29 +404,6 @@
   font-weight: bold;
 }
 
-.user-homepage .code-snippet {
-  flex: 1;
-  min-width: 300px;
-  background: #1F1443;
-  border-radius: 12px;
-  padding: 1.5rem;
-  border: 1px solid #4830A0;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-}
-
-.user-homepage .code-snippet pre {
-  margin: 0;
-  overflow-x: auto;
-  color: #C994FF;
-  font-family: 'Fira Code', monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.user-homepage .code-snippet code {
-  color: #F5F5F5;
-}
-
 /* ========================================================= */
 /* LOGOUT POPUP MODAL                                        */
 /* ========================================================= */
@@ -453,6 +430,30 @@
   max-width: 500px;
   width: 90%;
   animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.user-homepage .feature-image-container {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.user-homepage .feature-example-image {
+  width: 100%;
+  max-width: 550px;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  object-fit: contain; /* prevents stretching */
+}
+
+.user-homepage .feature-example-image:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
 }
 
 @keyframes popIn {
@@ -539,6 +540,10 @@
   .user-homepage .features-list {
     gap: 2rem;
   }
+
+  .user-homepage .feature-example-image {
+    max-width: 450px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -575,9 +580,8 @@
     gap: 2rem;
   }
 
-  .user-homepage .features-content,
-  .user-homepage .code-snippet {
-    min-width: 100%;
+  .user-homepage .feature-example-image {
+    max-width: 380px;
   }
 }
 
@@ -630,11 +634,12 @@
     font-size: 1rem;
   }
 
-  .user-homepage .code-snippet pre {
-    font-size: 0.8rem;
-  }
-
   .user-homepage .logout-modal {
     padding: 2.5rem 2rem;
+  }
+
+  .user-homepage .feature-example-image {
+    max-width: 280px;
+    border-radius: 10px;
   }
 }

@@ -142,20 +142,12 @@ export default function UserHomePage() {
             </ul>
           </div>
 
-          <div className="code-snippet">
-            <pre>
-              <code>
-                {`# Example output with feedback
-                    def bubble_sort(arr):
-                        n = len(arr)              # O(1)
-                        for i in range(n):        # O(n)
-                            for j in range(0, n-i-1):   # O(n)
-                                if arr[j] > arr[j+1]:   # O(1)
-                                    arr[j], arr[j+1] = arr[j+1], arr[j]  # O(1)
-
-                    # Overall Time: O(n^2)   Space: O(1)`}
-              </code>
-            </pre>
+          <div className="feature-image-container">
+            <img
+              src="/assets/example.png"
+              alt="AlgoBlocks Interface Example"
+              className="feature-example-image"
+            />
           </div>
         </section>
       </main>
