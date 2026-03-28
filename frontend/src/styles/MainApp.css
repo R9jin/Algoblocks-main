@@ -807,3 +807,140 @@
     transform: translateY(0);
   }
 }
+
+/* =========================================
+   CUSTOM PROMPT MODAL STYLES
+   ========================================= */
+
+.custom-prompt-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  z-index: 10000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  animation: promptFadeIn 0.2s ease-out;
+}
+
+.custom-prompt-modal {
+  background: #1C1236;
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid #6C5CE7;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  animation: promptSlideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.custom-prompt-title {
+  color: #EBE4FF;
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.4rem;
+}
+
+.custom-prompt-message {
+  color: #A096B9;
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.custom-prompt-input {
+  width: 100%;
+  padding: 12px 15px;
+  margin-bottom: 25px;
+  background: #2D2B55;
+  border: 1px solid #4a478a;
+  color: white;
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.custom-prompt-input:focus {
+  border-color: #6C5CE7;
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.25);
+  background: #343163;
+}
+
+.custom-prompt-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+}
+
+.custom-prompt-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.custom-prompt-btn-cancel {
+  background: transparent;
+  color: #A096B9;
+}
+
+.custom-prompt-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #EBE4FF;
+}
+
+.custom-prompt-btn-confirm {
+  background: #6C5CE7;
+  color: white;
+}
+
+.custom-prompt-btn-confirm:hover {
+  background: #5a4bcf;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.4);
+}
+
+.custom-prompt-btn-confirm:active {
+  transform: translateY(0);
+}
+
+/* Modal Animations */
+@keyframes promptFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes promptSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Modal Mobile Tweaks */
+@media screen and (max-width: 480px) {
+  .custom-prompt-modal {
+    padding: 24px 20px;
+  }
+  
+  .custom-prompt-actions {
+    flex-direction: column-reverse; /* Reverses so 'Cancel' is on bottom, 'Confirm' is on top */
+    gap: 10px;
+  }
+
+  .custom-prompt-btn {
+    width: 100%;
+    padding: 12px;
+  }
+}

@@ -144,6 +144,17 @@ export default function MainApp() {
     analysisTimeoutRef.current = setTimeout(() => performAnalysis(value), 1000);
   };
 
+  // Add this near your other state declarations
+  const [promptConfig, setPromptConfig] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    placeholder: "",
+    confirmText: "Submit",
+    onConfirm: null,
+  });
+  const [promptValue, setPromptValue] = useState("");
+
   const executeLoadTemplate = async (path) => {
     if (codingMode === 'manual') {
       alert("Templates are currently designed for Block-based mode. Switching to manual will clear the visual template.");
@@ -244,34 +255,128 @@ export default function MainApp() {
   };
 
   const handleExport = () => {
-    if (codingMode === 'manual') {
-      const projectName = window.prompt("Enter a name for your export file:", "my_algorithm");
-      if (projectName && manualPythonCode) {
-        const blob = new Blob([manualPythonCode], { type: "text/x-python" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url; link.download = `${projectName.replace(/\s+/g, '_')}.py`;
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }
+    if (codingMode === 'blocks' && !blocklyJson) {
+      alert("The workspace is empty. Nothing to export!");
       return;
     }
 
-    const projectName = window.prompt("Enter a name for your export file:", "my_algorithm");
-    if (projectName && blocklyJson) {
-      const blob = new Blob([JSON.stringify(blocklyJson, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url; link.download = `${projectName.replace(/\s+/g, '_')}.json`;
-      document.body.appendChild(link); link.click(); document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } else if (!blocklyJson) {
-      alert("The workspace is empty. Nothing to export!");
-    }
+    // Open our custom prompt modal
+    setPromptValue("my_algorithm");
+    setPromptConfig({
+      isOpen: true,
+      title: "Export Project",
+      message: "Enter a name for your export file:",
+      placeholder: "e.g., my_algorithm",
+      confirmText: "Export",
+      onConfirm: (projectName) => {
+        setPromptConfig({ ...promptConfig, isOpen: false }); // Close modal
+
+        const finalName = projectName.trim() || "my_algorithm";
+
+        if (codingMode === 'manual') {
+          if (manualPythonCode) {
+            const blob = new Blob([manualPythonCode], { type: "text/x-python" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url; link.download = `${finalName.replace(/\s+/g, '_')}.py`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }
+        } else {
+          const blob = new Blob([JSON.stringify(blocklyJson, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url; link.download = `${finalName.replace(/\s+/g, '_')}.json`;
+          document.body.appendChild(link); link.click(); document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
+      }
+    });
   };
 
-  const handleSaveToDB = async () => { /* Add logic for saving IDE code later if needed */ };
-  const handleUpdateDB = async () => { /* Add logic for saving IDE code later if needed */ };
+  const handleSaveToDB = async () => {
+    if (codingMode === 'blocks' && !blocklyJson) {
+      alert("The workspace is empty. Nothing to save!");
+      return;
+    }
+    if (codingMode === 'manual' && (!manualPythonCode || manualPythonCode.trim() === '')) {
+      alert("Code editor is empty. Nothing to save!");
+      return;
+    }
+
+    // Open our custom prompt modal
+    setPromptValue(currentProjectTitle !== "Untitled Project" ? currentProjectTitle : "");
+    setPromptConfig({
+      isOpen: true,
+      title: "Save Project",
+      message: "Enter a title for your project:",
+      placeholder: "e.g., My Awesome Algorithm",
+      confirmText: "Save to Cloud",
+      onConfirm: async (projectTitle) => {
+        setPromptConfig({ ...promptConfig, isOpen: false }); // Close modal
+
+        const finalTitle = projectTitle.trim() || "Untitled Project";
+        const projectData = codingMode === 'blocks'
+          ? blocklyJson
+          : { type: 'manual', code: manualPythonCode };
+
+        try {
+          const response = await fetch('/api/projects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: finalTitle,
+              data: projectData
+            })
+          });
+
+          const result = await response.json();
+
+          if (result.status === 'success') {
+            setCurrentProjectId(result.id);
+            setCurrentProjectTitle(finalTitle);
+          } else {
+            alert("Failed to save project.");
+          }
+        } catch (error) {
+          console.error("Save error:", error);
+          alert("Error saving project to database. Check connection.");
+        }
+      }
+    });
+  };
+
+  const handleUpdateDB = async () => {
+    if (!currentProjectId) {
+      alert("No project ID found. Save as a new project first.");
+      return;
+    }
+
+    const projectData = codingMode === 'blocks'
+      ? blocklyJson
+      : { type: 'manual', code: manualPythonCode };
+
+    try {
+      const response = await fetch(`/api/projects/${currentProjectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: projectData
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        alert("Changes saved successfully!");
+      } else {
+        alert("Failed to update project.");
+      }
+    } catch (error) {
+      console.error("Update error:", error);
+      alert("Error updating project in database.");
+    }
+  };
 
   const runCode = async () => {
     setConsoleOutput("> Running...");
@@ -525,6 +630,44 @@ export default function MainApp() {
           </footer>
         </main>
       </Split>
+
+      {/* --- CUSTOM INPUT PROMPT OVERLAY --- */}
+      {promptConfig.isOpen && (
+        <div className="custom-prompt-overlay">
+          <div className="custom-prompt-modal">
+            <h3 className="custom-prompt-title">{promptConfig.title}</h3>
+            <p className="custom-prompt-message">{promptConfig.message}</p>
+            
+            <input 
+              type="text" 
+              className="custom-prompt-input"
+              value={promptValue} 
+              onChange={(e) => setPromptValue(e.target.value)}
+              placeholder={promptConfig.placeholder}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') promptConfig.onConfirm(promptValue);
+                if (e.key === 'Escape') setPromptConfig({ ...promptConfig, isOpen: false });
+              }}
+            />
+            
+            <div className="custom-prompt-actions">
+              <button 
+                className="custom-prompt-btn custom-prompt-btn-cancel"
+                onClick={() => setPromptConfig({ ...promptConfig, isOpen: false })}
+              >
+                Cancel
+              </button>
+              <button 
+                className="custom-prompt-btn custom-prompt-btn-confirm"
+                onClick={() => promptConfig.onConfirm(promptValue)}
+              >
+                {promptConfig.confirmText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} confirmText={modalConfig.confirmText} isDanger={modalConfig.isDanger} onCancel={closeModal} onConfirm={modalConfig.onConfirmAction} />
       <BigOModal isOpen={isBigOModalOpen} onClose={() => setIsBigOModalOpen(false)} />
