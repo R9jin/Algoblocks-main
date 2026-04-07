@@ -1,3 +1,4 @@
+import { useGoogleLogin } from '@react-oauth/google'; // <-- Add this import
 import { useState } from "react";
 import { FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
@@ -10,31 +11,25 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
+  // Standard Email/Password Login
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
-      // Send a POST request to your FastAPI backend
       const response = await fetch("/api/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       if (response.ok) {
         const data = await response.json();
-
         localStorage.setItem("user", JSON.stringify({
           email: data.email,
           name: data.name,
-          progress: data.progress || {} // <-- Add this
+          progress: data.progress || {} 
         }));
-
-        navigate("/home");
+        navigate("/dashboard"); 
       } else {
-        // If backend returns a 401 error, show an alert
         alert("Invalid email or password. Please try again.");
       }
     } catch (error) {
@@ -43,11 +38,42 @@ export default function SignIn() {
     }
   };
 
+  // Google Login Flow
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        // Send the Google token to our FastAPI backend
+        const response = await fetch("/api/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ access_token: tokenResponse.access_token }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Log the user in on the frontend
+          localStorage.setItem("user", JSON.stringify({
+            email: data.email,
+            name: data.name,
+            progress: data.progress || {} 
+          }));
+          navigate("/dashboard");
+        } else {
+          alert("Failed to authenticate with the server.");
+        }
+      } catch (error) {
+        console.error("Google Auth Error:", error);
+      }
+    },
+    onError: (error) => console.log('Google Login Failed:', error)
+  });
+
   return (
     <div className="auth-container">
       <div className="auth-card">
         <h2>Sign In to AlgoBlocks</h2>
         <form onSubmit={handleSubmit}>
+          {/* ... Your existing email/password form inputs ... */}
           <div className="form-group">
             <label>Email</label>
             <div className="auth-input-wrap">
@@ -76,21 +102,30 @@ export default function SignIn() {
           </div>
           <button type="submit" className="auth-button">Sign In</button>
         </form>
+
         <div className="social-auth">
           <div className="social-divider">
             <span>Or sign in with</span>
           </div>
           <div className="social-buttons">
-            <button type="button" className="social-btn">
+            
+            {/* THIS BUTTON IS NOW RUNNABLE */}
+            <button 
+              type="button" 
+              className="social-btn"
+              onClick={() => handleGoogleLogin()}
+            >
               <FcGoogle className="social-icon" aria-hidden="true" />
               Google
             </button>
+
             <button type="button" className="social-btn">
               <FaGithub className="social-icon" aria-hidden="true" />
               GitHub
             </button>
           </div>
         </div>
+        
         <div className="auth-links">
           <Link to="/forgot-password">Forgot password?</Link>
           <p>Don't have an account?<Link to="/signup">Sign up</Link></p>

@@ -295,6 +295,145 @@
   font-size: 0.9rem;
 }
 
+/* User Profile Menu & Button Resets */
+.user-menu {
+  margin-left: 15px;
+  position: relative; /* Keeps the dropdown anchored to the menu */
+}
+
+.user-menu-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* User Profile Image Styling */
+.user-profile-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* Forces the square image into a circle */
+  object-fit: cover;  /* Prevents image distortion */
+  background-color: #EBE4FF; 
+  border: 2px solid #A594DC; 
+  transition: transform 0.2s ease;
+}
+
+.user-profile-img:hover {
+  transform: scale(1.05); /* Slight zoom effect on hover */
+}
+
+/* =========================================
+   USER PROFILE DROPDOWN MENU
+   ========================================= */
+
+/* =========================================
+   USER PROFILE DROPDOWN MENU (LIGHT MODE)
+   ========================================= */
+
+/* The floating menu container */
+.user-dropdown {
+  position: absolute;
+  top: 55px; 
+  right: 0;
+  background-color: #ffffff; /* Clean white background */
+  border: 1px solid #e2e8f0; /* Light gray border */
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); /* Soft, airy drop shadow */
+  width: 220px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* The header area inside the dropdown */
+.user-dropdown-head {
+  padding: 16px;
+  background-color: #f8fafc; /* Very soft gray background for the header */
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.dropdown-avatar-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #f1f5f9;
+  border: 2px solid #cbd5e1; /* Subtle outline for the image */
+  object-fit: cover;
+  margin-bottom: 10px;
+}
+
+.user-name {
+  color: #1e293b; /* Dark, high-contrast text */
+  font-weight: bold;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.user-email {
+  color: #64748b; /* Muted gray text for secondary info */
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+/* The clickable buttons inside the menu */
+.user-dd-item {
+  background: none;
+  border: none;
+  color: #334155; 
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s ease;
+  width: 100%;
+}
+
+.user-dd-item:hover {
+  background-color: #f1f5f9; /* Light gray hover state */
+}
+
+.user-dd-item svg {
+  color: #64748b; /* Muted icon color */
+}
+
+/* Specific styling for the Sign Out button */
+.user-dd-item.danger {
+  color: #ef4444; /* Clean, modern red */
+}
+
+.user-dd-item.danger svg {
+  color: #ef4444;
+}
+
+.user-dd-item.danger:hover {
+  background-color: #fef2f2; /* Very faint red hover background */
+}
+
+/* The line that separates the items */
+.user-dd-divider {
+  height: 1px;
+  background-color: #e2e8f0;
+  margin: 4px 0;
+}
+
 /* ========================= */
 /* Responsive Improvements */
 /* ========================= */
