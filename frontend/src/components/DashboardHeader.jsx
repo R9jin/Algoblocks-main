@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 export default function DashboardHeader() {
   const navigate = useNavigate();
-  
+
   // State for user data and dropdown menu
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
@@ -70,13 +70,9 @@ export default function DashboardHeader() {
         </Link>
       </div>
 
-      // In frontend/src/components/DashboardHeader.jsx
-
-{/* ... previous header code ... */}
-
       <div className="header-right">
-        <button 
-          className="btn-open-project" 
+        <button
+          className="btn-open-project"
           onClick={() => navigate("/projects")}
         >
           <img
@@ -103,19 +99,23 @@ export default function DashboardHeader() {
             aria-haspopup="menu"
             aria-expanded={open}
           >
-            <img 
-              src="/assets/user-icon.png" 
-              alt="User Profile" 
-              className="user-profile-img" 
+            <img
+              src="/assets/user-icon.png"
+              alt="User Profile"
+              className="user-profile-img"
             />
           </button>
 
           {open && (
             <div className="user-dropdown" role="menu">
+              {/* Inside frontend/src/components/DashboardHeader.jsx */}
               <div className="user-dropdown-head">
-                <div className="dropdown-avatar" aria-hidden="true">
-                  {initials}
-                </div>
+                {/* Replaced the initials with the image */}
+                <img
+                  src="/assets/user-icon.png"
+                  alt="Profile"
+                  className="dropdown-avatar-img"
+                />
                 <div className="user-name">{user?.name || "User"}</div>
                 <div className="user-email">{user?.email || ""}</div>
               </div>

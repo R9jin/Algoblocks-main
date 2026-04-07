@@ -6,6 +6,7 @@ from io import StringIO
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import ast
+import requests # Add this to the top of your file with the other imports
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -42,6 +43,9 @@ class ProgressRequest(BaseModel):
     email: str
     lesson_id: str
     score: int
+    
+class GoogleAuthRequest(BaseModel):
+    access_token: str
 
 @app.post("/api/analyze")
 @app.post("/analyze")
@@ -208,3 +212,45 @@ def update_project(project_id: str, payload: ProjectUpdate):
             raise HTTPException(status_code=404, detail="Project not found")
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid update request format")
+
+@app.post("/api/auth/google")
+def google_auth(req: GoogleAuthRequest):
+    if users_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+
+    # 1. Verify the token with Google's servers
+    google_response = requests.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        headers={"Authorization": f"Bearer {req.access_token}"}
+    )
+    
+    if not google_response.ok:
+        raise HTTPException(status_code=400, detail="Invalid Google token")
+
+    google_user = google_response.json()
+    email = google_user.get("email")
+    name = google_user.get("name")
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Email not provided by Google")
+
+    # 2. Check if the user already exists in your MongoDB
+    user = users_collection.find_one({"email": email})
+    
+    if not user:
+        # 3. If they don't exist, create a new account for them automatically
+        user = {
+            "name": name,
+            "email": email,
+            "password": "", # Leave password empty for OAuth users
+            "progress": {}
+        }
+        users_collection.insert_one(user)
+
+    # 4. Return the standard login payload
+    return {
+        "status": "success", 
+        "email": email, 
+        "name": name, 
+        "progress": user.get("progress", {})
+    }
