@@ -1,3 +1,4 @@
+// frontend/src/pages/SignIn.jsx
 import { useState } from "react";
 import { FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
@@ -14,7 +15,6 @@ export default function SignIn() {
     e.preventDefault();
 
     try {
-      // Send a POST request to your FastAPI backend
       const response = await fetch("/api/login", {
         method: "POST",
         headers: {
@@ -29,12 +29,12 @@ export default function SignIn() {
         localStorage.setItem("user", JSON.stringify({
           email: data.email,
           name: data.name,
-          progress: data.progress || {} // <-- Add this
+          progress: data.progress || {} 
         }));
 
-        navigate("/home");
+        // FIX: Route to the dashboard instead of home after logging in
+        navigate("/dashboard"); 
       } else {
-        // If backend returns a 401 error, show an alert
         alert("Invalid email or password. Please try again.");
       }
     } catch (error) {

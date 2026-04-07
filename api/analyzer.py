@@ -86,17 +86,25 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     def detect_indirect_recursion(self):
         for func in self.call_graph:
             visited = set()
-            if self._has_cycle(func, visited):
-                self.custom_functions[func] = "O(2^n)"  
+            rec_stack = set()
+            if self._has_cycle(func, visited, rec_stack):
+                self.custom_functions[func] = "O(2^n)"
 
-    def _has_cycle(self, current_func, visited):
-        if current_func in visited:  
+    def _has_cycle(self, node, visited, rec_stack):
+        if node in rec_stack:
             return True
-        visited.add(current_func)
-        for neighbor in self.call_graph.get(current_func, []):
-            if self._has_cycle(neighbor, visited.copy()):  
+        if node in visited:
+            return False
+
+        visited.add(node)
+        rec_stack.add(node)
+
+        for neighbor in self.call_graph.get(node, []):
+            if self._has_cycle(neighbor, visited, rec_stack):
                 return True
-        return False  
+
+        rec_stack.remove(node)
+        return False
 
     def get_code_snippet(self, node):
         if hasattr(node, 'lineno'):

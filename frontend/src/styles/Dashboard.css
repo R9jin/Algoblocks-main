@@ -295,6 +295,37 @@
   font-size: 0.9rem;
 }
 
+/* User Profile Menu & Button Resets */
+.user-menu {
+  margin-left: 15px;
+  position: relative; /* Keeps the dropdown anchored to the menu */
+}
+
+.user-menu-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* User Profile Image Styling */
+.user-profile-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* Forces the square image into a circle */
+  object-fit: cover;  /* Prevents image distortion */
+  background-color: #EBE4FF; 
+  border: 2px solid #A594DC; 
+  transition: transform 0.2s ease;
+}
+
+.user-profile-img:hover {
+  transform: scale(1.05); /* Slight zoom effect on hover */
+}
+
 /* ========================= */
 /* Responsive Improvements */
 /* ========================= */
