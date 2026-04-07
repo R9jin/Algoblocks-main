@@ -11,4 +11,4 @@ venv/
 .env
 
 # --- System ---
-.DS_Store
+.DS_Storeapi/.env.example 

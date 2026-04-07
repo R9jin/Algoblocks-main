@@ -1,20 +1,24 @@
-import { Link } from "react-router-dom";
-import Header from "../components/Header";
-import "../styles/HomePage.css";
-import { LuPuzzle, LuChartBar, LuCirclePlay } from "react-icons/lu";
+import { useEffect, useState } from "react"; // Added missing import
 import { FaPython } from "react-icons/fa";
 import { IoArrowForward } from "react-icons/io5";
+import { LuChartBar, LuCirclePlay, LuPuzzle } from "react-icons/lu";
+import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
- 
+import Header from "../components/Header";
+import "../styles/HomePage.css";
+
 export default function LandingPage() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) setUser(JSON.parse(storedUser));
+  }, []);
+
   return (
     <div className="landing-container">
-      
-      {/* Reusing the same header component for consistency */}
       <Header />
-
       <main className="landing-main">
-        {/* Hero Section */}
         <section className="hero home-hero">
           <div className="home-hero-copy">
             <h1 className="slogan-text">
@@ -27,8 +31,9 @@ export default function LandingPage() {
               performance in real-time.
             </p>
             <div className="hero-buttons">
-              <Link to="/app" className="btn-primary">
-                Launch Playground
+              {/* Dynamic Call-To-Action based on DB Auth Status */}
+              <Link to={user ? "/home" : "/signup"} className="btn-primary">
+                {user ? "Continue Learning" : "Start for Free"}
                 <IoArrowForward className="btn-icon-inline" aria-hidden="true" />
               </Link>
               <button className="btn-secondary">
@@ -97,7 +102,7 @@ export default function LandingPage() {
           <div className="code-snippet">
             <pre>
               <code>
-{`def bubble_sort(arr):
+                {`def bubble_sort(arr):
     n = len(arr)
     for i in range(n):
         for j in range(0, n-i-1):

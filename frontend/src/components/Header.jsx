@@ -1,6 +1,18 @@
+import { useEffect, useState } from "react";
+import { IoArrowForward } from 'react-icons/io5';
 import { Link } from "react-router-dom";
 
 export default function Header() {
+  const [user, setUser] = useState(null);
+
+  // Check if a user is logged in from the database session
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
   return (
     <nav className="landing-nav">
       <div className="logo-container">
@@ -9,8 +21,17 @@ export default function Header() {
       </div>
 
       <div className="nav-links">
-        <Link to="/signin" className="nav-btn signin">Sign In</Link>
-        <Link to="/app" className="nav-btn signup">Start Learning</Link>
+        {user ? (
+          <Link to={user ? "/dashboard" : "/signup"} className="btn-primary">
+            {user ? "Continue Learning" : "Start for Free"}
+            <IoArrowForward className="btn-icon-inline" aria-hidden="true" />
+          </Link>
+        ) : (
+          <>
+            <Link to="/signin" className="nav-btn signin">Sign In</Link>
+            <Link to="/signup" className="nav-btn signup">Start Learning</Link>
+          </>
+        )}
       </div>
     </nav>
   );

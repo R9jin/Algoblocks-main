@@ -1,31 +1,44 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "../styles/UserHomePage.css"; 
-import UserHeader from "../components/UserHeader";
 import Footer from "../components/Footer";
+import UserHeader from "../components/UserHeader";
+import "../styles/UserHomePage.css";
 
-import { LuPuzzle, LuChartBar, LuCirclePlay, LuFolder, LuLayoutDashboard, LuBookOpen } from "react-icons/lu";
 import { IoArrowForward } from "react-icons/io5";
+import { LuBookOpen, LuChartBar, LuCirclePlay, LuFolder } from "react-icons/lu";
 
-export default function UserHomePage({ user = { name: "Test User", email: "test@example.com" } }) {
+export default function UserHomePage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
+
+  // Load the user from the database session on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      navigate("/signin"); // Protect the route
+    }
+  }, [navigate]);
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
     navigate("/signin");
   };
 
+  // ADD THIS LINE: Prevent rendering before the user data is loaded
+  if (!user) return null;
+
   return (
     <div className="landing-container user-homepage">
       <UserHeader user={user} onLogoutClick={() => setShowLogoutModal(true)} />
-
       <main className="landing-main">
         {/* Hero Section */}
         <section className="hero home-hero">
           <div className="home-hero-copy">
             <p className="welcome-text">Welcome Back, {user.name}!</p>
-            
+
             <h1 className="slogan-text">
               Think in <span className="accent">Steps</span>.<br />
               <span className="accent">Analyze</span> in Depth.
@@ -48,7 +61,7 @@ export default function UserHomePage({ user = { name: "Test User", email: "test@
               </button>
             </div>
           </div>
-          
+
           <div className="home-hero-media" aria-hidden="true">
             <img
               src="/assets/programming-code-editor-illustration-design-vector-removebg-preview.png"
@@ -66,7 +79,12 @@ export default function UserHomePage({ user = { name: "Test User", email: "test@
           </p>
 
           <div className="cards-grid">
-            <div className="card">
+            {/* Updated: Made the card clickable to navigate to /projects */}
+            <div
+              className="card"
+              onClick={() => navigate("/projects")}
+              style={{ cursor: "pointer" }}
+            >
               <div className="card-icon">
                 <span className="card-icon-badge">
                   <LuFolder size={24} color="#7F57F9" aria-hidden="true" />
@@ -78,7 +96,11 @@ export default function UserHomePage({ user = { name: "Test User", email: "test@
               </p>
             </div>
 
-            <div className="card">
+            <div
+              className="card"
+              onClick={() => navigate("/learning-path")}
+              style={{ cursor: "pointer" }}
+            >
               <div className="card-icon">
                 <span className="card-icon-badge">
                   <LuBookOpen size={24} color="#7F57F9" aria-hidden="true" />
@@ -90,7 +112,11 @@ export default function UserHomePage({ user = { name: "Test User", email: "test@
               </p>
             </div>
 
-            <div className="card">
+            <div
+              className="card"
+              onClick={() => navigate("/app")}
+              style={{ cursor: "pointer" }}
+            >
               <div className="card-icon">
                 <span className="card-icon-badge">
                   <LuChartBar size={24} color="#7F57F9" aria-hidden="true" />
@@ -116,20 +142,12 @@ export default function UserHomePage({ user = { name: "Test User", email: "test@
             </ul>
           </div>
 
-          <div className="code-snippet">
-            <pre>
-              <code>
-                    {`# Example output with feedback
-                    def bubble_sort(arr):
-                        n = len(arr)              # O(1)
-                        for i in range(n):        # O(n)
-                            for j in range(0, n-i-1):   # O(n)
-                                if arr[j] > arr[j+1]:   # O(1)
-                                    arr[j], arr[j+1] = arr[j+1], arr[j]  # O(1)
-
-                    # Overall Time: O(n^2)   Space: O(1)`}
-              </code>
-            </pre>
+          <div className="feature-image-container">
+            <img
+              src="/assets/example.png"
+              alt="AlgoBlocks Interface Example"
+              className="feature-example-image"
+            />
           </div>
         </section>
       </main>

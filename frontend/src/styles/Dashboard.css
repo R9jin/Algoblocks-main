@@ -15,7 +15,8 @@
   background: white;
 }
 
-.dashboard-header .header-left, .dashboard-header .header-right {
+.dashboard-header .header-left,
+.dashboard-header .header-right {
   display: flex;
   align-items: center;
   gap: 20px;
@@ -38,7 +39,8 @@
   font-size: 0.9rem;
   display: flex;
   align-items: center;
-  gap: 8px; /* Adds space between the icon and the text */
+  gap: 8px;
+  /* Adds space between the icon and the text */
 }
 
 /* Add this new class to control the size of your icon */
@@ -63,19 +65,21 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: none; /* <-- Changed from '1px solid #5A1398' to 'none' */
+  border: none;
+  /* <-- Changed from '1px solid #5A1398' to 'none' */
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  overflow: hidden; 
-  background-color: transparent; /* Changed to transparent so there's no background box */
+  overflow: hidden;
+  background-color: transparent;
+  /* Changed to transparent so there's no background box */
 }
 
 .user-profile-icon img {
   width: 100%;
   height: 100%;
-  object-fit: cover; 
+  object-fit: cover;
 }
 
 .dashboard-body {
@@ -130,7 +134,8 @@
 .banner-icon img {
   width: 50px;
   height: 50px;
-  object-fit: contain; /* Prevents image stretching */
+  object-fit: contain;
+  /* Prevents image stretching */
 }
 
 .banner-text h2 {
@@ -172,7 +177,8 @@
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 20px;
   margin-bottom: 40px;
-  align-items: start; /* Prevents cards from stretching heights to match neighbors */
+  align-items: start;
+  /* Prevents cards from stretching heights to match neighbors */
 }
 
 .template-card {
@@ -193,7 +199,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 0; 
+  margin-bottom: 0;
   transition: margin-bottom 0.3s ease;
 }
 
@@ -203,7 +209,7 @@
   align-items: center;
   gap: 10px;
   /* Removed the hardcoded margin-bottom so the card is compact when collapsed */
-  margin-bottom: 0; 
+  margin-bottom: 0;
   transition: margin-bottom 0.3s ease;
 }
 
@@ -216,7 +222,7 @@
 .card-icon-img {
   width: 24px;
   height: 24px;
-  object-fit: contain; 
+  object-fit: contain;
 }
 
 /* --- HOVER ANIMATION LOGIC --- */
@@ -231,9 +237,10 @@
 
 /* Hover state: Expand the container to reveal both text and button */
 .template-card:hover .card-hover-content {
-  max-height: 250px; /* Made slightly taller to ensure long descriptions + button fit */
+  max-height: 250px;
+  /* Made slightly taller to ensure long descriptions + button fit */
   opacity: 1;
-  margin-top: 12px; 
+  margin-top: 12px;
 }
 
 /* Base text styling */
@@ -242,7 +249,8 @@
   color: #555;
   font-size: 0.85rem;
   line-height: 1.5;
-  margin-bottom: 15px; /* Adds space between the text and the button */
+  margin-bottom: 15px;
+  /* Adds space between the text and the button */
 }
 
 /* Test Template Button Styling */
@@ -264,6 +272,7 @@
   background-color: #7F57F9;
   transform: translateY(-1px);
 }
+
 /* ... keep sidebar and banner CSS ... */
 
 /* Sidebar */
@@ -292,6 +301,7 @@
 
 /* Large Tablets */
 @media (max-width: 1024px) {
+
   .dashboard-main,
   .dashboard-sidebar {
     padding: 25px;
@@ -390,4 +400,261 @@
     width: 40px;
     height: 40px;
   }
+}
+
+.algorithm-library-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  /* 3 columns for Sorting, Searching, Recursive */
+  gap: 40px;
+  /* space between columns */
+  margin-bottom: 50px;
+}
+
+.algorithm-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.column-title {
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  color: #6e6e8e;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+}
+
+.algorithm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  cursor: pointer;
+  transition: transform 0.2s, color 0.2s;
+}
+
+.algorithm-item:hover {
+  transform: translateX(5px);
+  color: #5A1398;
+}
+
+.algo-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+@media (max-width: 900px) {
+  .algorithm-library-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .algorithm-library-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.algorithm-library-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  /* 3 columns for Sorting / Searching / Recursive */
+  gap: 40px;
+  /* spacing between columns */
+  margin-bottom: 50px;
+}
+
+.algorithm-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.column-title {
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  color: #6e6e8e;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+}
+
+/* Reuse your old card styles */
+.algorithm-card {
+  background-color: #EBE4FF;
+  border: 1px solid #BCA1FC;
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.algorithm-card:hover {
+  transform: translateY(-3px);
+  background-color: #e0d4ff;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.card-header h4 {
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 1.05rem;
+}
+
+.card-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+/* Hover content */
+.card-hover-content {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out, margin-top 0.3s ease-in-out;
+}
+
+.algorithm-card:hover .card-hover-content {
+  max-height: 250px;
+  /* enough space for desc + button */
+  opacity: 1;
+  margin-top: 12px;
+}
+
+.template-card-desc {
+  margin: 0 0 10px 0;
+  color: #555;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.try-template-btn {
+  background-color: #5A1398;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.try-template-btn:hover {
+  background-color: #7F57F9;
+  transform: translateY(-1px);
+}
+
+.algorithm-library-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  /* 3 columns for Sorting / Searching / Recursive */
+  gap: 40px;
+  /* spacing between columns */
+  margin-bottom: 50px;
+}
+
+.algorithm-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.column-title {
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  color: #6e6e8e;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+}
+
+/* Reuse your old card styles */
+.algorithm-card {
+  background-color: #EBE4FF;
+  border: 1px solid #BCA1FC;
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.algorithm-card:hover {
+  transform: translateY(-3px);
+  background-color: #e0d4ff;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.card-header h4 {
+  margin: 0;
+  color: #1a1a1a;
+  font-size: 1.05rem;
+}
+
+.card-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+/* Hover content */
+.card-hover-content {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out, margin-top 0.3s ease-in-out;
+}
+
+.algorithm-card:hover .card-hover-content {
+  max-height: 250px;
+  /* enough space for desc + button */
+  opacity: 1;
+  margin-top: 12px;
+}
+
+.template-card-desc {
+  margin: 0 0 10px 0;
+  color: #555;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.try-template-btn {
+  background-color: #5A1398;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.try-template-btn:hover {
+  background-color: #7F57F9;
+  transform: translateY(-1px);
+}
+
+.dashboard-body>* {
+  height: 100%;
+}
+
+.dashboard-body {
+  height: calc(100vh - 80px);
+  /* adjust if your header height is 80px */
 }
