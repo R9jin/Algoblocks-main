@@ -296,29 +296,40 @@ export default function MainApp() {
     <div className="workspace-app-container">
       {/* Toast Notification */}
       {toast.show && (
-        <div style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', background: toast.type === 'error' ? '#E74C3C' : '#00b8a3', color: 'white', padding: '12px 24px', borderRadius: '8px', zIndex: 10000, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', fontWeight: 'bold' }}>
+        <div className={`toast-notification ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`}>
           {toast.message}
         </div>
       )}
 
       {/* Save Modal */}
       {saveModal.isOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <div style={{ background: '#2A1B54', padding: '24px', borderRadius: '12px', width: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', border: '1px solid #4a4a4a', color: '#EBE4FF' }}>
-            <h2 style={{marginTop: 0, marginBottom: '20px', fontSize: '1.4rem'}}>Save Custom Template</h2>
-            <div style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
+        <div className="modal-overlay">
+          <div className="save-modal-content">
+            <h2 className="save-modal-title">Save Custom Template</h2>
+            <div className="save-modal-form">
               <div>
-                <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#B8A0D6'}}>Template Name</label>
-                <input type="text" value={saveModal.title} onChange={e => setSaveModal({...saveModal, title: e.target.value})} placeholder="e.g. My Optimized Sort" style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #4a4a4a', background: '#1C1236', color: 'white', outline: 'none'}} />
+                <label className="save-modal-label">Template Name</label>
+                <input 
+                  type="text" 
+                  value={saveModal.title} 
+                  onChange={e => setSaveModal({...saveModal, title: e.target.value})} 
+                  placeholder="e.g. My Optimized Sort" 
+                  className="save-modal-input" 
+                />
               </div>
               <div>
-                <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#B8A0D6'}}>Description</label>
-                <textarea value={saveModal.description} onChange={e => setSaveModal({...saveModal, description: e.target.value})} placeholder="What does this do?" style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #4a4a4a', background: '#1C1236', color: 'white', minHeight: '80px', outline: 'none', resize: 'vertical'}} />
+                <label className="save-modal-label">Description</label>
+                <textarea 
+                  value={saveModal.description} 
+                  onChange={e => setSaveModal({...saveModal, description: e.target.value})} 
+                  placeholder="What does this do?" 
+                  className="save-modal-textarea" 
+                />
               </div>
             </div>
-            <div style={{display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '25px'}}>
-              <button onClick={() => setSaveModal({...saveModal, isOpen: false})} style={{padding: '8px 16px', background: 'transparent', color: '#B8A0D6', border: '1px solid #B8A0D6', borderRadius: '6px', cursor: 'pointer'}}>Cancel</button>
-              <button onClick={submitSave} style={{padding: '8px 16px', background: '#00b8a3', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold'}}>Save</button>
+            <div className="save-modal-actions">
+              <button onClick={() => setSaveModal({...saveModal, isOpen: false})} className="save-modal-cancel-btn">Cancel</button>
+              <button onClick={submitSave} className="save-modal-confirm-btn">Save</button>
             </div>
           </div>
         </div>
@@ -336,29 +347,29 @@ export default function MainApp() {
       <Split className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} sizes={[20, 80]} minSize={[250, 400]} gutterSize={8}>
         
         {/* Templates Sidebar */}
-        <aside className="templates-sidebar" style={{display: 'flex', flexDirection: 'column'}}>
-          <div className="sidebar-search" style={{ margin: '15px' }}>
+        <aside className="templates-sidebar">
+
+          <div className="sidebar-search">
             <img src="/assets/search-icon.png" alt="Search" className="search-icon" />
             <input type="text" placeholder="Search templates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
 
-          <div className="sidebar-list" style={{flex: 1, overflowY: 'auto'}}>
+          <div className="sidebar-list">
             {filteredTemplates.map((item) => (
               <div key={item._id || item.title} className="sidebar-card" onClick={() => loadConfirm(item)}>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <div className="sidebar-card-header">
                   <h4>{item.title}</h4>
                   
                   {item.isSystem ? (
-                    <span style={{fontSize: '0.7rem', background: '#4a4a4a', color: 'white', padding: '2px 6px', borderRadius: '10px'}}>System</span>
+                    <span className="badge-system">System</span>
                   ) : (
-                    <div style={{display: 'flex', gap: '5px'}}>
-                      <span style={{fontSize: '0.7rem', background: '#00b8a3', color: 'white', padding: '2px 6px', borderRadius: '10px'}}>Custom</span>
-                      <button onClick={(e) => handleDeleteItem(e, item._id)} style={{background: 'transparent', border: 'none', color: '#ff4d4d', cursor: 'pointer', fontSize: '1.1rem', padding: '0 2px'}} title="Delete">
+                    <div className="badge-custom-group">
+                      <span className="badge-custom">Custom</span>
+                      <button onClick={(e) => handleDeleteItem(e, item._id)} className="sidebar-delete-btn" title="Delete">
                         ✕
                       </button>
                     </div>
                   )}
-
                 </div>
                 <p>{item.description}</p>
               </div>
@@ -374,18 +385,27 @@ export default function MainApp() {
           </button>
 
           <div className="editor-container">
-            <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
+            <div className={viewMode === 'workspace' ? 'workspace-view d-block' : 'workspace-view d-none'}>
               <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
             </div>
 
-            <div style={{ display: viewMode === 'python' ? 'flex' : 'none', flexDirection: 'column', height: '100%', background: '#1C1236' }}>
-              <div style={{ padding: '10px 20px', background: '#2A1B54', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#EBE4FF', fontSize: '0.9rem', fontStyle: 'italic' }}>{isEditingCode ? "✏️ Unsaved code changes..." : "Code is synced with blocks."}</span>
-                <button onClick={handleSyncToBlocks} disabled={!isEditingCode} style={{ background: isEditingCode ? '#00b8a3' : '#4a4a4a', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: isEditingCode ? 'pointer' : 'not-allowed', fontWeight: 'bold' }}>
+            <div className={viewMode === 'python' ? 'python-view d-flex' : 'python-view d-none'}>
+              <div className="python-header">
+                <span className="python-sync-status">{isEditingCode ? "✏️ Unsaved code changes..." : "Code is synced with blocks."}</span>
+                <button 
+                  onClick={handleSyncToBlocks} 
+                  disabled={!isEditingCode} 
+                  className={`python-sync-btn ${isEditingCode ? 'active' : 'disabled'}`}
+                >
                   Sync to Blocks ↻
                 </button>
               </div>
-              <textarea value={generatedPython} onChange={(e) => { setGeneratedPython(e.target.value); setIsEditingCode(true); }} spellCheck={false} style={{ flex: 1, margin: 0, padding: '20px', fontSize: '0.95rem', fontFamily: "'Fira Code', Consolas, Monaco, monospace", background: '#1C1236', color: '#EBE4FF', border: 'none', outline: 'none', resize: 'none', whiteSpace: 'pre', lineHeight: '1.5' }} />
+              <textarea 
+                value={generatedPython} 
+                onChange={(e) => { setGeneratedPython(e.target.value); setIsEditingCode(true); }} 
+                spellCheck={false} 
+                className="python-textarea" 
+              />
             </div>
           </div>
 
@@ -402,18 +422,18 @@ export default function MainApp() {
                   <pre className="console-output">{consoleOutput}</pre>
                 ) : (
                   <div className="complexity-content">
-                    <div className="complexity-tabs" style={{ justifyContent: 'space-between', padding: '0 15px' }}>
-                      <div style={{ display: 'flex', gap: '10px' }}>
+                    <div className="complexity-tabs">
+                      <div className="tab-btn-group">
                         <button onClick={() => { setActiveTab("local"); setExpandedLines({}); }} className={`tab-btn ${activeTab === 'local' ? 'active' : ''}`}>Local Complexity</button>
                         <button onClick={() => { setActiveTab("global"); setExpandedLines({}); }} className={`tab-btn ${activeTab === 'global' ? 'active' : ''}`}>Global Complexity</button>
                       </div>
-                      <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                      <div className="total-badge-group">
                         <span className="total-badge"><span className="total-label">Total Time:</span> {analysisResult.total}</span>
-                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)' }}><span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {analysisResult.space_total}</span>
+                        <span className="total-badge space"><span className="total-label space">Total Space:</span> {analysisResult.space_total}</span>
                       </div>
                     </div>
-                    <div className="complexity-table-wrapper" style={{ overflowX: 'auto' }}>
-                      <table className="complexity-table" style={{ width: '100%', minWidth: '800px', textAlign: 'left' }}>
+                    <div className="complexity-table-wrapper">
+                      <table className="complexity-table">
                         <thead><tr><th>Line of Code</th><th>Operation</th><th>{activeTab === 'local' ? 'Local Time' : 'Global Time'}</th><th>{activeTab === 'local' ? 'Local Space' : 'Global Space'}</th></tr></thead>
                         <tbody>
                           {analysisResult.lines.map((row, i) => {
@@ -424,23 +444,23 @@ export default function MainApp() {
                               <React.Fragment key={i}>
                                 <tr className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`} onClick={() => toggleLine(i)} style={{ cursor: explanationText ? 'pointer' : 'default' }}>
                                   <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>{row.lineOfCode}</td>
-                                  <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
+                                  <td className="operation-cell">{row.operation || '-'}</td>
                                   <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>{formatComplexity(activeTab === 'local' ? row.local_time : row.global_time)}</td>
                                   <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
                                     {formatComplexity(activeTab === 'local' ? row.local_space : row.global_space)}
-                                    {explanationText && <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>{expandedLines[i] ? '▼' : '▶'}</span>}
+                                    {explanationText && <span className="dropdown-chevron">{expandedLines[i] ? '▼' : '▶'}</span>}
                                   </td>
                                 </tr>
                                 
                                 {expandedLines[i] && explanationText && (
                                   <tr className="explanation-row">
                                     <td colSpan="4">
-                                      <div className="explanation-content" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                                        <div style={{ flex: 1 }}>
-                                          <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
+                                      <div className="explanation-content">
+                                        <div className="explanation-text">
+                                          <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon explanation-icon" />
                                           <p>{explanationText}</p>
                                         </div>
-                                        <div style={{ minWidth: '200px' }}>
+                                        <div className="explanation-graph">
                                           <ComplexityGraph complexity={graphComplexity} color={row.color} label={graphLabel} />
                                         </div>
                                       </div>
@@ -463,7 +483,7 @@ export default function MainApp() {
             <div className="footer-left">
               <button className={`footer-tab ${bottomPanel === 'console' ? 'active' : ''}`} onClick={() => setBottomPanel(bottomPanel === 'console' ? null : 'console')}><img src="/assets/console-icon.png" alt="Console" className="tab-icon" /> Console</button>
               <button className={`footer-tab ${bottomPanel === 'complexity' ? 'active' : ''}`} onClick={() => setBottomPanel(bottomPanel === 'complexity' ? null : 'complexity')}><img src="/assets/complexity-icon.png" alt="Complexity" className="tab-icon" /> Complexity</button>
-              <button className="footer-tab" onClick={() => setIsBigOModalOpen(true)} style={{ color: '#ffffff', fontWeight: 'bold' }}><img src="/assets/table-icon.png" alt="Reference" className="tab-icon" /> Big O Reference</button>
+              <button className="footer-tab big-o-btn" onClick={() => setIsBigOModalOpen(true)}><img src="/assets/table-icon.png" alt="Reference" className="tab-icon" /> Big O Reference</button>
             </div>
             <div className="footer-right">
               <button className="footer-action-icon" onClick={handleClear} title="Clear Workspace"><img src="/assets/recursive-icon.png" alt="Refresh" /></button>
