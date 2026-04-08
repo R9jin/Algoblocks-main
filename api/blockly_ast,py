@@ -15,9 +15,10 @@ class BlocklyASTConverter:
             if first_block:
                 first_block["x"] = 20
                 first_block["y"] = 20
-                return {"blocks": {"languageVersion": 0, "blocks": [first_block]}}
+                # ADDED "status": "success" here!
+                return {"status": "success", "blocks": {"languageVersion": 0, "blocks": [first_block]}}
 
-            return {"blocks": {"languageVersion": 0, "blocks": []}}
+            return {"status": "success", "blocks": {"languageVersion": 0, "blocks": []}}
 
         except Exception as e:
             print("AST Parsing Error:", e)
@@ -25,6 +26,7 @@ class BlocklyASTConverter:
 
     def raw_fallback(self, code):
         return {
+            "status": "error", # Explicitly tell the frontend this is a fallback
             "blocks": {
                 "languageVersion": 0,
                 "blocks": [{
@@ -51,6 +53,10 @@ class BlocklyASTConverter:
 
             if not block:
                 block = self.make_raw_statement(node)
+                
+            # Failsafe: if even raw_statement fails, skip it so the whole app doesn't crash
+            if not block:
+                continue
 
             if not first_block:
                 first_block = block
@@ -253,14 +259,17 @@ class BlocklyASTConverter:
             if isinstance(node, ast.Assign):
                 target = node.targets[0]
                 if isinstance(target, ast.Name):
-                    return {
+                    block = {
                         "type": "variables_set",
                         "id": gen_uid(),
                         "fields": {"VAR": {"id": target.id, "name": target.id}},
-                        "inputs": {
-                            "VALUE": {"block": self.serialize_expr(node.value)}
-                        }
+                        "inputs": {}
                     }
+                    val_block = self.serialize_expr(node.value)
+                    if val_block:
+                        block["inputs"]["VALUE"] = {"block": val_block}
+                    return block
+                    
                 # Handle Dictionary/List Assignment (e.g., dict['key'] = value)
                 elif isinstance(target, ast.Subscript):
                     slice_val = target.slice.value if hasattr(target.slice, 'value') else target.slice
@@ -295,27 +304,35 @@ class BlocklyASTConverter:
                 block = {
                     "type": "controls_if",
                     "id": gen_uid(),
-                    "inputs": {
-                        "IF0": {"block": self.serialize_expr(node.test)},
-                        "DO0": {"block": self.serialize_body(node.body)}
-                    }
+                    "inputs": {}
                 }
+                test_block = self.serialize_expr(node.test)
+                do_block = self.serialize_body(node.body)
+                
+                if test_block: block["inputs"]["IF0"] = {"block": test_block}
+                if do_block: block["inputs"]["DO0"] = {"block": do_block}
+                
                 if node.orelse:
-                    block["extraState"] = {"hasElse": True}
-                    block["inputs"]["ELSE"] = {"block": self.serialize_body(node.orelse)}
+                    else_block = self.serialize_body(node.orelse)
+                    if else_block:
+                        block["extraState"] = {"hasElse": True}
+                        block["inputs"]["ELSE"] = {"block": else_block}
                 return block
 
             # ---------- WHILE ----------
             elif isinstance(node, ast.While):
-                return {
+                block = {
                     "type": "controls_whileUntil",
                     "id": gen_uid(),
                     "fields": {"MODE": "WHILE"},
-                    "inputs": {
-                        "BOOL": {"block": self.serialize_expr(node.test)},
-                        "DO": {"block": self.serialize_body(node.body)}
-                    }
+                    "inputs": {}
                 }
+                test_block = self.serialize_expr(node.test)
+                do_block = self.serialize_body(node.body)
+                
+                if test_block: block["inputs"]["BOOL"] = {"block": test_block}
+                if do_block: block["inputs"]["DO"] = {"block": do_block}
+                return block
 
             # ---------- FOR ----------
             elif isinstance(node, ast.For):
@@ -340,13 +357,12 @@ class BlocklyASTConverter:
 
             # ---------- RETURN ----------
             elif isinstance(node, ast.Return):
-                return {
-                    "type": "procedure_return_value",
-                    "id": gen_uid(),
-                    "inputs": {
-                        "VALUE": {"block": self.serialize_expr(node.value)}
-                    } if node.value else {}
-                }
+                block = {"type": "procedure_return_value", "id": gen_uid()}
+                if node.value:
+                    val_block = self.serialize_expr(node.value)
+                    if val_block:
+                        block["inputs"] = {"VALUE": {"block": val_block}}
+                return block
 
             # ---------- FUNCTION ----------
             elif isinstance(node, ast.FunctionDef):
@@ -370,13 +386,13 @@ class BlocklyASTConverter:
                     }
                 # 2. Print function call
                 elif isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name) and node.value.func.id == "print":
-                    return {
-                        "type": "text_print",
-                        "id": gen_uid(),
-                        "inputs": {
-                            "TEXT": {"block": self.serialize_expr(node.value.args[0])} if node.value.args else None
-                        }
-                    }
+                    block = {"type": "text_print", "id": gen_uid()}
+                    if node.value.args:
+                        expr_block = self.serialize_expr(node.value.args[0])
+                        # This safely assigns the input only if the expression successfully parsed
+                        if expr_block:
+                            block["inputs"] = {"TEXT": {"block": expr_block}}
+                    return block
                 else:
                     return self.make_raw_statement(node)
 
