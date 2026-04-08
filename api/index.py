@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from blockly_ast import BlocklyASTConverter
 from pydantic import BaseModel
 import ast
-import requests # Add this to the top of your file with the other imports
+import requests 
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -15,7 +15,6 @@ from database import projects_collection, users_collection, templates_collection
 from models import ProjectModel, ProjectUpdate, TemplateModel, TemplateUpdate
 from bson import ObjectId             
 
-# Import the newly separated ComplexityAnalyzer
 from analyzer import ComplexityAnalyzer
 
 app = FastAPI()  
@@ -55,8 +54,9 @@ class AstRequest(BaseModel):
 async def ast_to_blocks(request: AstRequest):
     try:
         converter = BlocklyASTConverter()
-        # Just return the JSON directly! No extra wrappers.
         return converter.convert(request.code)
+    except SyntaxError as e:
+        return {"status": "error", "error_type": "SyntaxError", "line": e.lineno, "message": e.msg}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -117,6 +117,17 @@ def analyze_complexity(payload: CodePayload):
             "space_total": "O(n)" if analyzer.max_space_weight > 0 else "O(1)",  
             "is_recursive": is_recursive                       
         }
+    except SyntaxError as e:
+        return {
+            "status": "error",
+            "error_type": "SyntaxError",
+            "line": e.lineno,
+            "message": e.msg,
+            "total": "Syntax Error",
+            "space_total": "-",
+            "lines": [],
+            "is_recursive": False
+        }
     except Exception as e:
         return {"status": "error", "total": "Error", "total_recurrence": "Error", "lines": [], "is_recursive": False}
 
@@ -156,11 +167,7 @@ def get_projects():
 
 @app.post("/api/login")
 def login_user(req: LoginRequest):
-    print(f"Trying to log in with email: '{req.email}' and password: '{req.password}'")
-    
     user = users_collection.find_one({"email": req.email})
-    print(f"MongoDB returned: {user}")
-    
     if user and user.get("password") == req.password:
         return {"status": "success", "email": req.email, "name": user.get("name"), "progress": user.get("progress", {})}
     
@@ -215,7 +222,6 @@ def update_project(project_id: str, payload: ProjectUpdate):
     if projects_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
     try:
-        # Dynamically build the update fields
         update_data = {}
         if payload.data is not None: update_data["data"] = payload.data
         if payload.title is not None: update_data["title"] = payload.title
@@ -237,7 +243,6 @@ def google_auth(req: GoogleAuthRequest):
     if users_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
 
-    # 1. Verify the token with Google's servers
     google_response = requests.get(
         "https://www.googleapis.com/oauth2/v3/userinfo",
         headers={"Authorization": f"Bearer {req.access_token}"}
@@ -253,20 +258,17 @@ def google_auth(req: GoogleAuthRequest):
     if not email:
         raise HTTPException(status_code=400, detail="Email not provided by Google")
 
-    # 2. Check if the user already exists in your MongoDB
     user = users_collection.find_one({"email": email})
     
     if not user:
-        # 3. If they don't exist, create a new account for them automatically
         user = {
             "name": name,
             "email": email,
-            "password": "", # Leave password empty for OAuth users
+            "password": "", 
             "progress": {}
         }
         users_collection.insert_one(user)
 
-    # 4. Return the standard login payload
     return {
         "status": "success", 
         "email": email, 

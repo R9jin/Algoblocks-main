@@ -39,6 +39,9 @@ export default function MainApp() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
+  // --- Error State ---
+  const [syntaxError, setSyntaxError] = useState(null);
+
   // --- Unified Template List State ---
   const [allTemplates, setAllTemplates] = useState([]);
   const [currentLoadedId, setCurrentLoadedId] = useState(null);
@@ -88,23 +91,13 @@ export default function MainApp() {
   // --- Fetch Combined Templates: System First, then User's Custom Templates ---
   const fetchTemplates = async () => {
     try {
-      // 1. Map internal system templates to standard format
-      const baseTemplates = SIDEBAR_TEMPLATES.map(t => ({
-        ...t,
-        title: t.name,
-        description: t.desc,
-        isSystem: true
-      }));
-
+      const baseTemplates = SIDEBAR_TEMPLATES.map(t => ({ ...t, title: t.name, description: t.desc, isSystem: true }));
       const storedUser = localStorage.getItem("user");
       if (!storedUser) {
         setAllTemplates(baseTemplates);
         return;
       }
-      
       const user = JSON.parse(storedUser);
-
-      // 2. Fetch user's custom templates from the DB
       const res = await fetch('/api/projects');
       const data = await res.json();
       
@@ -112,14 +105,8 @@ export default function MainApp() {
         const userTemplates = data.projects
           .filter(p => p.owner_id === user.email)
           .map(p => ({
-            _id: p._id,
-            title: p.title,
-            description: p.description || "Custom saved template",
-            isSystem: false,
-            data: p.data
+            _id: p._id, title: p.title, description: p.description || "Custom saved template", isSystem: false, data: p.data
           }));
-        
-        // Render System templates first, then append User templates to the end
         setAllTemplates([...baseTemplates, ...userTemplates]);
       } else {
         setAllTemplates(baseTemplates);
@@ -132,17 +119,15 @@ export default function MainApp() {
 
   useEffect(() => { fetchTemplates(); }, []);
 
-  // --- Loading Logic ---
   const executeLoad = async (item) => {
     try {
       setAnalysisResult({ lines: [], total: "Analyzing...", space_total: "Analyzing...", is_recursive: false });
       let json;
-
       if (item.isSystem) {
         const response = await fetch(`/templates/${item.path}.json`);
         if (!response.ok) throw new Error("Template not found");
         json = await response.json();
-        setCurrentLoadedId(null); // Treat as new if user saves it later
+        setCurrentLoadedId(null); 
       } else {
         json = item.data;
         setCurrentLoadedId(item._id);
@@ -160,48 +145,69 @@ export default function MainApp() {
 
   const loadConfirm = (item) => {
     setModalConfig({
-      isOpen: true,
-      title: `Load ${item.title}?`,
-      message: "This will overwrite your current workspace. Continue?",
-      confirmText: "Load Template",
-      isDanger: false,
-      onConfirmAction: () => {
-        closeModal();
-        executeLoad(item);
-      }
+      isOpen: true, title: `Load ${item.title}?`, message: "This will overwrite your current workspace. Continue?", confirmText: "Load Template", isDanger: false,
+      onConfirmAction: () => { closeModal(); executeLoad(item); }
     });
   };
 
-  // --- Workspace Actions ---
+  // --- Blockly View Changes ---
   const handleBlocklyChange = async (json, pythonCode) => {
     if (!isEditingCode) setGeneratedPython(pythonCode);
     setBlocklyJson(json);
     try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: pythonCode })
-      });
+      const response = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: pythonCode }) });
       const data = await response.json();
+      
       if (data.status === "success") {
         setAnalysisResult({ total: data.total, space_total: data.space_total || "O(1)", lines: data.lines || [], is_recursive: data.is_recursive || false });
+        setSyntaxError(null);
+      } else if (data.status === "error" && data.error_type === "SyntaxError") {
+        setSyntaxError({ line: data.line, message: data.message });
+        setAnalysisResult({ lines: [], total: "Syntax Error", space_total: "-", is_recursive: false });
+      } else {
+        setSyntaxError(null);
       }
     } catch (e) { console.error("Analysis Error:", e); }
   };
 
-  const handleSyncToBlocks = () => {
+  // --- Real-time Python Code Analysis (Debounced) ---
+  useEffect(() => {
+    if (!isEditingCode) return;
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: generatedPython }) });
+        const data = await response.json();
+        if (data.status === "success") {
+          setAnalysisResult({ total: data.total, space_total: data.space_total || "O(1)", lines: data.lines || [], is_recursive: data.is_recursive || false });
+          setSyntaxError(null);
+        } else if (data.status === "error" && data.error_type === "SyntaxError") {
+          setSyntaxError({ line: data.line, message: data.message });
+          setAnalysisResult({ lines: [], total: "Syntax Error", space_total: "-", is_recursive: false });
+        } else {
+           setSyntaxError(null);
+        }
+      } catch (error) { console.error("Analysis Error:", error); }
+    }, 500); // 500ms delay to feel exactly like VSCode live syntax checking
+    return () => clearTimeout(timeoutId);
+  }, [generatedPython, isEditingCode]);
+
+  const handleSyncToBlocks = async () => {
     if (workspaceRef.current && generatedPython) {
-      workspaceRef.current.loadFromPython(generatedPython);
-      setIsEditingCode(false);
-      setViewMode("workspace");
-      showToast("Code successfully synced to Blocks");
+      try {
+        // Will throw an error if the backend ast parsing fails
+        await workspaceRef.current.loadFromPython(generatedPython);
+        setIsEditingCode(false);
+        setViewMode("workspace");
+        showToast("Code successfully synced to Blocks");
+      } catch (e) {
+        showToast("Syntax Error: Cannot sync to blocks until fixed.", "error");
+      }
     }
   };
 
   const handleClear = () => {
     setModalConfig({
-      isOpen: true, title: "Clear Workspace?", message: "Are you sure you want to clear? All unsaved progress will be lost.",
-      confirmText: "Clear", isDanger: true,
+      isOpen: true, title: "Clear Workspace?", message: "Are you sure you want to clear? All unsaved progress will be lost.", confirmText: "Clear", isDanger: true,
       onConfirmAction: () => {
         closeModal();
         if (workspaceRef.current) {
@@ -209,7 +215,7 @@ export default function MainApp() {
           setGeneratedPython("# Drag blocks to generate Python code");
           setBlocklyJson(null);
           setAnalysisResult({ lines: [], total: "O(1)", space_total: "O(1)", is_recursive: false });
-          setBottomPanel(null); setExpandedLines({});
+          setBottomPanel(null); setExpandedLines({}); setSyntaxError(null);
           setCurrentLoadedId(null); setCurrentProjectTitle("Untitled Project");
         }
       }
@@ -223,32 +229,17 @@ export default function MainApp() {
 
   const submitSave = async () => {
     const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      showToast("You must be signed in to save.", "error"); return;
-    }
+    if (!storedUser) { showToast("You must be signed in to save.", "error"); return; }
+    
     const user = JSON.parse(storedUser);
-
-    const payload = {
-      title: saveModal.title || "My Custom Template",
-      description: saveModal.description || "",
-      data: blocklyJson,
-      owner_id: user.email
-    };
+    const payload = { title: saveModal.title || "My Custom Template", description: saveModal.description || "", data: blocklyJson, owner_id: user.email };
 
     try {
       let res;
       if (currentLoadedId) {
-        res = await fetch(`/api/projects/${currentLoadedId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        res = await fetch(`/api/projects/${currentLoadedId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       } else {
-        res = await fetch("/api/projects", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        res = await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       }
       
       if (res.ok) {
@@ -256,7 +247,7 @@ export default function MainApp() {
         showToast("Template saved!", "success");
         if (!currentLoadedId && result.id) setCurrentLoadedId(result.id);
         setCurrentProjectTitle(payload.title);
-        fetchTemplates(); // Refresh the list to show new user template at the end
+        fetchTemplates(); 
       } else {
         showToast("Failed to save", "error");
       }
@@ -273,12 +264,8 @@ export default function MainApp() {
         showToast("Template deleted!", "success");
         fetchTemplates();
         if (currentLoadedId === id) handleClear(); 
-      } else {
-        showToast("Failed to delete", "error");
-      }
-    } catch(e) {
-      showToast("Connection error", "error");
-    }
+      } else { showToast("Failed to delete", "error"); }
+    } catch(e) { showToast("Connection error", "error"); }
   };
 
   const runCode = async () => {
@@ -294,14 +281,12 @@ export default function MainApp() {
 
   return (
     <div className="workspace-app-container">
-      {/* Toast Notification */}
       {toast.show && (
         <div className={`toast-notification ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`}>
           {toast.message}
         </div>
       )}
 
-      {/* Save Modal */}
       {saveModal.isOpen && (
         <div className="modal-overlay">
           <div className="save-modal-content">
@@ -309,22 +294,11 @@ export default function MainApp() {
             <div className="save-modal-form">
               <div>
                 <label className="save-modal-label">Template Name</label>
-                <input 
-                  type="text" 
-                  value={saveModal.title} 
-                  onChange={e => setSaveModal({...saveModal, title: e.target.value})} 
-                  placeholder="e.g. My Optimized Sort" 
-                  className="save-modal-input" 
-                />
+                <input type="text" value={saveModal.title} onChange={e => setSaveModal({...saveModal, title: e.target.value})} placeholder="e.g. My Optimized Sort" className="save-modal-input" />
               </div>
               <div>
                 <label className="save-modal-label">Description</label>
-                <textarea 
-                  value={saveModal.description} 
-                  onChange={e => setSaveModal({...saveModal, description: e.target.value})} 
-                  placeholder="What does this do?" 
-                  className="save-modal-textarea" 
-                />
+                <textarea value={saveModal.description} onChange={e => setSaveModal({...saveModal, description: e.target.value})} placeholder="What does this do?" className="save-modal-textarea" />
               </div>
             </div>
             <div className="save-modal-actions">
@@ -335,39 +309,24 @@ export default function MainApp() {
         </div>
       )}
 
-      <WorkspaceHeader
-        viewMode={viewMode} setViewMode={setViewMode} runCode={runCode}
-        handleExport={openSaveModal} 
-        handleSaveToDB={openSaveModal} 
-        currentProjectId={currentLoadedId} 
-        currentProjectTitle={currentProjectTitle}
-        handleUpdateDB={submitSave} // Unified saving flow
-      />
+      <WorkspaceHeader viewMode={viewMode} setViewMode={setViewMode} runCode={runCode} handleExport={openSaveModal} handleSaveToDB={openSaveModal} currentProjectId={currentLoadedId} currentProjectTitle={currentProjectTitle} handleUpdateDB={submitSave} />
 
       <Split className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} sizes={[20, 80]} minSize={[250, 400]} gutterSize={8}>
         
-        {/* Templates Sidebar */}
         <aside className="templates-sidebar">
-
           <div className="sidebar-search">
             <img src="/assets/search-icon.png" alt="Search" className="search-icon" />
             <input type="text" placeholder="Search templates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-
           <div className="sidebar-list">
             {filteredTemplates.map((item) => (
               <div key={item._id || item.title} className="sidebar-card" onClick={() => loadConfirm(item)}>
                 <div className="sidebar-card-header">
                   <h4>{item.title}</h4>
-                  
-                  {item.isSystem ? (
-                    <span className="badge-system">System</span>
-                  ) : (
+                  {item.isSystem ? (<span className="badge-system">System</span>) : (
                     <div className="badge-custom-group">
                       <span className="badge-custom">Custom</span>
-                      <button onClick={(e) => handleDeleteItem(e, item._id)} className="sidebar-delete-btn" title="Delete">
-                        ✕
-                      </button>
+                      <button onClick={(e) => handleDeleteItem(e, item._id)} className="sidebar-delete-btn" title="Delete">✕</button>
                     </div>
                   )}
                 </div>
@@ -378,34 +337,78 @@ export default function MainApp() {
           </div>
         </aside>
 
-        {/* Main Workspace Area */}
         <main className="workspace-main">
           <button className={`sidebar-toggle-btn ${!isSidebarVisible ? 'closed' : ''}`} onClick={() => setIsSidebarVisible(!isSidebarVisible)} title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}>
             <span className="toggle-icon">❮</span>
           </button>
 
           <div className="editor-container">
+            {/* Visual Workspace view */}
             <div className={viewMode === 'workspace' ? 'workspace-view d-block' : 'workspace-view d-none'}>
-              <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
+              <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} syntaxError={syntaxError} />
             </div>
 
+            {/* VSCode-like Python Editor View */}
             <div className={viewMode === 'python' ? 'python-view d-flex' : 'python-view d-none'}>
               <div className="python-header">
                 <span className="python-sync-status">{isEditingCode ? "✏️ Unsaved code changes..." : "Code is synced with blocks."}</span>
-                <button 
-                  onClick={handleSyncToBlocks} 
-                  disabled={!isEditingCode} 
-                  className={`python-sync-btn ${isEditingCode ? 'active' : 'disabled'}`}
-                >
+                <button onClick={handleSyncToBlocks} disabled={!isEditingCode} className={`python-sync-btn ${isEditingCode ? 'active' : 'disabled'}`}>
                   Sync to Blocks ↻
                 </button>
               </div>
-              <textarea 
-                value={generatedPython} 
-                onChange={(e) => { setGeneratedPython(e.target.value); setIsEditingCode(true); }} 
-                spellCheck={false} 
-                className="python-textarea" 
-              />
+
+              <div style={{ position: 'relative', flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+                
+                {/* VSCode-style Dynamic Line Error Highlight */}
+                {syntaxError && (
+                  <div style={{
+                    position: 'absolute',
+                    top: `${(syntaxError.line - 1) * 24 + 20}px`, /* 20px padding + (lineIdx * 24px lineHeight) */
+                    left: 0,
+                    right: 0,
+                    height: '24px',
+                    backgroundColor: 'rgba(231, 76, 60, 0.15)',
+                    borderLeft: '4px solid #E74C3C',
+                    pointerEvents: 'none',
+                    zIndex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    paddingLeft: '16px'
+                  }}>
+                    <span style={{ color: '#E74C3C', position: 'absolute', right: '20px', fontSize: '0.8rem', fontStyle: 'italic', fontWeight: 'bold' }}>
+                      ⚠️ {syntaxError.message}
+                    </span>
+                  </div>
+                )}
+
+                <textarea 
+                  value={generatedPython} 
+                  onChange={(e) => { 
+                    setGeneratedPython(e.target.value); 
+                    setIsEditingCode(true); 
+                    if (syntaxError) setSyntaxError(null); // Temporarily hide error while user fixes it
+                  }} 
+                  spellCheck={false} 
+                  style={{ 
+                    display: 'block',
+                    width: '100%',
+                    minHeight: '100%',
+                    margin: 0, 
+                    padding: '20px', 
+                    fontSize: '15px', // Fixed sizing to guarantee 1-to-1 sync with error highlight
+                    fontFamily: "'Fira Code', Consolas, Monaco, monospace", 
+                    background: 'transparent', 
+                    color: '#EBE4FF', 
+                    border: 'none', 
+                    outline: 'none', 
+                    resize: 'none', 
+                    whiteSpace: 'pre', 
+                    lineHeight: '24px', // Fixed mapping
+                    zIndex: 2,
+                    position: 'relative'
+                  }} 
+                />
+              </div>
             </div>
           </div>
 

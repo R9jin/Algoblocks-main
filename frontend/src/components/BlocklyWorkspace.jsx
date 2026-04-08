@@ -137,7 +137,6 @@ const customBlocks = [
     colour: "#4C97FF",
     tooltip: "Returns the maximum or minimum of two numbers"
   },
-  // --- DICTIONARY BLOCKS ---
   {
     type: "dict_create_empty",
     message0: "create empty dictionary",
@@ -171,7 +170,6 @@ const customBlocks = [
     style: "list_blocks",
     tooltip: "Retrieves the value for a specific key in a dictionary"
   },
-  // --- DYNAMIC DICTIONARY CONSTRUCTOR BLOCKS ---
   {
     type: "dict_pair",
     message0: "key %1 : value %2",
@@ -381,7 +379,6 @@ const toolbox = {
         { kind: "block", type: "lists_getSublist" },
         { kind: "block", type: "lists_split" },
         { kind: "block", type: "lists_sort" },
-        // --- DICTIONARY BLOCKS ---
         { kind: "block", type: "dict_create_empty" },
         {
           kind: "block", type: "dict_set", inputs: {
@@ -394,7 +391,6 @@ const toolbox = {
             KEY: { shadow: { type: "text", fields: { TEXT: "key_name" } } }
           }
         },
-        // --- DYNAMIC DICTIONARY BLOCKS ---
         {
           kind: "block", type: "dict_from_pairs", inputs: {
             LIST: { block: { type: "lists_create_with", extraState: { itemCount: 2 } } }
@@ -424,7 +420,8 @@ const toolbox = {
   ]
 };
 
-const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
+// Accept the syntaxError context prop here
+const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
   const blocklyDiv = useRef(null);
   const workspace = useRef(null);
   const onChangeRef = useRef(onChange);
@@ -440,16 +437,13 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         }
       }
     },
-    // --- FIX 1: EVENT DISABLED LOADING ---
     loadTemplate: (json) => {
       if (workspace.current) {
-        // Disable ALL blockly events so they don't queue up and flood
         Blockly.Events.disable(); 
         try {
           workspace.current.clear();
           Blockly.serialization.workspaces.load(json, workspace.current);
         } finally {
-          // Re-enable events safely after the load is complete
           Blockly.Events.enable(); 
         }
 
@@ -465,7 +459,6 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         workspace.current.setTheme(themeName === 'dark' ? DarkTheme : pastelTheme);
       }
     },
-    // --- REVERSE ENGINEERING (PYTHON AST -> BLOCKS) ---
     loadFromPython: async (pythonCode) => {
       if (!workspace.current) return;
       
@@ -477,30 +470,23 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         });
         const data = await response.json();
 
-        Blockly.Events.disable(); // Prevent event flood
+        // Enforce throwing an explicit error on Syntax Errors to prevent block overwrites
+        if (data.status === "error") {
+            throw new Error(data.message);
+        }
+
+        Blockly.Events.disable(); 
         try {
           workspace.current.clear();
           if (data.status === "success" && data.blocks) {
             Blockly.serialization.workspaces.load(data.blocks, workspace.current);
-          } else {
-            const fallbackState = {
-              blocks: {
-                languageVersion: 0,
-                blocks: [{
-                  type: "raw_python_multiline",
-                  id: Blockly.utils.idGenerator.genUid(),
-                  x: 20, y: 20,
-                  fields: { CODE: pythonCode }
-                }]
-              }
-            };
-            Blockly.serialization.workspaces.load(fallbackState, workspace.current);
           }
         } finally {
-          Blockly.Events.enable(); // Re-enable events
+          Blockly.Events.enable(); 
         }
       } catch (error) {
         console.error("AST Parsing connection failed", error);
+        throw error;
       } finally {
         setTimeout(() => {
           const currentJson = Blockly.serialization.workspaces.save(workspace.current);
@@ -515,7 +501,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
   }, [onChange]);
 
   useEffect(() => {
-    if (workspace.current) return; // only initialize once
+    if (workspace.current) return; 
 
     let searchPlugin, minimapPlugin, modalPlugin, backpackPlugin, highlightPlugin;
 
@@ -782,16 +768,11 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return block.getFieldValue('CODE') + '\n';
       };
 
-      // --- FIX 2: DEBOUNCED WORKSPACE CHANGE LISTENER ---
       let changeTimeout = null;
-      
       workspace.current.addChangeListener((event) => {
         if (event.isUiEvent) return;
-
-        // Clear the previous timeout if the user is still interacting
         if (changeTimeout) clearTimeout(changeTimeout);
 
-        // Wait 400ms after the last block interaction before generating code/fetching
         changeTimeout = setTimeout(() => {
           try {
             const json = Blockly.serialization.workspaces.save(workspace.current);
@@ -803,7 +784,6 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         }, 400); 
       });
 
-      // --- FIX 3: REQUEST_ANIMATION_FRAME RESIZE OBSERVER ---
       let resizeFrame;
       const observer = new ResizeObserver(() => {
         if (resizeFrame) cancelAnimationFrame(resizeFrame);
@@ -840,6 +820,32 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <div ref={blocklyDiv} style={{ height: "100%", width: "100%" }} />
+      
+      {/* VSCode-style Workspace Floating Syntax Error Indicator */}
+      {syntaxError && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          backgroundColor: '#1C1236',
+          borderLeft: '4px solid #E74C3C',
+          color: '#EBE4FF',
+          padding: '12px 16px',
+          borderRadius: '0 8px 8px 0',
+          boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          zIndex: 1000,
+          maxWidth: '300px'
+        }}>
+          <div style={{ fontSize: '1.5rem' }}>❌</div>
+          <div>
+            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#E74C3C' }}>Syntax Error (Line {syntaxError.line})</div>
+            <div style={{ fontSize: '0.8rem', marginTop: '4px', opacity: 0.9 }}>{syntaxError.message}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });
