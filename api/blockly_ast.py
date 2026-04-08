@@ -4,16 +4,20 @@ import uuid
 def gen_uid():
     return str(uuid.uuid4())[:15]
 
-
 class BlocklyASTConverter:
+    def __init__(self):
+        # We must collect all variables to prevent Blockly's "Undeclared Variable" crash
+        self.variables = set()
 
     def convert(self, code: str):
+        self.variables = set()
         try:
-            # CRITICAL FIX: Sanitize non-breaking spaces from GeeksforGeeks and zero-width spaces
             clean_code = code.replace('\xa0', ' ').replace('\u200b', '')
-            
             tree = ast.parse(clean_code)
             first_block = self.serialize_body(tree.body)
+
+            # Convert our collected variables into the strict format Blockly demands
+            vars_array = [{"id": v, "name": v} for v in self.variables]
 
             if first_block:
                 first_block["x"] = 20
@@ -21,6 +25,7 @@ class BlocklyASTConverter:
                 return {
                     "status": "success", 
                     "blocks": {
+                        "variables": vars_array,
                         "blocks": {
                             "languageVersion": 0, 
                             "blocks": [first_block]
@@ -31,6 +36,7 @@ class BlocklyASTConverter:
             return {
                 "status": "success", 
                 "blocks": {
+                    "variables": vars_array,
                     "blocks": {
                         "languageVersion": 0, 
                         "blocks": []
@@ -40,8 +46,8 @@ class BlocklyASTConverter:
 
         except Exception as e:
             print("AST Parsing Error:", e)
-            # Make sure we use the original code in the fallback so the user doesn't lose data
             return self.raw_fallback(code)
+
     def raw_fallback(self, code):
         return {
             "status": "error",
@@ -59,12 +65,20 @@ class BlocklyASTConverter:
         }
 
     # ===============================
+    # SAFE INPUT GENERATOR
+    # Prevents fatal "null" JSON crashes
+    # ===============================
+    def add_input(self, block_dict, input_name, child_block):
+        if child_block:
+            if "inputs" not in block_dict:
+                block_dict["inputs"] = {}
+            block_dict["inputs"][input_name] = {"block": child_block}
+
+    # ===============================
     # BODY SERIALIZATION
     # ===============================
     def serialize_body(self, nodes):
-        if not nodes:
-            return None
-
+        if not nodes: return None
         first_block = None
         prev_block = None
 
@@ -74,38 +88,33 @@ class BlocklyASTConverter:
             if not block:
                 block = self.make_raw_statement(node)
                 
-            # Failsafe: if even raw_statement fails, skip it so the whole app doesn't crash
             if not block:
                 continue
 
             if not first_block:
                 first_block = block
             else:
-                prev_block["next"] = {"block": block}
+                # Prevent crashing: Do not attach 'next' if the previous block is a function definition
+                if prev_block.get("type") not in ["procedures_defnoreturn", "procedures_defreturn"]:
+                    prev_block["next"] = {"block": block}
 
-            prev_block = block
-
-        return first_block
+            # Only update prev_block if we can actually attach things to it
+            # Otherwise, leave prev_block as it was so the NEXT line of code attaches 
+            # to the block *above* the function (or sits separately)
+            if block.get("type") not in ["procedures_defnoreturn", "procedures_defreturn"]:
+                prev_block = block
 
     def make_raw_statement(self, node):
         try:
             code_str = ast.unparse(node) if hasattr(ast, 'unparse') else "Raw Code fallback"
-            return {
-                "type": "raw_python_statement",
-                "id": gen_uid(),
-                "fields": {"CODE": code_str}
-            }
+            return {"type": "raw_python_statement", "id": gen_uid(), "fields": {"CODE": code_str}}
         except:
             return None
 
     def make_raw_expr(self, node):
         try:
             code_str = ast.unparse(node) if hasattr(ast, 'unparse') else "Raw Expr fallback"
-            return {
-                "type": "raw_python_expression",
-                "id": gen_uid(),
-                "fields": {"CODE": code_str}
-            }
+            return {"type": "raw_python_expression", "id": gen_uid(), "fields": {"CODE": code_str}}
         except:
             return None
 
@@ -113,11 +122,8 @@ class BlocklyASTConverter:
     # EXPRESSIONS
     # ===============================
     def serialize_expr(self, node):
-        if not node:
-            return None
-
+        if not node: return None
         try:
-            # Constants & Variables...
             if isinstance(node, ast.Constant):
                 if isinstance(node.value, bool):
                     return {"type": "logic_boolean", "id": gen_uid(), "fields": {"BOOL": "TRUE" if node.value else "FALSE"}}
@@ -126,7 +132,6 @@ class BlocklyASTConverter:
                 elif isinstance(node.value, str):
                     return {"type": "text", "id": gen_uid(), "fields": {"TEXT": node.value}}
             
-            # --- CRITICAL FIX: Support for Python 3.7 and older ---
             elif type(node).__name__ == 'Str':
                 return {"type": "text", "id": gen_uid(), "fields": {"TEXT": node.s}}
             elif type(node).__name__ == 'Num':
@@ -135,312 +140,181 @@ class BlocklyASTConverter:
                 return {"type": "logic_boolean", "id": gen_uid(), "fields": {"BOOL": "TRUE" if node.value else "FALSE"}}
 
             elif isinstance(node, ast.Name):
+                self.variables.add(node.id) # Register variable
                 return {"type": "variables_get", "id": gen_uid(), "fields": {"VAR": {"id": node.id, "name": node.id}}}
 
-            # Dictionaries (Empty dict check)
             elif isinstance(node, ast.Dict):
-                if not node.keys:
-                    return {"type": "dict_create_empty", "id": gen_uid()}
-                
+                if not node.keys: return {"type": "dict_create_empty", "id": gen_uid()}
                 pairs = []
                 for k, v in zip(node.keys, node.values):
-                    pairs.append({
-                        "type": "dict_pair",
-                        "id": gen_uid(),
-                        "inputs": {
-                            "KEY": {"block": self.serialize_expr(k)},
-                            "VALUE": {"block": self.serialize_expr(v)}
-                        }
-                    })
-                return {
-                    "type": "dict_from_pairs",
-                    "id": gen_uid(),
-                    "inputs": {
-                        "LIST": {
-                            "block": {
-                                "type": "lists_create_with",
-                                "id": gen_uid(),
-                                "extraState": {"itemCount": len(pairs)},
-                                "inputs": {f"ADD{i}": {"block": p} for i, p in enumerate(pairs)}
-                            }
-                        }
-                    }
-                }
-
-            # Dictionary / List Getter
-            elif isinstance(node, ast.Subscript):
-                # Safely handle Python 3.8 and 3.9+ slice differences
-                slice_val = node.slice.value if type(node.slice).__name__ == 'Index' else node.slice
-                return {
-                    "type": "dict_get",
-                    "id": gen_uid(),
-                    "inputs": {
-                        "DICT": {"block": self.serialize_expr(node.value)},
-                        "KEY": {"block": self.serialize_expr(slice_val)}
-                    }
-                }
-
-            # Binary & Bitwise Math Operations
-            elif isinstance(node, ast.BinOp):
-                arithmetic_map = {ast.Add: "ADD", ast.Sub: "MINUS", ast.Mult: "MULTIPLY", ast.Div: "DIVIDE"}
-                advanced_map = {
-                    ast.FloorDiv: "FLOOR_DIV", ast.Pow: "POWER",
-                    ast.LShift: "LSHIFT", ast.RShift: "RSHIFT",
-                    ast.BitAnd: "BIT_AND", ast.BitOr: "BIT_OR"
-                }
+                    pair = {"type": "dict_pair", "id": gen_uid()}
+                    self.add_input(pair, "KEY", self.serialize_expr(k))
+                    self.add_input(pair, "VALUE", self.serialize_expr(v))
+                    pairs.append(pair)
                 
-                if type(node.op) in arithmetic_map:
-                    return {
-                        "type": "math_arithmetic",
-                        "id": gen_uid(),
-                        "fields": {"OP": arithmetic_map[type(node.op)]},
-                        "inputs": {
-                            "A": {"block": self.serialize_expr(node.left)},
-                            "B": {"block": self.serialize_expr(node.right)}
-                        }
-                    }
-                elif type(node.op) in advanced_map:
-                    return {
-                        "type": "math_advanced_operators",
-                        "id": gen_uid(),
-                        "fields": {"OP": advanced_map[type(node.op)]},
-                        "inputs": {
-                            "A": {"block": self.serialize_expr(node.left)},
-                            "B": {"block": self.serialize_expr(node.right)}
-                        }
-                    }
+                list_block = {"type": "lists_create_with", "id": gen_uid(), "extraState": {"itemCount": len(pairs)}}
+                for i, p in enumerate(pairs):
+                    self.add_input(list_block, f"ADD{i}", p)
+                    
+                dict_block = {"type": "dict_from_pairs", "id": gen_uid()}
+                self.add_input(dict_block, "LIST", list_block)
+                return dict_block
+
+            elif isinstance(node, ast.Subscript):
+                slice_val = node.slice.value if type(node.slice).__name__ == 'Index' else node.slice
+                block = {"type": "dict_get", "id": gen_uid()}
+                self.add_input(block, "DICT", self.serialize_expr(node.value))
+                self.add_input(block, "KEY", self.serialize_expr(slice_val))
+                return block
+
+            elif isinstance(node, ast.BinOp):
+                arith_map = {ast.Add: "ADD", ast.Sub: "MINUS", ast.Mult: "MULTIPLY", ast.Div: "DIVIDE"}
+                adv_map = {ast.FloorDiv: "FLOOR_DIV", ast.Pow: "POWER", ast.LShift: "LSHIFT", ast.RShift: "RSHIFT", ast.BitAnd: "BIT_AND", ast.BitOr: "BIT_OR"}
+                
+                if type(node.op) in arith_map:
+                    block = {"type": "math_arithmetic", "id": gen_uid(), "fields": {"OP": arith_map[type(node.op)]}}
+                elif type(node.op) in adv_map:
+                    block = {"type": "math_advanced_operators", "id": gen_uid(), "fields": {"OP": adv_map[type(node.op)]}}
+                else:
+                    return self.make_raw_expr(node)
+
+                self.add_input(block, "A", self.serialize_expr(node.left))
+                self.add_input(block, "B", self.serialize_expr(node.right))
+                return block
 
             elif isinstance(node, ast.Compare):
                 if len(node.ops) == 1:
-                    return {
-                        "type": "logic_compare",
-                        "id": gen_uid(),
-                        "fields": {"OP": self.map_compare(node.ops[0])},
-                        "inputs": {
-                            "A": {"block": self.serialize_expr(node.left)},
-                            "B": {"block": self.serialize_expr(node.comparators[0])}
-                        }
-                    }
+                    block = {"type": "logic_compare", "id": gen_uid(), "fields": {"OP": self.map_compare(node.ops[0])}}
+                    self.add_input(block, "A", self.serialize_expr(node.left))
+                    self.add_input(block, "B", self.serialize_expr(node.comparators[0]))
+                    return block
                 return self.make_raw_expr(node)
 
-            # Function Calls & Builtins
             elif isinstance(node, ast.Call):
-                # Handle 'string'.join(list) -> custom_string_join
                 if isinstance(node.func, ast.Attribute) and node.func.attr == "join":
-                    return {
-                        "type": "custom_string_join",
-                        "id": gen_uid(),
-                        "inputs": {
-                            "DELIMITER": {"block": self.serialize_expr(node.func.value)},
-                            "LIST": {"block": self.serialize_expr(node.args[0])}
-                        }
-                    }
+                    block = {"type": "custom_string_join", "id": gen_uid()}
+                    self.add_input(block, "DELIMITER", self.serialize_expr(node.func.value))
+                    self.add_input(block, "LIST", self.serialize_expr(node.args[0]))
+                    return block
 
                 if isinstance(node.func, ast.Name):
                     name = node.func.id
                     if name == "len":
-                        return {"type": "lists_length", "id": gen_uid(), "inputs": {"VALUE": {"block": self.serialize_expr(node.args[0])}}}
+                        block = {"type": "lists_length", "id": gen_uid()}
+                        self.add_input(block, "VALUE", self.serialize_expr(node.args[0]))
+                        return block
                     elif name in ["min", "max"]:
-                        return {
-                            "type": "math_min_max",
-                            "id": gen_uid(),
-                            "fields": {"OP": name.upper()},
-                            "inputs": {
-                                "A": {"block": self.serialize_expr(node.args[0])},
-                                "B": {"block": self.serialize_expr(node.args[1])} if len(node.args) > 1 else None
-                            }
-                        }
+                        block = {"type": "math_min_max", "id": gen_uid(), "fields": {"OP": name.upper()}}
+                        self.add_input(block, "A", self.serialize_expr(node.args[0]))
+                        if len(node.args) > 1:
+                            self.add_input(block, "B", self.serialize_expr(node.args[1]))
+                        return block
                     elif name == "int":
-                        return {"type": "type_cast_int", "id": gen_uid(), "inputs": {"VALUE": {"block": self.serialize_expr(node.args[0])}}}
+                        block = {"type": "type_cast_int", "id": gen_uid()}
+                        if node.args: self.add_input(block, "VALUE", self.serialize_expr(node.args[0]))
+                        return block
                     elif name == "list":
-                        return {"type": "string_to_list", "id": gen_uid(), "inputs": {"STRING": {"block": self.serialize_expr(node.args[0])}}}
+                        block = {"type": "string_to_list", "id": gen_uid()}
+                        if node.args: self.add_input(block, "STRING", self.serialize_expr(node.args[0]))
+                        return block
                     
-                    # Standard User Procedures
-                    block = {
-                        "type": "procedures_callreturn",
-                        "id": gen_uid(),
-                        "extraState": {"name": name},
-                        "inputs": {}
-                    }
+                    block = {"type": "procedures_callreturn", "id": gen_uid(), "extraState": {"name": name}}
                     for i, arg in enumerate(node.args):
-                        block["inputs"][f"ARG{i}"] = {"block": self.serialize_expr(arg)}
+                        self.add_input(block, f"ARG{i}", self.serialize_expr(arg))
                     return block
 
         except Exception:
             pass
-
         return self.make_raw_expr(node)
 
     def map_compare(self, op):
-        return {
-            ast.Eq: "EQ",
-            ast.NotEq: "NEQ",
-            ast.Lt: "LT",
-            ast.LtE: "LTE",
-            ast.Gt: "GT",
-            ast.GtE: "GTE"
-        }.get(type(op), "EQ")
+        return {ast.Eq: "EQ", ast.NotEq: "NEQ", ast.Lt: "LT", ast.LtE: "LTE", ast.Gt: "GT", ast.GtE: "GTE"}.get(type(op), "EQ")
 
     # ===============================
     # STATEMENTS
     # ===============================
     def serialize_node(self, node):
         try:
-            # ---------- ASSIGN & DICTIONARY SET ----------
             if isinstance(node, ast.Assign):
                 target = node.targets[0]
                 if isinstance(target, ast.Name):
-                    block = {
-                        "type": "variables_set",
-                        "id": gen_uid(),
-                        "fields": {"VAR": {"id": target.id, "name": target.id}},
-                        "inputs": {}
-                    }
-                    val_block = self.serialize_expr(node.value)
-                    if val_block:
-                        block["inputs"]["VALUE"] = {"block": val_block}
+                    self.variables.add(target.id) # Register variable
+                    block = {"type": "variables_set", "id": gen_uid(), "fields": {"VAR": {"id": target.id, "name": target.id}}}
+                    self.add_input(block, "VALUE", self.serialize_expr(node.value))
                     return block
                     
-                # Handle Dictionary/List Assignment (e.g., dict['key'] = value)
                 elif isinstance(target, ast.Subscript):
-                    # Safely handle Python 3.8 and 3.9+ slice differences
                     slice_val = target.slice.value if type(target.slice).__name__ == 'Index' else target.slice
-                    return {
-                        "type": "dict_set",
-                        "id": gen_uid(),
-                        "inputs": {
-                            "DICT": {"block": self.serialize_expr(target.value)},
-                            "KEY": {"block": self.serialize_expr(slice_val)},
-                            "VALUE": {"block": self.serialize_expr(node.value)}
-                        }
-                    }
+                    block = {"type": "dict_set", "id": gen_uid()}
+                    self.add_input(block, "DICT", self.serialize_expr(target.value))
+                    self.add_input(block, "KEY", self.serialize_expr(slice_val))
+                    self.add_input(block, "VALUE", self.serialize_expr(node.value))
+                    return block
 
-            # ---------- AUGMENTED ASSIGN (+=, -=, *=, /=) ----------
             elif isinstance(node, ast.AugAssign):
                 op_map = {ast.Add: "ADD", ast.Sub: "MINUS", ast.Mult: "MULTIPLY", ast.Div: "DIVIDE"}
                 if type(node.op) in op_map and isinstance(node.target, ast.Name):
-                    return {
-                        "type": "math_assignment",
-                        "id": gen_uid(),
-                        "fields": {
-                            "VAR": {"id": node.target.id, "name": node.target.id},
-                            "OP": op_map[type(node.op)]
-                        },
-                        "inputs": {
-                            "DELTA": {"block": self.serialize_expr(node.value)}
-                        }
-                    }
+                    self.variables.add(node.target.id) # Register variable
+                    block = {"type": "math_assignment", "id": gen_uid(), "fields": {"VAR": {"id": node.target.id, "name": node.target.id}, "OP": op_map[type(node.op)]}}
+                    self.add_input(block, "DELTA", self.serialize_expr(node.value))
+                    return block
 
-            # ---------- IF ----------
             elif isinstance(node, ast.If):
-                block = {
-                    "type": "controls_if",
-                    "id": gen_uid(),
-                    "inputs": {}
-                }
-                test_block = self.serialize_expr(node.test)
-                do_block = self.serialize_body(node.body)
-                
-                if test_block: block["inputs"]["IF0"] = {"block": test_block}
-                if do_block: block["inputs"]["DO0"] = {"block": do_block}
-                
+                block = {"type": "controls_if", "id": gen_uid()}
+                self.add_input(block, "IF0", self.serialize_expr(node.test))
+                self.add_input(block, "DO0", self.serialize_body(node.body))
                 if node.orelse:
-                    else_block = self.serialize_body(node.orelse)
-                    if else_block:
-                        block["extraState"] = {"hasElse": True}
-                        block["inputs"]["ELSE"] = {"block": else_block}
+                    block["extraState"] = {"hasElse": True}
+                    self.add_input(block, "ELSE", self.serialize_body(node.orelse))
                 return block
 
-            # ---------- WHILE ----------
             elif isinstance(node, ast.While):
-                block = {
-                    "type": "controls_whileUntil",
-                    "id": gen_uid(),
-                    "fields": {"MODE": "WHILE"},
-                    "inputs": {}
-                }
-                test_block = self.serialize_expr(node.test)
-                do_block = self.serialize_body(node.body)
-                
-                if test_block: block["inputs"]["BOOL"] = {"block": test_block}
-                if do_block: block["inputs"]["DO"] = {"block": do_block}
+                block = {"type": "controls_whileUntil", "id": gen_uid(), "fields": {"MODE": "WHILE"}}
+                self.add_input(block, "BOOL", self.serialize_expr(node.test))
+                self.add_input(block, "DO", self.serialize_body(node.body))
                 return block
 
-            # ---------- FOR ----------
             elif isinstance(node, ast.For):
                 if isinstance(node.iter, ast.Call) and isinstance(node.iter.func, ast.Name) and node.iter.func.id == "range":
                     args = node.iter.args
-                    # FIX 1: Safely parse 0 and 1 for older Python versions instead of using ast.Constant
                     start = args[0] if len(args) > 1 else ast.parse("0").body[0].value
                     stop = args[1] if len(args) > 1 else args[0]
                     step = args[2] if len(args) > 2 else ast.parse("1").body[0].value
 
-                    # FIX 2: Safely get the target ID
                     target_id = node.target.id if isinstance(node.target, ast.Name) else "i"
-
-                    return {
-                        "type": "controls_for",
-                        "id": gen_uid(),
-                        # CRITICAL FIX 3: Blockly strictly requires VAR to be an object, not a string!
-                        "fields": {"VAR": {"id": target_id, "name": target_id}}, 
-                        "inputs": {
-                            "FROM": {"block": self.serialize_expr(start)},
-                            "TO": {"block": self.serialize_expr(stop)},
-                            "BY": {"block": self.serialize_expr(step)},
-                            "DO": {"block": self.serialize_body(node.body)}
-                        }
-                    }
+                    self.variables.add(target_id) # Register variable
+                    
+                    block = {"type": "controls_for", "id": gen_uid(), "fields": {"VAR": {"id": target_id, "name": target_id}}}
+                    self.add_input(block, "FROM", self.serialize_expr(start))
+                    self.add_input(block, "TO", self.serialize_expr(stop))
+                    self.add_input(block, "BY", self.serialize_expr(step))
+                    self.add_input(block, "DO", self.serialize_body(node.body))
+                    return block
                 return self.make_raw_statement(node)
 
-            # ---------- RETURN ----------
             elif isinstance(node, ast.Return):
                 block = {"type": "procedure_return_value", "id": gen_uid()}
                 if node.value:
-                    val_block = self.serialize_expr(node.value)
-                    if val_block:
-                        block["inputs"] = {"VALUE": {"block": val_block}}
+                    self.add_input(block, "VALUE", self.serialize_expr(node.value))
                 return block
 
-            # ---------- FUNCTION ----------
             elif isinstance(node, ast.FunctionDef):
-                return {
-                    "type": "procedures_defnoreturn",
-                    "id": gen_uid(),
-                    "fields": {"NAME": node.name},
-                    "inputs": {
-                        "STACK": {"block": self.serialize_body(node.body)}
-                    }
-                }
+                block = {"type": "procedures_defnoreturn", "id": gen_uid(), "fields": {"NAME": node.name}}
+                self.add_input(block, "STACK", self.serialize_body(node.body))
+                return block
 
-            # ---------- EXPRESSIONS (Print & Comments) ----------
             elif isinstance(node, ast.Expr):
-                # 1. Multi-line comment / Docstring (Python 3.8+)
                 if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                    return {
-                        "type": "multi_line_comment",
-                        "id": gen_uid(),
-                        "fields": {"TEXT": node.value.value}
-                    }
-                # Legacy Docstring support (Python < 3.8)
+                    return {"type": "multi_line_comment", "id": gen_uid(), "fields": {"TEXT": node.value.value}}
                 elif type(node.value).__name__ == 'Str':
-                    return {
-                        "type": "multi_line_comment",
-                        "id": gen_uid(),
-                        "fields": {"TEXT": node.value.s}
-                    }
-                # 2. Print function call
+                    return {"type": "multi_line_comment", "id": gen_uid(), "fields": {"TEXT": node.value.s}}
                 elif isinstance(node.value, ast.Call) and getattr(node.value.func, 'id', '') == "print":
                     block = {"type": "text_print", "id": gen_uid()}
                     if node.value.args:
-                        expr_block = self.serialize_expr(node.value.args[0])
-                        # Safely assign the input only if the expression successfully parsed
-                        if expr_block:
-                            block["inputs"] = {"TEXT": {"block": expr_block}}
+                        self.add_input(block, "TEXT", self.serialize_expr(node.value.args[0]))
                     return block
-                else:
-                    return self.make_raw_statement(node)
+                return self.make_raw_statement(node)
 
         except Exception as e:
             pass
-
         return None
