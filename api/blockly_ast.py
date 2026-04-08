@@ -9,15 +9,15 @@ class BlocklyASTConverter:
 
     def convert(self, code: str):
         try:
-            tree = ast.parse(code)
+            # CRITICAL FIX: Sanitize non-breaking spaces from GeeksforGeeks and zero-width spaces
+            clean_code = code.replace('\xa0', ' ').replace('\u200b', '')
+            
+            tree = ast.parse(clean_code)
             first_block = self.serialize_body(tree.body)
 
             if first_block:
                 first_block["x"] = 20
                 first_block["y"] = 20
-                # CRITICAL FIX: Double-nested "blocks" key. 
-                # React calls load(data.blocks). The remaining object MUST STILL 
-                # have a "blocks" key for Blockly's plugin system to recognize it!
                 return {
                     "status": "success", 
                     "blocks": {
@@ -40,8 +40,8 @@ class BlocklyASTConverter:
 
         except Exception as e:
             print("AST Parsing Error:", e)
+            # Make sure we use the original code in the fallback so the user doesn't lose data
             return self.raw_fallback(code)
-
     def raw_fallback(self, code):
         return {
             "status": "error",
