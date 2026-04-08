@@ -169,7 +169,8 @@ class BlocklyASTConverter:
 
             # Dictionary / List Getter
             elif isinstance(node, ast.Subscript):
-                slice_val = node.slice.value if hasattr(node.slice, 'value') else node.slice
+                # Safely handle Python 3.8 and 3.9+ slice differences
+                slice_val = node.slice.value if type(node.slice).__name__ == 'Index' else node.slice
                 return {
                     "type": "dict_get",
                     "id": gen_uid(),
@@ -302,7 +303,8 @@ class BlocklyASTConverter:
                     
                 # Handle Dictionary/List Assignment (e.g., dict['key'] = value)
                 elif isinstance(target, ast.Subscript):
-                    slice_val = target.slice.value if hasattr(target.slice, 'value') else target.slice
+                    # Safely handle Python 3.8 and 3.9+ slice differences
+                    slice_val = target.slice.value if type(target.slice).__name__ == 'Index' else target.slice
                     return {
                         "type": "dict_set",
                         "id": gen_uid(),
@@ -368,14 +370,19 @@ class BlocklyASTConverter:
             elif isinstance(node, ast.For):
                 if isinstance(node.iter, ast.Call) and isinstance(node.iter.func, ast.Name) and node.iter.func.id == "range":
                     args = node.iter.args
-                    start = args[0] if len(args) > 1 else ast.Constant(value=0)
+                    # FIX 1: Safely parse 0 and 1 for older Python versions instead of using ast.Constant
+                    start = args[0] if len(args) > 1 else ast.parse("0").body[0].value
                     stop = args[1] if len(args) > 1 else args[0]
-                    step = args[2] if len(args) > 2 else ast.Constant(value=1)
+                    step = args[2] if len(args) > 2 else ast.parse("1").body[0].value
+
+                    # FIX 2: Safely get the target ID
+                    target_id = node.target.id if isinstance(node.target, ast.Name) else "i"
 
                     return {
                         "type": "controls_for",
                         "id": gen_uid(),
-                        "fields": {"VAR": node.target.id},
+                        # CRITICAL FIX 3: Blockly strictly requires VAR to be an object, not a string!
+                        "fields": {"VAR": {"id": target_id, "name": target_id}}, 
                         "inputs": {
                             "FROM": {"block": self.serialize_expr(start)},
                             "TO": {"block": self.serialize_expr(stop)},
