@@ -215,9 +215,15 @@ def update_project(project_id: str, payload: ProjectUpdate):
     if projects_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
     try:
+        # Dynamically build the update fields
+        update_data = {}
+        if payload.data is not None: update_data["data"] = payload.data
+        if payload.title is not None: update_data["title"] = payload.title
+        if payload.description is not None: update_data["description"] = payload.description
+
         result = projects_collection.update_one(
             {"_id": ObjectId(project_id)},
-            {"$set": {"data": payload.data}}
+            {"$set": update_data}
         )
         if result.matched_count == 1:
             return {"status": "success", "message": "Project updated successfully"}
@@ -267,3 +273,57 @@ def google_auth(req: GoogleAuthRequest):
         "name": name, 
         "progress": user.get("progress", {})
     }
+    
+@app.post("/api/templates")
+@app.post("/templates")
+def save_template(template: TemplateModel):
+    if templates_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    template_dict = template.model_dump()         
+    result = templates_collection.insert_one(template_dict)  
+    return {"status": "success", "message": "Template saved!", "id": str(result.inserted_id)}
+
+@app.get("/api/templates")
+@app.get("/templates")
+def get_templates():
+    if templates_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    templates = list(templates_collection.find({}))  
+    for t in templates:
+        t["_id"] = str(t["_id"])                 
+    return {"status": "success", "templates": templates}
+
+@app.delete("/api/templates/{template_id}")
+@app.delete("/templates/{template_id}")
+def delete_template(template_id: str):
+    if templates_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    try:
+        from bson import ObjectId
+        result = templates_collection.delete_one({"_id": ObjectId(template_id)})
+        if result.deleted_count == 1:
+            return {"status": "success", "message": "Template deleted"}
+        else:
+            raise HTTPException(status_code=404, detail="Template not found")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid ID format")
+
+@app.put("/api/templates/{template_id}")
+@app.put("/templates/{template_id}")
+def update_template(template_id: str, payload: TemplateUpdate):
+    if templates_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    try:
+        from bson import ObjectId
+        update_data = {}
+        if payload.data is not None: update_data["data"] = payload.data
+        if payload.title is not None: update_data["title"] = payload.title
+        if payload.description is not None: update_data["description"] = payload.description
+
+        result = templates_collection.update_one(
+            {"_id": ObjectId(template_id)},
+            {"$set": update_data}
+        )
+        return {"status": "success", "message": "Template updated"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid update")

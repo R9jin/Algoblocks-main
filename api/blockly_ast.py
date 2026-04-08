@@ -316,7 +316,22 @@ class BlocklyASTConverter:
                 return block
 
             elif isinstance(node, ast.FunctionDef):
-                block = {"type": "procedures_defnoreturn", "id": gen_uid(), "fields": {"NAME": node.name}}
+                # Detect if the function has a return statement to use the correct Blockly block type
+                has_return = any(isinstance(n, ast.Return) for n in ast.walk(node))
+                block_type = "procedures_defreturn" if has_return else "procedures_defnoreturn"
+                
+                block = {"type": block_type, "id": gen_uid(), "fields": {"NAME": node.name}}
+                
+                # --- FIX: Extract Function Parameters ---
+                params = []
+                for arg in node.args.args:
+                    arg_name = arg.arg
+                    self.variables.add(arg_name) # Registers parameter in the workspace variables
+                    params.append({"name": arg_name, "id": arg_name})
+                    
+                if params:
+                    block["extraState"] = {"params": params}
+                    
                 self.add_input(block, "STACK", self.serialize_body(node.body))
                 return block
 
@@ -332,12 +347,21 @@ class BlocklyASTConverter:
                     if len(node.value.args) == 1:
                         self.add_input(block, "TEXT", self.serialize_expr(node.value.args[0]))
                     elif len(node.value.args) > 1:
-                        # Wrap multiple args in a text_join block
                         join_block = {"type": "text_join", "id": gen_uid(), "extraState": {"itemCount": len(node.value.args)}}
                         for i, arg in enumerate(node.value.args):
                             self.add_input(join_block, f"ADD{i}", self.serialize_expr(arg))
                         self.add_input(block, "TEXT", join_block)
                     return block
+
+                # --- NEW FIX: STANDALONE FUNCTION CALLS ---
+                # (This maps `bubble_sort(list2)` directly to the procedures_callnoreturn block)
+                elif isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name):
+                    name = node.value.func.id
+                    block = {"type": "procedures_callnoreturn", "id": gen_uid(), "extraState": {"name": name}}
+                    for i, arg in enumerate(node.value.args):
+                        self.add_input(block, f"ARG{i}", self.serialize_expr(arg))
+                    return block
+
                 return self.make_raw_statement(node)
 
         except Exception as e:
