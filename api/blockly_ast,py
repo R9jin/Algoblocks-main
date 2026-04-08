@@ -28,7 +28,7 @@ class BlocklyASTConverter:
         for node in nodes:
             block = self.serialize_node(node)
             
-            # THE GATEKEEPER: Fallback to your Custom Red Block if unhandled
+            # THE GATEKEEPER: Fallback to Raw Statement if unsupported
             if not block:
                 try:
                     code_str = ast.unparse(node)
@@ -50,7 +50,7 @@ class BlocklyASTConverter:
 
     def serialize_node(self, node):
         try:
-            # 1. Variable Assignments (e.g., step = int(math.sqrt(n)))
+            # 1. Standard Variable Assignments (e.g., step = math.sqrt(n))
             if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
                 return {
                     "type": "variables_set",
@@ -66,8 +66,34 @@ class BlocklyASTConverter:
                         }
                     }
                 }
-                
-            # 2. While Loops
+            
+            # 2. Augmented Assignments (e.g., prev += 1)
+            elif isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name):
+                op_map = {
+                    ast.Add: "ADD", ast.Sub: "MINUS", 
+                    ast.Mult: "MULTIPLY", ast.Div: "DIVIDE"
+                }
+                op_type = type(node.op)
+                if op_type in op_map:
+                    return {
+                        "type": "math_assignment",
+                        "id": gen_uid(),
+                        "fields": {
+                            "VAR": {"id": node.target.id, "name": node.target.id},
+                            "OP": op_map[op_type]
+                        },
+                        "inputs": {
+                            "DELTA": {
+                                "block": {
+                                    "type": "raw_python_expression",
+                                    "id": gen_uid(),
+                                    "fields": {"CODE": ast.unparse(node.value)}
+                                }
+                            }
+                        }
+                    }
+
+            # 3. While Loops
             elif isinstance(node, ast.While):
                 block = {
                     "type": "controls_whileUntil",
@@ -88,7 +114,7 @@ class BlocklyASTConverter:
                     block["inputs"]["DO"] = {"block": body_block}
                 return block
                 
-            # 3. If Statements
+            # 4. If Statements
             elif isinstance(node, ast.If):
                 block = {
                     "type": "controls_if",
@@ -107,7 +133,6 @@ class BlocklyASTConverter:
                 if body_block:
                     block["inputs"]["DO0"] = {"block": body_block}
                     
-                # Handle basic Else blocks
                 if node.orelse:
                     block["extraState"] = {"hasElse": True}
                     else_body = self.serialize_body(node.orelse)
@@ -115,28 +140,7 @@ class BlocklyASTConverter:
                         block["inputs"]["ELSE"] = {"block": else_body}
                 return block
 
-            # 4. For Loops
-            elif isinstance(node, ast.For):
-                block = {
-                    "type": "controls_forEach",
-                    "id": gen_uid(),
-                    "fields": {"VAR": {"id": ast.unparse(node.target), "name": ast.unparse(node.target)}},
-                    "inputs": {
-                        "LIST": {
-                            "block": {
-                                "type": "raw_python_expression",
-                                "id": gen_uid(),
-                                "fields": {"CODE": ast.unparse(node.iter)}
-                            }
-                        }
-                    }
-                }
-                body_block = self.serialize_body(node.body)
-                if body_block:
-                    block["inputs"]["DO"] = {"block": body_block}
-                return block
-
-            # 5. Returns
+            # 5. Returns (e.g., return prev)
             elif isinstance(node, ast.Return):
                 val_code = ast.unparse(node.value) if node.value else "None"
                 return {
@@ -160,7 +164,6 @@ class BlocklyASTConverter:
                     "id": gen_uid(),
                     "fields": {"NAME": node.name},
                 }
-                # Extracts the arguments so the block has the correct inputs visually
                 if node.args.args:
                     block["extraState"] = {
                         "params": [{"name": arg.arg, "id": arg.arg} for arg in node.args.args]
@@ -169,8 +172,26 @@ class BlocklyASTConverter:
                 if body_block:
                     block["inputs"]["STACK"] = {"block": body_block}
                 return block
-                
-        except Exception:
-            pass # Failsafe triggered, will drop to Raw Statement
+            
+            # 7. Print Statements
+            elif isinstance(node, ast.Expr) and isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name) and node.value.func.id == 'print':
+                # Join arguments back into a string for the raw block
+                args_code = ", ".join(ast.unparse(arg) for arg in node.value.args)
+                return {
+                    "type": "text_print",
+                    "id": gen_uid(),
+                    "inputs": {
+                        "TEXT": {
+                            "block": {
+                                "type": "raw_python_expression",
+                                "id": gen_uid(),
+                                "fields": {"CODE": args_code}
+                            }
+                        }
+                    }
+                }
+
+        except Exception as e:
+            pass # Suppress inner errors, let Gatekeeper handle it
             
         return None
