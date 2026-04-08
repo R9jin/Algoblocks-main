@@ -6,40 +6,61 @@ def gen_uid():
 
 class BlocklyASTConverter:
     def __init__(self):
-        # We must collect all variables to prevent Blockly's "Undeclared Variable" crash
         self.variables = set()
 
     def convert(self, code: str):
         self.variables = set()
         try:
-            clean_code = code.replace('\xa0', ' ').replace('\u200b', '')
+            # Better invisible character and tab cleanup for copy-pasted code
+            clean_code = code.replace('\xa0', ' ').replace('\u200b', '').replace('\t', '    ')
             tree = ast.parse(clean_code)
-            first_block = self.serialize_body(tree.body)
+            
+            # --- ARCHITECTURAL FIX: Support MULTIPLE top-level elements ---
+            top_blocks = []
+            current_chain_head = None
+            current_chain_tail = None
+            y_offset = 20
 
-            # Convert our collected variables into the strict format Blockly demands
+            for node in tree.body:
+                block = self.serialize_node(node)
+                if not block:
+                    block = self.make_raw_statement(node)
+                    
+                if not block:
+                    continue
+
+                # Functions sit on their own natively
+                if block.get("type") in ["procedures_defnoreturn", "procedures_defreturn"]:
+                    block["x"] = 20
+                    block["y"] = y_offset
+                    top_blocks.append(block)
+                    y_offset += 150
+                    
+                    # Break the chain so the next line starts a new workspace stack
+                    current_chain_head = None
+                    current_chain_tail = None
+                else:
+                    if not current_chain_head:
+                        block["x"] = 20
+                        block["y"] = y_offset
+                        current_chain_head = block
+                        top_blocks.append(current_chain_head)
+                        current_chain_tail = block
+                        y_offset += 100
+                    else:
+                        current_chain_tail["next"] = {"block": block}
+                        current_chain_tail = block
+
             vars_array = [{"id": v, "name": v} for v in self.variables]
 
-            if first_block:
-                first_block["x"] = 20
-                first_block["y"] = 20
-                return {
-                    "status": "success", 
-                    "blocks": {
-                        "variables": vars_array,
-                        "blocks": {
-                            "languageVersion": 0, 
-                            "blocks": [first_block]
-                        }
-                    }
-                }
-
+            # Return the top_blocks ARRAY instead of a single first_block
             return {
                 "status": "success", 
                 "blocks": {
                     "variables": vars_array,
                     "blocks": {
                         "languageVersion": 0, 
-                        "blocks": []
+                        "blocks": top_blocks
                     }
                 }
             }
@@ -64,19 +85,12 @@ class BlocklyASTConverter:
             }
         }
 
-    # ===============================
-    # SAFE INPUT GENERATOR
-    # Prevents fatal "null" JSON crashes
-    # ===============================
     def add_input(self, block_dict, input_name, child_block):
         if child_block:
             if "inputs" not in block_dict:
                 block_dict["inputs"] = {}
             block_dict["inputs"][input_name] = {"block": child_block}
 
-    # ===============================
-    # BODY SERIALIZATION
-    # ===============================
     def serialize_body(self, nodes):
         if not nodes: return None
         first_block = None
@@ -84,7 +98,6 @@ class BlocklyASTConverter:
 
         for node in nodes:
             block = self.serialize_node(node)
-
             if not block:
                 block = self.make_raw_statement(node)
                 
@@ -94,15 +107,12 @@ class BlocklyASTConverter:
             if not first_block:
                 first_block = block
             else:
-                # Prevent crashing: Do not attach 'next' if the previous block is a function definition
                 if prev_block and prev_block.get("type") not in ["procedures_defnoreturn", "procedures_defreturn"]:
                     prev_block["next"] = {"block": block}
 
-            # Only update prev_block if we can actually attach things to it
-            # Otherwise, leave prev_block as it was so the NEXT line of code attaches 
-            # to the block *above* the function (or sits separately)
             if block.get("type") not in ["procedures_defnoreturn", "procedures_defreturn"]:
                 prev_block = block
+        return first_block
 
     def make_raw_statement(self, node):
         try:
@@ -118,9 +128,6 @@ class BlocklyASTConverter:
         except:
             return None
 
-    # ===============================
-    # EXPRESSIONS
-    # ===============================
     def serialize_expr(self, node):
         if not node: return None
         try:
@@ -140,8 +147,15 @@ class BlocklyASTConverter:
                 return {"type": "logic_boolean", "id": gen_uid(), "fields": {"BOOL": "TRUE" if node.value else "FALSE"}}
 
             elif isinstance(node, ast.Name):
-                self.variables.add(node.id) # Register variable
+                self.variables.add(node.id) 
                 return {"type": "variables_get", "id": gen_uid(), "fields": {"VAR": {"id": node.id, "name": node.id}}}
+
+            # --- ADDED: LIST SUPPORT ---
+            elif isinstance(node, ast.List):
+                block = {"type": "lists_create_with", "id": gen_uid(), "extraState": {"itemCount": len(node.elts)}}
+                for i, elt in enumerate(node.elts):
+                    self.add_input(block, f"ADD{i}", self.serialize_expr(elt))
+                return block
 
             elif isinstance(node, ast.Dict):
                 if not node.keys: return {"type": "dict_create_empty", "id": gen_uid()}
@@ -191,11 +205,17 @@ class BlocklyASTConverter:
                 return self.make_raw_expr(node)
 
             elif isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Attribute) and node.func.attr == "join":
-                    block = {"type": "custom_string_join", "id": gen_uid()}
-                    self.add_input(block, "DELIMITER", self.serialize_expr(node.func.value))
-                    self.add_input(block, "LIST", self.serialize_expr(node.args[0]))
-                    return block
+                if isinstance(node.func, ast.Attribute):
+                    if node.func.attr == "join":
+                        block = {"type": "custom_string_join", "id": gen_uid()}
+                        self.add_input(block, "DELIMITER", self.serialize_expr(node.func.value))
+                        self.add_input(block, "LIST", self.serialize_expr(node.args[0]))
+                        return block
+                    # --- ADDED: MATH.SQRT SUPPORT ---
+                    if node.func.attr == "sqrt":
+                        block = {"type": "math_single", "id": gen_uid(), "fields": {"OP": "ROOT"}}
+                        self.add_input(block, "NUM", self.serialize_expr(node.args[0]))
+                        return block
 
                 if isinstance(node.func, ast.Name):
                     name = node.func.id
@@ -230,15 +250,12 @@ class BlocklyASTConverter:
     def map_compare(self, op):
         return {ast.Eq: "EQ", ast.NotEq: "NEQ", ast.Lt: "LT", ast.LtE: "LTE", ast.Gt: "GT", ast.GtE: "GTE"}.get(type(op), "EQ")
 
-    # ===============================
-    # STATEMENTS
-    # ===============================
     def serialize_node(self, node):
         try:
             if isinstance(node, ast.Assign):
                 target = node.targets[0]
                 if isinstance(target, ast.Name):
-                    self.variables.add(target.id) # Register variable
+                    self.variables.add(target.id) 
                     block = {"type": "variables_set", "id": gen_uid(), "fields": {"VAR": {"id": target.id, "name": target.id}}}
                     self.add_input(block, "VALUE", self.serialize_expr(node.value))
                     return block
@@ -254,7 +271,7 @@ class BlocklyASTConverter:
             elif isinstance(node, ast.AugAssign):
                 op_map = {ast.Add: "ADD", ast.Sub: "MINUS", ast.Mult: "MULTIPLY", ast.Div: "DIVIDE"}
                 if type(node.op) in op_map and isinstance(node.target, ast.Name):
-                    self.variables.add(node.target.id) # Register variable
+                    self.variables.add(node.target.id)
                     block = {"type": "math_assignment", "id": gen_uid(), "fields": {"VAR": {"id": node.target.id, "name": node.target.id}, "OP": op_map[type(node.op)]}}
                     self.add_input(block, "DELTA", self.serialize_expr(node.value))
                     return block
@@ -282,7 +299,7 @@ class BlocklyASTConverter:
                     step = args[2] if len(args) > 2 else ast.parse("1").body[0].value
 
                     target_id = node.target.id if isinstance(node.target, ast.Name) else "i"
-                    self.variables.add(target_id) # Register variable
+                    self.variables.add(target_id)
                     
                     block = {"type": "controls_for", "id": gen_uid(), "fields": {"VAR": {"id": target_id, "name": target_id}}}
                     self.add_input(block, "FROM", self.serialize_expr(start))
@@ -308,10 +325,18 @@ class BlocklyASTConverter:
                     return {"type": "multi_line_comment", "id": gen_uid(), "fields": {"TEXT": node.value.value}}
                 elif type(node.value).__name__ == 'Str':
                     return {"type": "multi_line_comment", "id": gen_uid(), "fields": {"TEXT": node.value.s}}
+                
+                # --- ADDED: MULTI-ARGUMENT PRINT SUPPORT ---
                 elif isinstance(node.value, ast.Call) and getattr(node.value.func, 'id', '') == "print":
                     block = {"type": "text_print", "id": gen_uid()}
-                    if node.value.args:
+                    if len(node.value.args) == 1:
                         self.add_input(block, "TEXT", self.serialize_expr(node.value.args[0]))
+                    elif len(node.value.args) > 1:
+                        # Wrap multiple args in a text_join block
+                        join_block = {"type": "text_join", "id": gen_uid(), "extraState": {"itemCount": len(node.value.args)}}
+                        for i, arg in enumerate(node.value.args):
+                            self.add_input(join_block, f"ADD{i}", self.serialize_expr(arg))
+                        self.add_input(block, "TEXT", join_block)
                     return block
                 return self.make_raw_statement(node)
 
