@@ -55,12 +55,8 @@ class AstRequest(BaseModel):
 async def ast_to_blocks(request: AstRequest):
     try:
         converter = BlocklyASTConverter()
-        blocks_json = converter.convert(request.code)
-        
-        if blocks_json:
-            return {"status": "success", "blocks": blocks_json}
-        else:
-            return {"status": "error", "message": "Failed to generate AST."}
+        # Just return the JSON directly! No extra wrappers.
+        return converter.convert(request.code)
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
