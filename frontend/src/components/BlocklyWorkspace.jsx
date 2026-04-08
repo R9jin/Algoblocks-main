@@ -461,120 +461,50 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       }
     },
 
-    // --- REVERSE ENGINEERING (PYTHON -> BLOCKS) ---
-    // --- REVERSE ENGINEERING (PYTHON -> BLOCKS) ---
-    loadFromPython: (pythonCode) => {
+    // --- REVERSE ENGINEERING (PYTHON AST -> BLOCKS) ---
+    loadFromPython: async (pythonCode) => {
       if (!workspace.current) return;
       isLoading.current = true;
       workspace.current.clear();
 
-      // Split code by newlines, ignoring pure whitespace lines
-      const lines = pythonCode.split('\n').filter(line => line.trim().length > 0);
+      try {
+        // Send the code to your backend Python AST parser
+        const response = await fetch('/api/ast-to-blocks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: pythonCode })
+        });
+        const data = await response.json();
 
-      let firstBlock = null;
-      let prevBlock = null;
-
-      // INTELLIGENT HEURISTIC PARSER
-      lines.forEach((line, index) => {
-        const trimmed = line.trim();
-        let newBlock = null;
-
-        // --- PATTERN 1: Detect Comments ---
-        if (trimmed.startsWith('#')) {
-          newBlock = {
-            type: "comment_block",
-            id: Blockly.utils.idGenerator.genUid(),
-            fields: { TEXT: trimmed.substring(1).trim() } // Remove the '#' and spaces
-          };
-        }
-
-        // --- PATTERN 2: Detect Print Statements ---
-        else if (trimmed.startsWith('print(') && trimmed.endsWith(')')) {
-          const innerCode = trimmed.slice(6, -1);
-          let inputBlock;
-
-          // Check if it's a simple string e.g., print("Hello")
-          if (/^["'].*["']$/.test(innerCode)) {
-            inputBlock = {
-              type: "text",
-              id: Blockly.utils.idGenerator.genUid(),
-              fields: { TEXT: innerCode.slice(1, -1) }
-            };
-          } else {
-            // It's a variable or complex math, snap a Raw Expression into the print block
-            inputBlock = {
-              type: "raw_python_expression",
-              id: Blockly.utils.idGenerator.genUid(),
-              fields: { CODE: innerCode }
-            };
-          }
-
-          newBlock = {
-            type: "text_print",
-            id: Blockly.utils.idGenerator.genUid(),
-            inputs: { TEXT: { block: inputBlock } }
-          };
-        }
-
-        // --- PATTERN 3: Detect Variable Assignment (e.g., x = 10) ---
-        else if (/^[a-zA-Z_]\w*\s*=\s*.+/.test(trimmed)) {
-          const parts = trimmed.split('=');
-          const varName = parts[0].trim();
-          const varValue = parts.slice(1).join('=').trim();
-
-          newBlock = {
-            type: "variables_set",
-            id: Blockly.utils.idGenerator.genUid(),
-            fields: { VAR: { id: varName, name: varName } },
-            inputs: {
-              VALUE: {
-                // Let the Raw Expression block handle whatever is on the right side of the '='
-                block: {
-                  type: "raw_python_expression",
-                  id: Blockly.utils.idGenerator.genUid(),
-                  fields: { CODE: varValue }
-                }
-              }
+        if (data.status === "success" && data.blocks) {
+          // Success! Load the fully structured AST block map
+          Blockly.serialization.workspaces.load(data.blocks, workspace.current);
+        } else {
+          // FAILSAFE: If the server fails, dump everything safely to a single Raw block
+          const fallbackState = {
+            blocks: {
+              languageVersion: 0,
+              blocks: [{
+                type: "raw_python_multiline",
+                id: Blockly.utils.idGenerator.genUid(),
+                x: 20, y: 20,
+                fields: { CODE: pythonCode }
+              }]
             }
           };
+          Blockly.serialization.workspaces.load(fallbackState, workspace.current);
         }
+      } catch (error) {
+        console.error("AST Parsing connection failed", error);
+      } finally {
+        isLoading.current = false;
 
-        // --- FALLBACK: Unrecognized Code (The Gatekeeper) ---
-        // If it's too complex (loops, ifs, function defs), dump it cleanly into a Raw Statement
-        else {
-          newBlock = {
-            type: "raw_python_statement",
-            id: Blockly.utils.idGenerator.genUid(),
-            fields: { CODE: line } // Keep original line WITH indentation intact
-          };
-        }
-
-        // --- CHAIN THE BLOCKS TOGETHER ---
-        if (index === 0) {
-          // Position the very first block in the workspace
-          newBlock.x = 20;
-          newBlock.y = 20;
-          firstBlock = newBlock;
-        } else {
-          // Snap this block to the bottom of the previous block
-          prevBlock.next = { block: newBlock };
-        }
-        prevBlock = newBlock;
-      });
-
-      // Load the generated JSON state back into Blockly
-      if (firstBlock) {
-        const state = { blocks: { languageVersion: 0, blocks: [firstBlock] } };
-        Blockly.serialization.workspaces.load(state, workspace.current);
+        // Trigger sync back to MainApp / ActivityApp
+        setTimeout(() => {
+          const currentJson = Blockly.serialization.workspaces.save(workspace.current);
+          if (onChangeRef.current) onChangeRef.current(currentJson, pythonCode);
+        }, 100);
       }
-
-      isLoading.current = false;
-
-      // Trigger sync back to MainApp
-      setTimeout(() => {
-        const currentJson = Blockly.serialization.workspaces.save(workspace.current);
-        if (onChangeRef.current) onChangeRef.current(currentJson, pythonCode);
-      }, 100);
     }
   }));
 

@@ -1,0 +1,176 @@
+import ast
+import uuid
+
+def gen_uid():
+    return str(uuid.uuid4())[:15]
+
+class BlocklyASTConverter:
+    def convert(self, code: str):
+        try:
+            tree = ast.parse(code)
+            first_block = self.serialize_body(tree.body)
+            if first_block:
+                first_block["x"] = 20
+                first_block["y"] = 20
+                return {"blocks": {"languageVersion": 0, "blocks": [first_block]}}
+            return {"blocks": {"languageVersion": 0, "blocks": []}}
+        except Exception as e:
+            print("AST Parsing Error:", e)
+            return None
+
+    def serialize_body(self, nodes):
+        if not nodes:
+            return None
+        
+        first_block = None
+        prev_block = None
+        
+        for node in nodes:
+            block = self.serialize_node(node)
+            
+            # THE GATEKEEPER: Fallback to your Custom Red Block if unhandled
+            if not block:
+                try:
+                    code_str = ast.unparse(node)
+                except:
+                    continue
+                block = {
+                    "type": "raw_python_statement",
+                    "id": gen_uid(),
+                    "fields": {"CODE": code_str}
+                }
+                
+            if not first_block:
+                first_block = block
+            else:
+                prev_block["next"] = {"block": block}
+            prev_block = block
+            
+        return first_block
+
+    def serialize_node(self, node):
+        try:
+            # 1. Variable Assignments (e.g., step = int(math.sqrt(n)))
+            if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+                return {
+                    "type": "variables_set",
+                    "id": gen_uid(),
+                    "fields": {"VAR": {"id": node.targets[0].id, "name": node.targets[0].id}},
+                    "inputs": {
+                        "VALUE": {
+                            "block": {
+                                "type": "raw_python_expression",
+                                "id": gen_uid(),
+                                "fields": {"CODE": ast.unparse(node.value)}
+                            }
+                        }
+                    }
+                }
+                
+            # 2. While Loops
+            elif isinstance(node, ast.While):
+                block = {
+                    "type": "controls_whileUntil",
+                    "id": gen_uid(),
+                    "fields": {"MODE": "WHILE"},
+                    "inputs": {
+                        "BOOL": {
+                            "block": {
+                                "type": "raw_python_expression",
+                                "id": gen_uid(),
+                                "fields": {"CODE": ast.unparse(node.test)}
+                            }
+                        }
+                    }
+                }
+                body_block = self.serialize_body(node.body)
+                if body_block:
+                    block["inputs"]["DO"] = {"block": body_block}
+                return block
+                
+            # 3. If Statements
+            elif isinstance(node, ast.If):
+                block = {
+                    "type": "controls_if",
+                    "id": gen_uid(),
+                    "inputs": {
+                        "IF0": {
+                            "block": {
+                                 "type": "raw_python_expression",
+                                 "id": gen_uid(),
+                                 "fields": {"CODE": ast.unparse(node.test)}
+                            }
+                        }
+                    }
+                }
+                body_block = self.serialize_body(node.body)
+                if body_block:
+                    block["inputs"]["DO0"] = {"block": body_block}
+                    
+                # Handle basic Else blocks
+                if node.orelse:
+                    block["extraState"] = {"hasElse": True}
+                    else_body = self.serialize_body(node.orelse)
+                    if else_body:
+                        block["inputs"]["ELSE"] = {"block": else_body}
+                return block
+
+            # 4. For Loops
+            elif isinstance(node, ast.For):
+                block = {
+                    "type": "controls_forEach",
+                    "id": gen_uid(),
+                    "fields": {"VAR": {"id": ast.unparse(node.target), "name": ast.unparse(node.target)}},
+                    "inputs": {
+                        "LIST": {
+                            "block": {
+                                "type": "raw_python_expression",
+                                "id": gen_uid(),
+                                "fields": {"CODE": ast.unparse(node.iter)}
+                            }
+                        }
+                    }
+                }
+                body_block = self.serialize_body(node.body)
+                if body_block:
+                    block["inputs"]["DO"] = {"block": body_block}
+                return block
+
+            # 5. Returns
+            elif isinstance(node, ast.Return):
+                val_code = ast.unparse(node.value) if node.value else "None"
+                return {
+                    "type": "procedure_return_value",
+                    "id": gen_uid(),
+                    "inputs": {
+                        "VALUE": {
+                            "block": {
+                                "type": "raw_python_expression",
+                                "id": gen_uid(),
+                                "fields": {"CODE": val_code}
+                            }
+                        }
+                    }
+                }
+
+            # 6. Function Definitions
+            elif isinstance(node, ast.FunctionDef):
+                block = {
+                    "type": "procedures_defnoreturn",
+                    "id": gen_uid(),
+                    "fields": {"NAME": node.name},
+                }
+                # Extracts the arguments so the block has the correct inputs visually
+                if node.args.args:
+                    block["extraState"] = {
+                        "params": [{"name": arg.arg, "id": arg.arg} for arg in node.args.args]
+                    }
+                body_block = self.serialize_body(node.body)
+                if body_block:
+                    block["inputs"]["STACK"] = {"block": body_block}
+                return block
+                
+        except Exception:
+            pass # Failsafe triggered, will drop to Raw Statement
+            
+        return None
