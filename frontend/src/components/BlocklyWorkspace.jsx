@@ -462,6 +462,7 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
     },
 
     // --- REVERSE ENGINEERING (PYTHON -> BLOCKS) ---
+    // --- REVERSE ENGINEERING (PYTHON -> BLOCKS) ---
     loadFromPython: (pythonCode) => {
       if (!workspace.current) return;
       isLoading.current = true;
@@ -473,21 +474,89 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
       let firstBlock = null;
       let prevBlock = null;
 
-      // Iterate through the Python code and construct a connected chain of raw blocks
+      // INTELLIGENT HEURISTIC PARSER
       lines.forEach((line, index) => {
-        const newBlock = {
-          type: "raw_python_statement",
-          id: Blockly.utils.idGenerator.genUid(),
-          fields: { CODE: line } // Put exact string into the raw block
-        };
+        const trimmed = line.trim();
+        let newBlock = null;
 
+        // --- PATTERN 1: Detect Comments ---
+        if (trimmed.startsWith('#')) {
+          newBlock = {
+            type: "comment_block",
+            id: Blockly.utils.idGenerator.genUid(),
+            fields: { TEXT: trimmed.substring(1).trim() } // Remove the '#' and spaces
+          };
+        }
+
+        // --- PATTERN 2: Detect Print Statements ---
+        else if (trimmed.startsWith('print(') && trimmed.endsWith(')')) {
+          const innerCode = trimmed.slice(6, -1);
+          let inputBlock;
+
+          // Check if it's a simple string e.g., print("Hello")
+          if (/^["'].*["']$/.test(innerCode)) {
+            inputBlock = {
+              type: "text",
+              id: Blockly.utils.idGenerator.genUid(),
+              fields: { TEXT: innerCode.slice(1, -1) }
+            };
+          } else {
+            // It's a variable or complex math, snap a Raw Expression into the print block
+            inputBlock = {
+              type: "raw_python_expression",
+              id: Blockly.utils.idGenerator.genUid(),
+              fields: { CODE: innerCode }
+            };
+          }
+
+          newBlock = {
+            type: "text_print",
+            id: Blockly.utils.idGenerator.genUid(),
+            inputs: { TEXT: { block: inputBlock } }
+          };
+        }
+
+        // --- PATTERN 3: Detect Variable Assignment (e.g., x = 10) ---
+        else if (/^[a-zA-Z_]\w*\s*=\s*.+/.test(trimmed)) {
+          const parts = trimmed.split('=');
+          const varName = parts[0].trim();
+          const varValue = parts.slice(1).join('=').trim();
+
+          newBlock = {
+            type: "variables_set",
+            id: Blockly.utils.idGenerator.genUid(),
+            fields: { VAR: { id: varName, name: varName } },
+            inputs: {
+              VALUE: {
+                // Let the Raw Expression block handle whatever is on the right side of the '='
+                block: {
+                  type: "raw_python_expression",
+                  id: Blockly.utils.idGenerator.genUid(),
+                  fields: { CODE: varValue }
+                }
+              }
+            }
+          };
+        }
+
+        // --- FALLBACK: Unrecognized Code (The Gatekeeper) ---
+        // If it's too complex (loops, ifs, function defs), dump it cleanly into a Raw Statement
+        else {
+          newBlock = {
+            type: "raw_python_statement",
+            id: Blockly.utils.idGenerator.genUid(),
+            fields: { CODE: line } // Keep original line WITH indentation intact
+          };
+        }
+
+        // --- CHAIN THE BLOCKS TOGETHER ---
         if (index === 0) {
           // Position the very first block in the workspace
           newBlock.x = 20;
           newBlock.y = 20;
           firstBlock = newBlock;
         } else {
-          // Chain this block to the 'next' property of the previous block
+          // Snap this block to the bottom of the previous block
           prevBlock.next = { block: newBlock };
         }
         prevBlock = newBlock;
