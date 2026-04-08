@@ -9,7 +9,6 @@ import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
 import "../styles/MainApp.css";
 import { formatComplexity } from "../utils/formatters";
 
-// --- RESTORED: Base Pre-Made System Templates ---
 const SIDEBAR_TEMPLATES = [
   { name: "Linear Search", path: "search/linear_search", desc: "Sequentially checks each element until the target is found or the list is exhausted." },
   { name: "Binary Search", path: "search/binary_search", desc: "Finds the position of a target value within a sorted array by repeatedly dividing the search interval in half." },
@@ -27,9 +26,11 @@ const SIDEBAR_TEMPLATES = [
 
 export default function MainApp() {
   const location = useLocation();
-  const workspaceRef = useRef(null);
 
-  const [analysisResult, setAnalysisResult] = useState({ lines: [], total: "O(1)", space_total: "O(1)", is_recursive: false });
+  const [analysisResult, setAnalysisResult] = useState({
+    lines: [], total: "O(1)", space_total: "O(1)", is_recursive: false
+  });
+
   const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
   const [consoleOutput, setConsoleOutput] = useState("Ready to run...");
   const [blocklyJson, setBlocklyJson] = useState(null);
@@ -39,69 +40,68 @@ export default function MainApp() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
-  const [sidebarTab, setSidebarTab] = useState("templates"); // 'templates' | 'projects'
-  const [systemTemplates, setSystemTemplates] = useState([]);
-  const [userProjects, setUserProjects] = useState([]);
-  
-  const [currentLoadedId, setCurrentLoadedId] = useState(null);
-  const [currentLoadedType, setCurrentLoadedType] = useState(null); // 'project' | 'template'
+  const [currentProjectId, setCurrentProjectId] = useState(null);
   const [currentProjectTitle, setCurrentProjectTitle] = useState("Untitled Project");
 
+  // --- NEW: User Custom Templates ---
+  const [userTemplates, setUserTemplates] = useState([]);
+  
+  // --- NEW: UI States (Replacing Alerts) ---
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
-  const [saveModal, setSaveModal] = useState({ isOpen: false, title: "", description: "", saveType: "project" });
+  const [saveModal, setSaveModal] = useState({ isOpen: false, title: "", description: "" });
+
   const [activeTab, setActiveTab] = useState("local");
-  const [expandedLines, setExpandedLines] = useState({});
-  const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
-  
-  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: "", message: "", confirmText: "Confirm", isDanger: false, onConfirmAction: null });
+
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false, title: "", message: "", confirmText: "Confirm", isDanger: false, onConfirmAction: null
+  });
+
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
-  
+  const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
+  const [expandedLines, setExpandedLines] = useState({});
+
   const toggleLine = (index) => setExpandedLines(prev => ({ ...prev, [index]: !prev[index] }));
+  
   const [panelHeight, setPanelHeight] = useState(450);
   const isDragging = useRef(false);
+  const workspaceRef = useRef(null);
   const [isEditingCode, setIsEditingCode] = useState(false);
 
+  // --- NEW: Toast Notification Helper ---
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
   };
 
-  // --- Fetch Templates and Projects ---
-  const fetchData = async () => {
+  // --- NEW: Fetch User's Saved Templates ---
+  const fetchUserTemplates = async () => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) return;
+    const user = JSON.parse(storedUser);
     try {
-      // 1. Prepare Base Hardcoded Templates
-      let baseTemplates = SIDEBAR_TEMPLATES.map(t => ({ ...t, title: t.name, description: t.desc, isSystem: true }));
-
-      const storedUser = localStorage.getItem("user");
-      if (!storedUser) {
-        setSystemTemplates(baseTemplates);
-        return;
-      }
-      
-      const user = JSON.parse(storedUser);
-
-      // 2. Fetch User's Custom Templates and combine them with Base Templates
-      const tRes = await fetch('/api/templates');
-      const tData = await tRes.json();
-      if (tData.status === 'success') {
-        const customTemplates = tData.templates
-          .filter(t => t.owner_id === user.email)
-          .map(t => ({ ...t, isCustomTemplate: true }));
-        setSystemTemplates([...baseTemplates, ...customTemplates]);
-      }
-
-      // 3. Fetch User's Personal Projects
-      const pRes = await fetch('/api/projects');
-      const pData = await pRes.json();
-      if (pData.status === 'success') {
-        setUserProjects(pData.projects.filter(p => p.owner_id === user.email) || []);
+      const res = await fetch('/api/projects');
+      const data = await res.json();
+      if (data.status === 'success') {
+        const templates = data.projects
+          .filter(p => p.owner_id === user.email)
+          .map(p => ({
+            _id: p._id,
+            name: p.title,
+            desc: p.description || "Custom saved template",
+            isCustom: true,
+            data: p.data
+          }));
+        setUserTemplates(templates);
       }
     } catch (e) {
-      console.error("Failed to fetch data", e);
+      console.error("Failed to load custom templates", e);
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchUserTemplates();
+    // eslint-disable-next-line
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -118,10 +118,18 @@ export default function MainApp() {
     };
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
-    return () => { document.removeEventListener("mousemove", handleMouseMove); document.removeEventListener("mouseup", handleMouseUp); };
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
   }, []);
 
-  const handleDragStart = (e) => { e.preventDefault(); isDragging.current = true; document.body.style.cursor = "ns-resize"; document.body.style.userSelect = "none"; };
+  const handleDragStart = (e) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+  };
 
   const handleSyncToBlocks = () => {
     if (workspaceRef.current && generatedPython) {
@@ -136,54 +144,92 @@ export default function MainApp() {
     if (!isEditingCode) setGeneratedPython(pythonCode);
     setBlocklyJson(json);
     try {
-      const response = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: pythonCode }) });
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: pythonCode })
+      });
       const data = await response.json();
       if (data.status === "success") {
         setAnalysisResult({ total: data.total, space_total: data.space_total || "O(1)", lines: data.lines || [], is_recursive: data.is_recursive || false });
       }
-    } catch (error) { console.error("Analysis Error:", error); }
-  };
-
-  const executeLoadItem = async (item, type) => {
-    try {
-      setAnalysisResult({ lines: [], total: "Analyzing...", space_total: "Analyzing...", is_recursive: false });
-      setCurrentLoadedType(type);
-      setCurrentProjectTitle(item.title);
-
-      let jsonToLoad;
-      if (item.isSystem) {
-        // Load Base Template from local files
-        const response = await fetch(`/templates/${item.path}.json`);
-        if (!response.ok) throw new Error("Template not found");
-        jsonToLoad = await response.json();
-        setCurrentLoadedId(null); // CRITICAL: Forces "Save" to clone it instead of overwriting
-      } else {
-        // Load Custom Template or Project from Database
-        jsonToLoad = item.data;
-        setCurrentLoadedId(item._id);
-      }
-
-      if (workspaceRef.current) {
-        workspaceRef.current.loadTemplate(jsonToLoad);
-        setViewMode("workspace");
-      }
     } catch (error) {
-      showToast(`Failed to load ${type}`, "error");
+      console.error("Analysis Error:", error);
     }
   };
 
-  const loadItemConfirm = (item, type) => {
-    setModalConfig({
-      isOpen: true, title: `Load ${item.title}?`, message: "Loading this will overwrite your current workspace. Continue?",
-      confirmText: "Load", isDanger: false,
-      onConfirmAction: () => { closeModal(); executeLoadItem(item, type); }
-    });
+  // --- UPDATED: Load Templates (Handles both pre-made and custom) ---
+  const executeLoadTemplate = async (template) => {
+    try {
+      setAnalysisResult({ lines: [], total: "Analyzing...", space_total: "Analyzing...", is_recursive: false });
+      let json;
+
+      if (template.isCustom) {
+        // Load user's saved project
+        json = template.data;
+        setCurrentProjectId(template._id); 
+      } else {
+        // Load default pre-made template
+        const response = await fetch(`/templates/${template.path}.json`);
+        if (!response.ok) throw new Error("Template not found");
+        json = await response.json();
+        setCurrentProjectId(null); // CRITICAL: Treat this as a fresh file so saving it clones it to the user's account
+      }
+
+      setCurrentProjectTitle(template.name);
+      if (workspaceRef.current) {
+        workspaceRef.current.loadTemplate(json);
+        setViewMode("workspace");
+      }
+    } catch (error) {
+      showToast("Failed to load template", "error");
+    }
   };
+
+  const loadAlgorithmTemplate = (template, skipConfirm = false) => {
+    if (!skipConfirm) {
+      setModalConfig({
+        isOpen: true,
+        title: `Load ${template.name}?`,
+        message: "Loading this algorithm will overwrite your current workspace. Do you want to continue?",
+        confirmText: "Load Template",
+        isDanger: false,
+        onConfirmAction: () => {
+          closeModal();
+          executeLoadTemplate(template);
+        }
+      });
+    } else {
+      executeLoadTemplate(template);
+    }
+  };
+
+  useEffect(() => {
+    if (location.state) {
+      setTimeout(() => {
+        if (location.state.templatePath) {
+          const t = SIDEBAR_TEMPLATES.find(x => x.path === location.state.templatePath);
+          if (t) loadAlgorithmTemplate(t, true);
+        }
+        if (location.state.projectToLoad && workspaceRef.current) {
+          workspaceRef.current.loadTemplate(location.state.projectToLoad.data);
+          setCurrentProjectId(location.state.projectToLoad._id);
+          setCurrentProjectTitle(location.state.projectToLoad.title);
+          setViewMode("workspace");
+        }
+        window.history.replaceState({}, document.title);
+      }, 300);
+    }
+    // eslint-disable-next-line
+  }, [location.state]);
 
   const handleClear = () => {
     setModalConfig({
-      isOpen: true, title: "Clear Workspace?", message: "Are you sure you want to clear? All unsaved progress will be lost.",
-      confirmText: "Clear", isDanger: true,
+      isOpen: true,
+      title: "Clear Workspace?",
+      message: "Are you sure you want to clear the workspace? All unsaved progress will be lost.",
+      confirmText: "Clear",
+      isDanger: true,
       onConfirmAction: () => {
         closeModal();
         if (workspaceRef.current) {
@@ -191,208 +237,195 @@ export default function MainApp() {
           setGeneratedPython("# Drag blocks to generate Python code");
           setBlocklyJson(null);
           setAnalysisResult({ lines: [], total: "O(1)", space_total: "O(1)", is_recursive: false });
-          setBottomPanel(null); setExpandedLines({});
-          setCurrentLoadedId(null); setCurrentLoadedType(null); setCurrentProjectTitle("Untitled Project");
+          setBottomPanel(null);
+          setExpandedLines({});
+          setCurrentProjectId(null);
+          setCurrentProjectTitle("Untitled Project");
         }
       }
     });
   };
 
-  const handleDeleteItem = async (e, id, type) => {
-    e.stopPropagation(); 
-    if (!window.confirm(`Are you sure you want to delete this ${type}?`)) return;
-    try {
-      const res = await fetch(`/api/${type}s/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        showToast(`${type} deleted!`, "success");
-        fetchData();
-        if (currentLoadedId === id) handleClear(); 
-      } else {
-        showToast(`Failed to delete ${type}`, "error");
-      }
-    } catch(e) {
-      showToast("Connection error", "error");
-    }
-  };
-
+  // --- NEW: Save Modal Trigger ---
   const openSaveModal = () => {
-    if (!blocklyJson) { showToast("The workspace is empty. Nothing to save!", "error"); return; }
-    const defaultType = currentLoadedType || "project";
+    if (!blocklyJson) {
+      showToast("The workspace is empty. Nothing to save!", "error");
+      return;
+    }
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      showToast("You must be signed in to save templates to your account.", "error");
+      return;
+    }
     setSaveModal({
-      isOpen: true, 
-      title: currentProjectTitle !== "Untitled Project" ? currentProjectTitle : "", 
-      description: "", 
-      saveType: defaultType
+      isOpen: true,
+      title: currentProjectTitle !== "Untitled Project" ? currentProjectTitle : "",
+      description: ""
     });
   };
 
-  const submitSave = async () => {
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      showToast("You must be signed in to save.", "error"); return;
-    }
-    const user = JSON.parse(storedUser);
-
-    const endpoint = saveModal.saveType === 'project' ? '/api/projects' : '/api/templates';
-    
+  // --- NEW: Submit Save Request ---
+  const submitSaveTemplate = async () => {
+    const user = JSON.parse(localStorage.getItem("user"));
     const payload = {
-      title: saveModal.title || "Untitled",
-      description: saveModal.description || "",
+      title: saveModal.title || "My Custom Template",
+      description: saveModal.description || "A custom algorithm template.",
       data: blocklyJson,
-      owner_id: user.email // Enforces that custom templates only show for the creator
+      owner_id: user.email
     };
-
-    const isUpdate = currentLoadedId && currentLoadedType === saveModal.saveType;
 
     try {
       let res;
-      if (isUpdate) {
-        res = await fetch(`${endpoint}/${currentLoadedId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (currentProjectId) {
+        // Update an existing custom template
+        res = await fetch(`/api/projects/${currentProjectId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: blocklyJson, title: payload.title, description: payload.description }),
+        });
       } else {
-        res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        // Clone a default template OR create a brand new one
+        res = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       }
       
+      const result = await res.json();
       if (res.ok) {
-        const result = await res.json();
-        showToast(`Saved as ${saveModal.saveType}!`, "success");
-        setCurrentLoadedId(isUpdate ? currentLoadedId : result.id);
-        setCurrentLoadedType(saveModal.saveType);
+        showToast("Template saved to your library!", "success");
+        if (!currentProjectId) setCurrentProjectId(result.id);
         setCurrentProjectTitle(payload.title);
-        fetchData(); 
+        fetchUserTemplates(); // Refresh sidebar
       } else {
-        showToast("Failed to save", "error");
+        showToast("Failed to save: " + (result.detail || "Error"), "error");
       }
     } catch (error) {
-      showToast("Connection error.", "error");
+      showToast("Connection error while saving.", "error");
     }
     setSaveModal({ ...saveModal, isOpen: false });
   };
 
-  const handleUpdateDB = async () => {
-    if (!blocklyJson || !currentLoadedId || !currentLoadedType) return;
-    const endpoint = currentLoadedType === 'project' ? '/api/projects' : '/api/templates';
+  const runCode = async () => {
+    setConsoleOutput("> Running...");
+    setBottomPanel("console");
+    setExpandedLines({});
     try {
-      const res = await fetch(`${endpoint}/${currentLoadedId}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: blocklyJson }),
+      const response = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: generatedPython }),
       });
-      if (res.ok) showToast("Changes saved successfully!", "success");
-      else showToast("Failed to save changes", "error");
-    } catch (e) {
-      showToast("Error saving changes.", "error");
+      const data = await response.json();
+      setConsoleOutput(data.status === "success" ? data.output : "> Error: " + data.output);
+    } catch {
+      setConsoleOutput("> Connection Error");
     }
   };
 
-  const runCode = async () => {
-    setConsoleOutput("> Running..."); setBottomPanel("console"); setExpandedLines({});
-    try {
-      const response = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: generatedPython }) });
-      const data = await response.json();
-      setConsoleOutput(data.status === "success" ? data.output : "> Error: " + data.output);
-    } catch { setConsoleOutput("> Connection Error"); }
-  };
-
-  const activeList = sidebarTab === 'templates' ? systemTemplates : userProjects;
-  const filteredList = activeList.filter(t => t.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  // Combine Default Templates with User's Custom Templates
+  const allTemplates = [...userTemplates, ...SIDEBAR_TEMPLATES];
+  const filteredTemplates = allTemplates.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="workspace-app-container">
+      {/* Toast Notification */}
       {toast.show && (
-        <div style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', background: toast.type === 'error' ? '#E74C3C' : '#00b8a3', color: 'white', padding: '12px 24px', borderRadius: '8px', zIndex: 10000, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', fontWeight: 'bold' }}>
+        <div style={{
+          position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+          background: toast.type === 'error' ? '#E74C3C' : '#00b8a3',
+          color: 'white', padding: '12px 24px', borderRadius: '8px', zIndex: 10000,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)', fontWeight: 'bold', animation: 'fadeIn 0.3s ease'
+        }}>
           {toast.message}
         </div>
       )}
 
+      {/* Save Template Modal */}
       {saveModal.isOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <div style={{ background: '#2A1B54', padding: '24px', borderRadius: '12px', width: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', border: '1px solid #4a4a4a', color: '#EBE4FF' }}>
-            <h2 style={{marginTop: 0, marginBottom: '20px', fontSize: '1.4rem'}}>Save Workspace</h2>
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div style={{
+            background: '#2A1B54', padding: '24px', borderRadius: '12px', width: '400px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.5)', border: '1px solid #4a4a4a', color: '#EBE4FF'
+          }}>
+            <h2 style={{marginTop: 0, marginBottom: '20px', fontSize: '1.4rem'}}>Save to My Templates</h2>
             
             <div style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
               <div>
-                <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#B8A0D6'}}>Save Destination</label>
-                <select 
-                  value={saveModal.saveType} 
-                  onChange={e => setSaveModal({...saveModal, saveType: e.target.value})}
-                  style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #4a4a4a', background: '#1C1236', color: 'white', outline: 'none', cursor: 'pointer'}}
-                >
-                  <option value="project">My Personal Project</option>
-                  <option value="template">My Custom Template</option>
-                </select>
-              </div>
-              <div>
-                <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#B8A0D6'}}>Title</label>
-                <input type="text" value={saveModal.title} onChange={e => setSaveModal({...saveModal, title: e.target.value})} placeholder="e.g. Optimized Quick Sort" style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #4a4a4a', background: '#1C1236', color: 'white', outline: 'none'}} />
+                <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#B8A0D6'}}>Template Name</label>
+                <input 
+                  type="text" 
+                  value={saveModal.title} 
+                  onChange={e => setSaveModal({...saveModal, title: e.target.value})}
+                  placeholder="e.g. My Optimized Quick Sort"
+                  style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #4a4a4a', background: '#1C1236', color: 'white', outline: 'none'}}
+                />
               </div>
               <div>
                 <label style={{display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#B8A0D6'}}>Description</label>
-                <textarea value={saveModal.description} onChange={e => setSaveModal({...saveModal, description: e.target.value})} placeholder="What does this code do?" style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #4a4a4a', background: '#1C1236', color: 'white', minHeight: '80px', outline: 'none', resize: 'vertical'}} />
+                <textarea 
+                  value={saveModal.description} 
+                  onChange={e => setSaveModal({...saveModal, description: e.target.value})}
+                  placeholder="What does this template do?"
+                  style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #4a4a4a', background: '#1C1236', color: 'white', minHeight: '80px', outline: 'none', resize: 'vertical'}}
+                />
               </div>
             </div>
 
             <div style={{display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '25px'}}>
-              <button onClick={() => setSaveModal({...saveModal, isOpen: false})} style={{padding: '8px 16px', background: 'transparent', color: '#B8A0D6', border: '1px solid #B8A0D6', borderRadius: '6px', cursor: 'pointer'}}>Cancel</button>
-              <button onClick={submitSave} style={{padding: '8px 16px', background: '#00b8a3', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold'}}>Confirm Save</button>
+              <button 
+                onClick={() => setSaveModal({...saveModal, isOpen: false})} 
+                style={{padding: '8px 16px', background: 'transparent', color: '#B8A0D6', border: '1px solid #B8A0D6', borderRadius: '6px', cursor: 'pointer'}}>
+                Cancel
+              </button>
+              <button 
+                onClick={submitSaveTemplate} 
+                style={{padding: '8px 16px', background: '#00b8a3', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold'}}>
+                Save Template
+              </button>
             </div>
           </div>
         </div>
       )}
 
       <WorkspaceHeader
-        viewMode={viewMode} setViewMode={setViewMode} runCode={runCode}
-        handleExport={openSaveModal} 
-        handleSaveToDB={openSaveModal} 
-        currentProjectId={currentLoadedId} 
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        runCode={runCode}
+        handleExport={openSaveModal}       // Replaced generic Export with specific Save trigger
+        handleSaveToDB={openSaveModal}     // Replaced old prompt with custom Modal trigger
+        currentProjectId={currentProjectId}
         currentProjectTitle={currentProjectTitle}
-        handleUpdateDB={handleUpdateDB}
+        handleUpdateDB={openSaveModal}     // Use the same modal flow for updating
       />
 
       <Split className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} sizes={[20, 80]} minSize={[250, 400]} gutterSize={8}>
-        
-        <aside className="templates-sidebar" style={{display: 'flex', flexDirection: 'column'}}>
-          <div style={{ display: 'flex', borderBottom: '1px solid #4a4a4a' }}>
-            <button 
-              onClick={() => setSidebarTab('templates')} 
-              style={{ flex: 1, padding: '12px 0', background: sidebarTab === 'templates' ? '#2A1B54' : 'transparent', color: sidebarTab === 'templates' ? '#00b8a3' : '#B8A0D6', border: 'none', borderBottom: sidebarTab === 'templates' ? '2px solid #00b8a3' : 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-              System Templates
-            </button>
-            <button 
-              onClick={() => setSidebarTab('projects')} 
-              style={{ flex: 1, padding: '12px 0', background: sidebarTab === 'projects' ? '#2A1B54' : 'transparent', color: sidebarTab === 'projects' ? '#00b8a3' : '#B8A0D6', border: 'none', borderBottom: sidebarTab === 'projects' ? '2px solid #00b8a3' : 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-              My Projects
-            </button>
-          </div>
-
-          <div className="sidebar-search" style={{ margin: '15px' }}>
+        <aside className="templates-sidebar">
+          <div className="sidebar-search">
             <img src="/assets/search-icon.png" alt="Search" className="search-icon" />
-            <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" placeholder="Search Templates" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
 
-          <div className="sidebar-list" style={{flex: 1, overflowY: 'auto'}}>
-            {filteredList.map((item) => (
-              <div key={item._id || item.title} className="sidebar-card" onClick={() => loadItemConfirm(item, sidebarTab === 'templates' ? 'template' : 'project')}>
+          <div className="sidebar-list">
+            {filteredTemplates.map((template) => (
+              <div key={template.name} className="sidebar-card" onClick={() => loadAlgorithmTemplate(template)}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                  <h4>{item.title}</h4>
-                  
-                  {/* Protects base System Templates from being deleted, but allows deletion of custom ones */}
-                  {item.isSystem ? (
-                    <span style={{fontSize: '0.7rem', background: '#4a4a4a', color: 'white', padding: '2px 6px', borderRadius: '10px'}}>Base Template</span>
-                  ) : (
-                    <button onClick={(e) => handleDeleteItem(e, item._id, sidebarTab === 'templates' ? 'template' : 'project')} style={{background: 'transparent', border: 'none', color: '#ff4d4d', cursor: 'pointer', fontSize: '1.2rem', padding: '0 5px'}} title="Delete">
-                      🗑️
-                    </button>
-                  )}
-
+                  <h4>{template.name}</h4>
+                  {template.isCustom && <span style={{fontSize: '0.7rem', background: '#00b8a3', color: 'white', padding: '2px 6px', borderRadius: '10px'}}>My Template</span>}
                 </div>
-                <p>{item.description}</p>
+                <p>{template.desc}</p>
               </div>
             ))}
-            {filteredList.length === 0 && <p className="no-results">No items found.</p>}
+            {filteredTemplates.length === 0 && <p className="no-results">No templates found.</p>}
           </div>
         </aside>
 
         <main className="workspace-main">
-          <button className={`sidebar-toggle-btn ${!isSidebarVisible ? 'closed' : ''}`} onClick={() => setIsSidebarVisible(!isSidebarVisible)} title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}>
+          <button className={`sidebar-toggle-btn ${!isSidebarVisible ? 'closed' : ''}`} onClick={() => setIsSidebarVisible(!isSidebarVisible)} title={isSidebarVisible ? "Hide Templates" : "Show Templates"}>
             <span className="toggle-icon">❮</span>
           </button>
 
@@ -403,12 +436,20 @@ export default function MainApp() {
 
             <div style={{ display: viewMode === 'python' ? 'flex' : 'none', flexDirection: 'column', height: '100%', background: '#1C1236' }}>
               <div style={{ padding: '10px 20px', background: '#2A1B54', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#EBE4FF', fontSize: '0.9rem', fontStyle: 'italic' }}>{isEditingCode ? "✏️ Unsaved code changes..." : "Code is synced with blocks."}</span>
-                <button onClick={handleSyncToBlocks} disabled={!isEditingCode} style={{ background: isEditingCode ? '#00b8a3' : '#4a4a4a', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: isEditingCode ? 'pointer' : 'not-allowed', fontWeight: 'bold' }}>
+                <span style={{ color: '#EBE4FF', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                  {isEditingCode ? "✏️ Unsaved code changes..." : "Code is synced with blocks."}
+                </span>
+                <button onClick={handleSyncToBlocks} disabled={!isEditingCode}
+                  style={{ background: isEditingCode ? '#00b8a3' : '#4a4a4a', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: isEditingCode ? 'pointer' : 'not-allowed', fontWeight: 'bold' }}>
                   Sync to Blocks ↻
                 </button>
               </div>
-              <textarea value={generatedPython} onChange={(e) => { setGeneratedPython(e.target.value); setIsEditingCode(true); }} spellCheck={false} style={{ flex: 1, margin: 0, padding: '20px', fontSize: '0.95rem', fontFamily: "'Fira Code', Consolas, Monaco, monospace", background: '#1C1236', color: '#EBE4FF', border: 'none', outline: 'none', resize: 'none', whiteSpace: 'pre', lineHeight: '1.5' }} />
+              <textarea
+                value={generatedPython}
+                onChange={(e) => { setGeneratedPython(e.target.value); setIsEditingCode(true); }}
+                spellCheck={false}
+                style={{ flex: 1, margin: 0, padding: '20px', fontSize: '0.95rem', fontFamily: "'Fira Code', Consolas, Monaco, monospace", background: '#1C1236', color: '#EBE4FF', border: 'none', outline: 'none', resize: 'none', whiteSpace: 'pre', lineHeight: '1.5' }}
+              />
             </div>
           </div>
 
@@ -431,7 +472,9 @@ export default function MainApp() {
                       </div>
                       <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                         <span className="total-badge"><span className="total-label">Total Time:</span> {analysisResult.total}</span>
-                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)' }}><span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {analysisResult.space_total}</span>
+                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)' }}>
+                          <span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {analysisResult.space_total}
+                        </span>
                       </div>
                     </div>
                     <div className="complexity-table-wrapper" style={{ overflowX: 'auto' }}>
@@ -453,22 +496,8 @@ export default function MainApp() {
                                     {explanationText && <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>{expandedLines[i] ? '▼' : '▶'}</span>}
                                   </td>
                                 </tr>
-                                
-                                {/* RESTORED COMPLEXITY GRAPH DROPDOWN */}
                                 {expandedLines[i] && explanationText && (
-                                  <tr className="explanation-row">
-                                    <td colSpan="4">
-                                      <div className="explanation-content" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                                        <div style={{ flex: 1 }}>
-                                          <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
-                                          <p>{explanationText}</p>
-                                        </div>
-                                        <div style={{ minWidth: '200px' }}>
-                                          <ComplexityGraph complexity={graphComplexity} color={row.color} label={graphLabel} />
-                                        </div>
-                                      </div>
-                                    </td>
-                                  </tr>
+                                  <tr className="explanation-row"><td colSpan="4"><div className="explanation-content" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}><div style={{ flex: 1 }}><img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" /><p>{explanationText}</p></div><div style={{ minWidth: '200px' }}><ComplexityGraph complexity={graphComplexity} color={row.color} label={graphLabel} /></div></div></td></tr>
                                 )}
                               </React.Fragment>
                             )
@@ -484,9 +513,15 @@ export default function MainApp() {
 
           <footer className="workspace-footer">
             <div className="footer-left">
-              <button className={`footer-tab ${bottomPanel === 'console' ? 'active' : ''}`} onClick={() => setBottomPanel(bottomPanel === 'console' ? null : 'console')}><img src="/assets/console-icon.png" alt="Console" className="tab-icon" /> Console</button>
-              <button className={`footer-tab ${bottomPanel === 'complexity' ? 'active' : ''}`} onClick={() => setBottomPanel(bottomPanel === 'complexity' ? null : 'complexity')}><img src="/assets/complexity-icon.png" alt="Complexity" className="tab-icon" /> Complexity</button>
-              <button className="footer-tab" onClick={() => setIsBigOModalOpen(true)} style={{ color: '#ffffff', fontWeight: 'bold' }}><img src="/assets/table-icon.png" alt="Reference" className="tab-icon" /> Big O Reference</button>
+              <button className={`footer-tab ${bottomPanel === 'console' ? 'active' : ''}`} onClick={() => setBottomPanel(bottomPanel === 'console' ? null : 'console')}>
+                <img src="/assets/console-icon.png" alt="Console" className="tab-icon" /> Console
+              </button>
+              <button className={`footer-tab ${bottomPanel === 'complexity' ? 'active' : ''}`} onClick={() => setBottomPanel(bottomPanel === 'complexity' ? null : 'complexity')}>
+                <img src="/assets/complexity-icon.png" alt="Complexity" className="tab-icon" /> Complexity
+              </button>
+              <button className="footer-tab" onClick={() => setIsBigOModalOpen(true)} style={{ color: '#ffffff', fontWeight: 'bold' }}>
+                <img src="/assets/table-icon.png" alt="Reference" className="tab-icon" /> Big O Reference
+              </button>
             </div>
             <div className="footer-right">
               <button className="footer-action-icon" onClick={handleClear} title="Clear Workspace"><img src="/assets/recursive-icon.png" alt="Refresh" /></button>

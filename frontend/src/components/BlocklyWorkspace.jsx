@@ -5,23 +5,22 @@ import { pythonGenerator } from "blockly/python";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
 // --- STABLE PLUGIN IMPORTS ---
-// These imports are stable Blockly plugins that enhance the workspace with additional functionality
 import { registerFieldMultilineInput } from '@blockly/field-multilineinput';
-import { Modal } from "@blockly/plugin-modal"; // Provides modal dialogs within Blockly
-import { WorkspaceSearch } from "@blockly/plugin-workspace-search"; // Adds a search interface for blocks
-import { shadowBlockConversionChangeListener } from "@blockly/shadow-block-converter"; // Handles automatic shadow block updates
-import "@blockly/toolbox-search"; // Toolbox search support
-import { Backpack } from "@blockly/workspace-backpack"; // Drag-and-drop workspace "backpack"
-import { ContentHighlight } from "@blockly/workspace-content-highlight"; // Highlights blocks when interacted with
-import { PositionedMinimap } from "@blockly/workspace-minimap"; // Adds a minimap overview of the workspace
-// Set Blockly interface language to English
+import { Modal } from "@blockly/plugin-modal";
+import { WorkspaceSearch } from "@blockly/plugin-workspace-search";
+import { shadowBlockConversionChangeListener } from "@blockly/shadow-block-converter";
+import "@blockly/toolbox-search";
+import { Backpack } from "@blockly/workspace-backpack";
+import { ContentHighlight } from "@blockly/workspace-content-highlight";
+import { PositionedMinimap } from "@blockly/workspace-minimap";
+
 registerFieldMultilineInput();
 Blockly.setLocale(En);
 
 const DarkTheme = Blockly.Themes.Dark;
 const ModernTheme = Blockly.Themes.Modern;
+
 // --- DEFINE CUSTOM PASTEL THEME ---
-// Create a pastel-themed Blockly workspace using ModernTheme as a base
 const pastelTheme = Blockly.Theme.defineTheme('pastelTheme', {
   base: ModernTheme,
   categoryStyles: {
@@ -32,7 +31,7 @@ const pastelTheme = Blockly.Theme.defineTheme('pastelTheme', {
     list_category: { colour: "#4DB6AC" },
     variable_category: { colour: "#f38286" },
     procedure_category: { colour: "#7a6b66" },
-    raw_category: { colour: "#FF6B6B" } // <--- 1. ADD THIS LINE
+    raw_category: { colour: "#FF6B6B" } 
   },
   blockStyles: {
     logic_blocks: { colourPrimary: "#c1a0e8", colourSecondary: "#B8A0D6", colourTertiary: "#A38CC1" },
@@ -42,7 +41,7 @@ const pastelTheme = Blockly.Theme.defineTheme('pastelTheme', {
     list_blocks: { colourPrimary: "#4DB6AC", colourSecondary: "#42A097", colourTertiary: "#388C83" },
     variable_blocks: { colourPrimary: "#f38286", colourSecondary: "#DB888B", colourTertiary: "#C27679" },
     procedure_blocks: { colourPrimary: "#7a6b66", colourSecondary: "#BDB2AE", colourTertiary: "#A89D9A" },
-    raw_blocks: { colourPrimary: "#FF6B6B", colourSecondary: "#FF8787", colourTertiary: "#FFA8A8" } // <--- 2. ADD THIS LINE
+    raw_blocks: { colourPrimary: "#FF6B6B", colourSecondary: "#FF8787", colourTertiary: "#FFA8A8" } 
   },
   fontStyle: {
     family: "'Outfit', 'Inter', sans-serif",
@@ -52,7 +51,6 @@ const pastelTheme = Blockly.Theme.defineTheme('pastelTheme', {
 });
 
 // --- 1. DEFINE CUSTOM BLOCKS ---
-// Define an array of custom blocks with JSON configuration
 const customBlocks = [
   {
     type: "comment_block",
@@ -139,12 +137,12 @@ const customBlocks = [
     colour: "#4C97FF",
     tooltip: "Returns the maximum or minimum of two numbers"
   },
-  // --- DICTIONARY BLOCKS (Perfect Visual & Connection Match) ---
+  // --- DICTIONARY BLOCKS ---
   {
     type: "dict_create_empty",
     message0: "create empty dictionary",
-    output: null, // Ensures it can plug into ANY variable block
-    style: "list_blocks", // Perfectly matches your theme's 3D List style
+    output: null,
+    style: "list_blocks",
     tooltip: "Creates a new, empty Python dictionary"
   },
   {
@@ -156,8 +154,8 @@ const customBlocks = [
       { type: "input_value", name: "VALUE" }
     ],
     inputsInline: true,
-    previousStatement: null, // Notch on top to stack below variables
-    nextStatement: null,     // Notch on bottom to continue the code
+    previousStatement: null,
+    nextStatement: null,
     style: "list_blocks",
     tooltip: "Sets a key-value pair in a dictionary (e.g., dict['key'] = value)"
   },
@@ -169,7 +167,7 @@ const customBlocks = [
       { type: "input_value", name: "KEY" }
     ],
     inputsInline: true,
-    output: null, // Puzzle tab on the left to plug into variables
+    output: null,
     style: "list_blocks",
     tooltip: "Retrieves the value for a specific key in a dictionary"
   },
@@ -182,13 +180,13 @@ const customBlocks = [
       { type: "input_value", "name": "VALUE" }
     ],
     inputsInline: true,
-    output: "DictPair", // Custom output type so it snaps cleanly
+    output: "DictPair", 
     style: "list_blocks",
     tooltip: "Creates a single Key-Value pair (e.g., 'A': 1)"
   },
   {
     type: "dict_from_pairs",
-    message0: "create dictionary with %1", // Changed text to show curly braces
+    message0: "create dictionary with %1",
     args0: [
       { type: "input_value", "name": "LIST", check: "Array" }
     ],
@@ -198,9 +196,9 @@ const customBlocks = [
   },
   {
     type: "multi_line_comment",
-    message0: 'comment %1', // Added \n so the quotes sit nicely above and below the box
+    message0: 'comment %1', 
     args0: [{
-      type: "field_multilinetext", // <--- EXACT SPELLING REQUIRED
+      type: "field_multilinetext",
       name: "TEXT",
       text: "Write multi-line note here",
       spellcheck: false
@@ -212,9 +210,9 @@ const customBlocks = [
   },
   {
     type: "raw_python_statement",
-    message0: "Raw Code \n %1", // Added \n to drop the box to the next line
+    message0: "Raw Code \n %1", 
     args0: [{ 
-      type: "field_multilinetext", // Changed from field_input so it expands dynamically
+      type: "field_multilinetext", 
       name: "CODE", 
       text: "print('Hello World')",
       spellcheck: false
@@ -226,9 +224,9 @@ const customBlocks = [
   },
   {
     type: "raw_python_expression",
-    message0: "Raw Eval \n %1", // Added \n to drop the box to the next line
+    message0: "Raw Eval \n %1", 
     args0: [{ 
-      type: "field_multilinetext", // Changed from field_input so it expands dynamically
+      type: "field_multilinetext",
       name: "CODE", 
       text: "x + y",
       spellcheck: false
@@ -253,7 +251,6 @@ const customBlocks = [
   }
 ];
 
-// Register custom blocks in Blockly
 if (Blockly.common && Blockly.common.defineBlocksWithJsonArray) {
   Blockly.common.defineBlocksWithJsonArray(customBlocks);
 } else {
@@ -261,12 +258,10 @@ if (Blockly.common && Blockly.common.defineBlocksWithJsonArray) {
 }
 
 // --- 2. TOOLBOX CONFIGURATION ---
-// Define Blockly toolbox structure with categories and blocks
 const toolbox = {
   kind: "categoryToolbox",
   contents: [
     { kind: "search", name: "Search", contents: [] },
-
     // Logic
     {
       kind: "category",
@@ -283,7 +278,6 @@ const toolbox = {
         { kind: "block", type: "procedure_return_value" }
       ]
     },
-
     // Loops
     {
       kind: "category",
@@ -303,7 +297,6 @@ const toolbox = {
         { kind: "block", type: "controls_flow_statements" }
       ]
     },
-
     // Math
     {
       kind: "category",
@@ -343,7 +336,6 @@ const toolbox = {
         { kind: "block", type: "math_random_float" }
       ]
     },
-
     // Text
     {
       kind: "category",
@@ -389,7 +381,6 @@ const toolbox = {
         { kind: "block", type: "lists_getSublist" },
         { kind: "block", type: "lists_split" },
         { kind: "block", type: "lists_sort" },
-
         // --- DICTIONARY BLOCKS ---
         { kind: "block", type: "dict_create_empty" },
         {
@@ -403,12 +394,9 @@ const toolbox = {
             KEY: { shadow: { type: "text", fields: { TEXT: "key_name" } } }
           }
         },
-
         // --- DYNAMIC DICTIONARY BLOCKS ---
         {
           kind: "block", type: "dict_from_pairs", inputs: {
-            // FIX 1: The input name must be 'LIST', not 'PAIRS'
-            // FIX 2: Use 'block' instead of 'shadow' so the user can click the gear icon!
             LIST: { block: { type: "lists_create_with", extraState: { itemCount: 2 } } }
           }
         },
@@ -420,14 +408,13 @@ const toolbox = {
         }
       ]
     },
-
     // Variables & Functions
     { kind: "category", name: "Variables", categorystyle: "variable_category", custom: "VARIABLE" },
     { kind: "category", name: "Functions", categorystyle: "procedure_category", custom: "PROCEDURE" },
     {
       kind: "category",
       name: "Raw Python",
-      categorystyle: "raw_category", // <--- SETS THE TOOLBOX DOT TO RED
+      categorystyle: "raw_category",
       contents: [
         { kind: "block", type: "raw_python_statement" },
         { kind: "block", type: "raw_python_expression" },
@@ -441,22 +428,30 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
   const blocklyDiv = useRef(null);
   const workspace = useRef(null);
   const onChangeRef = useRef(onChange);
-  const isLoading = useRef(false);
 
   useImperativeHandle(ref, () => ({
     clear: () => {
       if (workspace.current) {
-        isLoading.current = true;
-        workspace.current.clear();
-        isLoading.current = false;
+        Blockly.Events.disable(); 
+        try {
+          workspace.current.clear();
+        } finally {
+          Blockly.Events.enable(); 
+        }
       }
     },
+    // --- FIX 1: EVENT DISABLED LOADING ---
     loadTemplate: (json) => {
       if (workspace.current) {
-        isLoading.current = true;
-        workspace.current.clear();
-        Blockly.serialization.workspaces.load(json, workspace.current);
-        isLoading.current = false;
+        // Disable ALL blockly events so they don't queue up and flood
+        Blockly.Events.disable(); 
+        try {
+          workspace.current.clear();
+          Blockly.serialization.workspaces.load(json, workspace.current);
+        } finally {
+          // Re-enable events safely after the load is complete
+          Blockly.Events.enable(); 
+        }
 
         setTimeout(() => {
           const code = pythonGenerator.workspaceToCode(workspace.current);
@@ -470,15 +465,11 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         workspace.current.setTheme(themeName === 'dark' ? DarkTheme : pastelTheme);
       }
     },
-
     // --- REVERSE ENGINEERING (PYTHON AST -> BLOCKS) ---
     loadFromPython: async (pythonCode) => {
       if (!workspace.current) return;
-      isLoading.current = true;
-      workspace.current.clear();
-
+      
       try {
-        // Send the code to your backend Python AST parser
         const response = await fetch('/api/ast-to-blocks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -486,30 +477,31 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         });
         const data = await response.json();
 
-        if (data.status === "success" && data.blocks) {
-          // Success! Load the fully structured AST block map
-          Blockly.serialization.workspaces.load(data.blocks, workspace.current);
-        } else {
-          // FAILSAFE: If the server fails, dump everything safely to a single Raw block
-          const fallbackState = {
-            blocks: {
-              languageVersion: 0,
-              blocks: [{
-                type: "raw_python_multiline",
-                id: Blockly.utils.idGenerator.genUid(),
-                x: 20, y: 20,
-                fields: { CODE: pythonCode }
-              }]
-            }
-          };
-          Blockly.serialization.workspaces.load(fallbackState, workspace.current);
+        Blockly.Events.disable(); // Prevent event flood
+        try {
+          workspace.current.clear();
+          if (data.status === "success" && data.blocks) {
+            Blockly.serialization.workspaces.load(data.blocks, workspace.current);
+          } else {
+            const fallbackState = {
+              blocks: {
+                languageVersion: 0,
+                blocks: [{
+                  type: "raw_python_multiline",
+                  id: Blockly.utils.idGenerator.genUid(),
+                  x: 20, y: 20,
+                  fields: { CODE: pythonCode }
+                }]
+              }
+            };
+            Blockly.serialization.workspaces.load(fallbackState, workspace.current);
+          }
+        } finally {
+          Blockly.Events.enable(); // Re-enable events
         }
       } catch (error) {
         console.error("AST Parsing connection failed", error);
       } finally {
-        isLoading.current = false;
-
-        // Trigger sync back to MainApp / ActivityApp
         setTimeout(() => {
           const currentJson = Blockly.serialization.workspaces.save(workspace.current);
           if (onChangeRef.current) onChangeRef.current(currentJson, pythonCode);
@@ -518,69 +510,52 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
     }
   }));
 
-  // --- KEEP ONCHANGE REFERENCE UPDATED ---
-  // Ensures onChangeRef always points to the latest onChange callback
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  // --- INITIALIZE BLOCKLY WORKSPACE ---
   useEffect(() => {
     if (workspace.current) return; // only initialize once
 
-    // Declare plugin references so they can be cleaned up on unmount
     let searchPlugin, minimapPlugin, modalPlugin, backpackPlugin, highlightPlugin;
 
     if (blocklyDiv.current) {
-
-      // Unregister default Blockly search shortcut if it exists
       if (Blockly.ShortcutRegistry.registry.getRegistry()['startSearch']) {
         Blockly.ShortcutRegistry.registry.unregister('startSearch');
       }
 
-      // Inject the Blockly workspace into the container div
       workspace.current = Blockly.inject(blocklyDiv.current, {
-        toolbox: toolbox, // Blockly toolbox configuration
-        trashcan: true, // enable trashcan for deleting blocks
-        move: { scrollbars: true, drag: true, wheel: true }, // enable moving workspace with drag/scroll
-        zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 }, // zoom controls
-        renderer: "geras", // Geras renderer for modern look
-        theme: pastelTheme, // default theme
-        grid: { spacing: 25, length: 3, colour: '#6e6e6e', snap: true } // workspace grid configuration
+        toolbox: toolbox, 
+        trashcan: true, 
+        move: { scrollbars: true, drag: true, wheel: true }, 
+        zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 }, 
+        renderer: "geras", 
+        theme: pastelTheme, 
+        grid: { spacing: 25, length: 3, colour: '#6e6e6e', snap: true } 
       });
 
       try {
-        // --- PLUGIN INITIALIZATION ---
-        // Each plugin enhances the workspace with extra features
-        searchPlugin = new WorkspaceSearch(workspace.current); // search blocks
+        searchPlugin = new WorkspaceSearch(workspace.current); 
         searchPlugin.init();
-
-        minimapPlugin = new PositionedMinimap(workspace.current); // minimap overview
+        minimapPlugin = new PositionedMinimap(workspace.current); 
         minimapPlugin.init();
-
-        modalPlugin = new Modal(workspace.current); // modal dialogs
+        modalPlugin = new Modal(workspace.current); 
         modalPlugin.init();
-
-        backpackPlugin = new Backpack(workspace.current); // drag-and-drop block backpack
+        backpackPlugin = new Backpack(workspace.current); 
         backpackPlugin.init();
-
-        highlightPlugin = new ContentHighlight(workspace.current); // highlight blocks on interaction
+        highlightPlugin = new ContentHighlight(workspace.current); 
         highlightPlugin.init();
-
-        // Add custom listener to convert shadow blocks to regular blocks
         workspace.current.addChangeListener(shadowBlockConversionChangeListener);
       } catch (e) {
         console.warn("Plugin init skipped:", e.message);
       }
 
-      // --- PYTHON GENERATOR OVERRIDES ---
-      // Customize Blockly Python generator to remove default globals and docstrings
       if (!pythonGenerator.__originalInit) {
         pythonGenerator.__originalInit = pythonGenerator.init;
         pythonGenerator.init = function (workspace) {
           pythonGenerator.__originalInit.call(this, workspace);
           if (this.definitions_['variables']) {
-            delete this.definitions_['variables']; // remove default variable declarations
+            delete this.definitions_['variables']; 
           }
         };
       }
@@ -589,60 +564,43 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         pythonGenerator.__originalFinish = pythonGenerator.finish;
         pythonGenerator.finish = function (code) {
           let finalCode = pythonGenerator.__originalFinish.call(this, code);
-
-          // Remove global variables
           finalCode = finalCode.replace(/^[ \t]*global[ \t]+.*\n?/gm, '');
-
-          // Remove default docstring descriptions
           finalCode = finalCode.replace(/^[ \t]*"""Describe this function\.\.\."""\n?/gm, '');
-
-          // Remove default comment descriptions
           finalCode = finalCode.replace(/^[ \t]*# Describe this function\.\.\.\n?/gm, '');
-
           return finalCode.trim();
         };
       }
 
-      // --- CUSTOM BLOCK PYTHON GENERATORS ---
-      // math_assignment: handles variable assignment with operators
       pythonGenerator.forBlock['math_assignment'] = function (block) {
         const variable = pythonGenerator.getVariableName(block.getFieldValue('VAR'));
         const operator = block.getFieldValue('OP');
         const value = pythonGenerator.valueToCode(block, 'DELTA', pythonGenerator.ORDER_ATOMIC) || '0';
-
         let symbol = "+=";
         if (operator === "MINUS") symbol = "-=";
         else if (operator === "MULTIPLY") symbol = "*=";
         else if (operator === "DIVIDE") symbol = "/=";
-
         return `${variable} ${symbol} ${value}\n`;
       };
 
-      // controls_for: Python for-loop with from/to/by support
       pythonGenerator.forBlock['controls_for'] = function (block) {
         const variable = pythonGenerator.getVariableName(block.getFieldValue('VAR'));
         const from = pythonGenerator.valueToCode(block, 'FROM', pythonGenerator.ORDER_NONE) || '0';
         const to = pythonGenerator.valueToCode(block, 'TO', pythonGenerator.ORDER_NONE) || '0';
         const step = pythonGenerator.valueToCode(block, 'BY', pythonGenerator.ORDER_NONE) || '1';
-
         let rangeCode;
         if (step.trim() === '1') {
           rangeCode = from.trim() === '0' ? `range(${to})` : `range(${from}, ${to})`;
         } else {
           rangeCode = `range(${from}, ${to}, ${step})`;
         }
-
         let branch = pythonGenerator.statementToCode(block, 'DO') || pythonGenerator.PASS;
         return `for ${variable} in ${rangeCode}:\n${branch}`;
       };
 
-      // lists_getIndex: Access list elements by index (FULLY PATCHED)
       pythonGenerator.forBlock['lists_getIndex'] = function (block) {
         const mode = block.getFieldValue('MODE') || 'GET';
         const where = block.getFieldValue('WHERE') || 'FROM_START';
         const list = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_MEMBER) || '[]';
-
-        // 1. Determine the exact index string based on the dropdown
         let indexCode = '0';
         if (where === 'FIRST') {
           indexCode = '0';
@@ -655,40 +613,29 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
           indexCode = '-' + at;
         }
 
-        // 2. GET AND REMOVE (pop)
         if (mode === 'GET_REMOVE') {
-          if (where === 'LAST') {
-            return [`${list}.pop()`, pythonGenerator.ORDER_FUNCTION_CALL];
-          }
+          if (where === 'LAST') return [`${list}.pop()`, pythonGenerator.ORDER_FUNCTION_CALL];
           return [`${list}.pop(${indexCode})`, pythonGenerator.ORDER_FUNCTION_CALL];
         }
 
-        // 3. REMOVE ONLY (deletes item without returning it)
         if (mode === 'REMOVE') {
-          if (where === 'LAST') {
-            return `${list}.pop()\n`;
-          }
+          if (where === 'LAST') return `${list}.pop()\n`;
           return `${list}.pop(${indexCode})\n`;
         }
 
-        // 4. GET ONLY (standard index lookup like list[0] or list[-1])
         return [`${list}[${indexCode}]`, pythonGenerator.ORDER_MEMBER];
       };
 
-      // lists_setIndex: Modify list elements by index (FULLY PATCHED)
       pythonGenerator.forBlock['lists_setIndex'] = function (block) {
         const list = pythonGenerator.valueToCode(block, 'LIST', pythonGenerator.ORDER_MEMBER) || '[]';
         const mode = block.getFieldValue('MODE') || 'SET';
         const where = block.getFieldValue('WHERE') || 'FROM_START';
         const value = pythonGenerator.valueToCode(block, 'TO', pythonGenerator.ORDER_NONE) || 'None';
 
-        // 1. INSERT MODE (append to end, or insert at specific index)
         if (mode === 'INSERT') {
-          if (where === 'LAST') {
-            return `${list}.append(${value})\n`;
-          } else if (where === 'FIRST') {
-            return `${list}.insert(0, ${value})\n`;
-          } else if (where === 'FROM_START') {
+          if (where === 'LAST') return `${list}.append(${value})\n`;
+          else if (where === 'FIRST') return `${list}.insert(0, ${value})\n`;
+          else if (where === 'FROM_START') {
             const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
             return `${list}.insert(${at}, ${value})\n`;
           } else if (where === 'FROM_END') {
@@ -697,15 +644,11 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
           }
         }
 
-        // 2. SET MODE (standard assignment like list[0] = x)
         let indexCode = '0';
-        if (where === 'FIRST') {
-          indexCode = '0';
-        } else if (where === 'LAST') {
-          indexCode = '-1'; // Python shortcut for last element
-        } else if (where === 'FROM_START') {
-          indexCode = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
-        } else if (where === 'FROM_END') {
+        if (where === 'FIRST') indexCode = '0';
+        else if (where === 'LAST') indexCode = '-1'; 
+        else if (where === 'FROM_START') indexCode = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
+        else if (where === 'FROM_END') {
           const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '1';
           indexCode = '-' + at;
         }
@@ -713,32 +656,27 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return `${list}[${indexCode}] = ${value}\n`;
       };
 
-      // procedure_return_value: Return a value from function
       pythonGenerator.forBlock['procedure_return_value'] = function (block) {
         const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
         return `return ${value}\n`;
       };
 
-      // custom_string_join: Join list of strings with a delimiter
       pythonGenerator.forBlock['custom_string_join'] = function (block) {
         const list = pythonGenerator.valueToCode(block, 'LIST', pythonGenerator.ORDER_NONE) || '[]';
         const delimiter = pythonGenerator.valueToCode(block, 'DELIMITER', pythonGenerator.ORDER_MEMBER) || "''";
         return [`${delimiter}.join(${list})`, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
-      // string_to_list: Convert string to list of characters
       pythonGenerator.forBlock['string_to_list'] = function (block) {
         const stringVal = pythonGenerator.valueToCode(block, 'STRING', pythonGenerator.ORDER_NONE) || "''";
         return [`list(${stringVal})`, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
-      // type_cast_int: Convert value to integer
       pythonGenerator.forBlock['type_cast_int'] = function (block) {
         const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || '0';
         return [`int(${value})`, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
-      // math_advanced_operators: Floor division, power, bitwise shifts, and operators
       pythonGenerator.forBlock['math_advanced_operators'] = function (block) {
         const operator = block.getFieldValue('OP');
         let opSymbol = '';
@@ -758,7 +696,6 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return [`${a} ${opSymbol} ${b}`, order];
       };
 
-      // math_min_max: Generate min() or max() function calls
       pythonGenerator.forBlock['math_min_max'] = function (block) {
         const op = block.getFieldValue('OP') === 'MAX' ? 'max' : 'min';
         const a = pythonGenerator.valueToCode(block, 'A', pythonGenerator.ORDER_NONE) || '0';
@@ -766,108 +703,70 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return [`${op}(${a}, ${b})`, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
-      // comment_block: Convert block text into Python comment
       pythonGenerator.forBlock['comment_block'] = function (block) {
         const text = block.getFieldValue('TEXT') || '';
         return `# ${text}\n`;
       };
 
-      // Override default text_join to produce clean Python f-strings
       pythonGenerator.forBlock['text_join'] = function (block) {
-        // Check how many inputs the block has
         const itemCount = block.itemCount_;
         let fStringContent = "";
 
         for (let i = 0; i < itemCount; i++) {
-          // Get the raw code for each connected block
           let elementCode = pythonGenerator.valueToCode(block, 'ADD' + i, pythonGenerator.ORDER_NONE);
+          if (!elementCode) continue;
 
-          if (!elementCode) {
-            continue;
-          }
-
-          // If it's a raw string (wrapped in quotes), remove the quotes and add it directly
           if (elementCode.startsWith("'") && elementCode.endsWith("'")) {
             fStringContent += elementCode.slice(1, -1);
-          }
-          // If it's a variable or number, wrap it in curly braces for the f-string
-          else {
+          } else {
             fStringContent += `{${elementCode}}`;
           }
         }
-
-        // Return the formatted f-string
         return [`f"${fStringContent}"`, pythonGenerator.ORDER_ATOMIC];
       };
 
-      // --- DICTIONARY GENERATORS ---
-
-      // 1. Create Empty Dictionary: {}
       pythonGenerator.forBlock['dict_create_empty'] = function (block) {
         return ['{}', pythonGenerator.ORDER_ATOMIC];
       };
 
-      // 2. Set Dictionary Key: dict['key'] = value
       pythonGenerator.forBlock['dict_set'] = function (block) {
         const dict = pythonGenerator.valueToCode(block, 'DICT', pythonGenerator.ORDER_MEMBER) || '{}';
         const key = pythonGenerator.valueToCode(block, 'KEY', pythonGenerator.ORDER_NONE) || '""';
         const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
-
         return `${dict}[${key}] = ${value}\n`;
       };
 
-      // 3. Get Dictionary Value: dict['key']
       pythonGenerator.forBlock['dict_get'] = function (block) {
         const dict = pythonGenerator.valueToCode(block, 'DICT', pythonGenerator.ORDER_MEMBER) || '{}';
         const key = pythonGenerator.valueToCode(block, 'KEY', pythonGenerator.ORDER_NONE) || '""';
-
         return [`${dict}[${key}]`, pythonGenerator.ORDER_MEMBER];
       };
 
-      // multi_line_comment: Convert block text into Python multi-line docstring/comment
       pythonGenerator.forBlock['multi_line_comment'] = function (block) {
         const text = block.getFieldValue('TEXT') || '';
-        // Wraps the text in triple quotes and ensures it's on its own lines
         return `"""\n${text}\n"""\n`;
       };
 
-      // --- DYNAMIC DICTIONARY GENERATORS (Literal {} Format) ---
-
-      // 1. Generate the raw pair without parentheses: 'key': value
       pythonGenerator.forBlock['dict_pair'] = function (block) {
         const key = pythonGenerator.valueToCode(block, 'KEY', pythonGenerator.ORDER_NONE) || '""';
         const value = pythonGenerator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
-
         return [`${key}: ${value}`, pythonGenerator.ORDER_NONE];
       };
 
-      // 2. Generate the Literal Dictionary: { \n 'A': 1 \n }
       pythonGenerator.forBlock['dict_from_pairs'] = function (block) {
-        // Grab the list block that is plugged into this dictionary block
         const listBlock = block.getInputTargetBlock('LIST');
-
-        // If there's no list block plugged in, return an empty dict
         if (!listBlock || listBlock.type !== 'lists_create_with') {
           return ['{}', pythonGenerator.ORDER_ATOMIC];
         }
 
-        // Loop through the list block's slots and extract the pairs directly
         let pairs = [];
         for (let i = 0; i < listBlock.itemCount_; i++) {
           let pairCode = pythonGenerator.valueToCode(listBlock, 'ADD' + i, pythonGenerator.ORDER_NONE);
-          if (pairCode) {
-            pairs.push(pairCode);
-          }
+          if (pairCode) pairs.push(pairCode);
         }
 
-        // If it's empty, return {}
-        if (pairs.length === 0) {
-          return ['{}', pythonGenerator.ORDER_ATOMIC];
-        }
-
-        // Wrap the pairs in curly braces with perfect multi-line indentation
+        if (pairs.length === 0) return ['{}', pythonGenerator.ORDER_ATOMIC];
         const code = '{\n    ' + pairs.join(',\n    ') + '\n}';
-
         return [code, pythonGenerator.ORDER_ATOMIC];
       };
 
@@ -883,32 +782,39 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         return block.getFieldValue('CODE') + '\n';
       };
 
-      // --- WORKSPACE CHANGE LISTENER ---
-      // Fires whenever the workspace changes, except during template load or UI events
+      // --- FIX 2: DEBOUNCED WORKSPACE CHANGE LISTENER ---
+      let changeTimeout = null;
+      
       workspace.current.addChangeListener((event) => {
-        if (isLoading.current) return;
         if (event.isUiEvent) return;
 
-        try {
-          const json = Blockly.serialization.workspaces.save(workspace.current);
-          const code = pythonGenerator.workspaceToCode(workspace.current);
-          if (onChangeRef.current) onChangeRef.current(json, code);
-        } catch (e) {
-          console.warn("Blockly Workspace Update Error: ", e);
-        }
+        // Clear the previous timeout if the user is still interacting
+        if (changeTimeout) clearTimeout(changeTimeout);
+
+        // Wait 400ms after the last block interaction before generating code/fetching
+        changeTimeout = setTimeout(() => {
+          try {
+            const json = Blockly.serialization.workspaces.save(workspace.current);
+            const code = pythonGenerator.workspaceToCode(workspace.current);
+            if (onChangeRef.current) onChangeRef.current(json, code);
+          } catch (e) {
+            console.warn("Blockly Workspace Update Error: ", e);
+          }
+        }, 400); 
       });
 
-      // --- RESIZE OBSERVER ---
-      // Observes container div and resizes Blockly workspace automatically
+      // --- FIX 3: REQUEST_ANIMATION_FRAME RESIZE OBSERVER ---
+      let resizeFrame;
       const observer = new ResizeObserver(() => {
-        if (workspace.current) Blockly.svgResize(workspace.current);
+        if (resizeFrame) cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(() => {
+          if (workspace.current) Blockly.svgResize(workspace.current);
+        });
       });
       observer.observe(blocklyDiv.current);
       blocklyDiv.current.resizeObserver = observer;
     }
 
-    // --- CLEANUP FUNCTION ---
-    // Dispose workspace and plugins to prevent memory leaks
     return () => {
       try {
         if (searchPlugin?.dispose) searchPlugin.dispose();
@@ -931,8 +837,6 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
     };
   }, []);
 
-  // --- RENDER BLOCKLY CONTAINER ---
-  // Outer div ensures workspace fills parent container
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <div ref={blocklyDiv} style={{ height: "100%", width: "100%" }} />
@@ -940,5 +844,4 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
   );
 });
 
-// Export the component for usage in other modules
 export default BlocklyWorkspace;
