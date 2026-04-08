@@ -4,6 +4,7 @@ import sys
 import os
 from io import StringIO
 from fastapi.middleware.cors import CORSMiddleware
+from blockly_ast import BlocklyASTConverter
 from pydantic import BaseModel
 import ast
 import requests # Add this to the top of your file with the other imports
@@ -46,6 +47,22 @@ class ProgressRequest(BaseModel):
     
 class GoogleAuthRequest(BaseModel):
     access_token: str
+
+class AstRequest(BaseModel):
+    code: str
+
+@app.post("/api/ast-to-blocks")
+async def ast_to_blocks(request: AstRequest):
+    try:
+        converter = BlocklyASTConverter()
+        blocks_json = converter.convert(request.code)
+        
+        if blocks_json:
+            return {"status": "success", "blocks": blocks_json}
+        else:
+            return {"status": "error", "message": "Failed to generate AST."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.post("/api/analyze")
 @app.post("/analyze")
