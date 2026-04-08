@@ -18,6 +18,7 @@ try:
     # Define your collections
     projects_collection = db["projects"]
     users_collection = db["users"]
+    templates_collection = db["templates"] # <--- ADD THIS LINE
 
     print("Successfully connected to MongoDB.")
 

@@ -3,10 +3,27 @@ import { useLocation } from "react-router-dom";
 import Split from "react-split";
 import BigOModal from "../components/BigOModal.jsx";
 import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
+import ComplexityGraph from '../components/ComplexityGraph.jsx';
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
 import "../styles/MainApp.css";
 import { formatComplexity } from "../utils/formatters";
+
+// --- RESTORED: Base Pre-Made System Templates ---
+const SIDEBAR_TEMPLATES = [
+  { name: "Linear Search", path: "search/linear_search", desc: "Sequentially checks each element until the target is found or the list is exhausted." },
+  { name: "Binary Search", path: "search/binary_search", desc: "Finds the position of a target value within a sorted array by repeatedly dividing the search interval in half." },
+  { name: "Exponential Search", path: "search/exponential_search", desc: "Finds the range where the target may exist by repeated doubling, then performs binary search within that range." },
+  { name: "Bubble Sort", path: "sort/bubble_sort", desc: "Repeatedly swaps adjacent elements if they are in the wrong order." },
+  { name: "Selection Sort", path: "sort/selection_sort", desc: "Finds the minimum element from the unsorted part and places it at the beginning." },
+  { name: "Insertion Sort", path: "sort/insertion_sort", desc: "Builds the final sorted array one element at a time by inserting elements into their correct position." },
+  { name: "Merge Sort", path: "sort/merge_sort", desc: "Divides the array into halves, sorts them, and merges them back." },
+  { name: "Quick Sort", path: "sort/quick_sort", desc: "Partitions elements around a pivot, then recursively sorts the subarrays." },
+  { name: "Factorial (Recursive)", path: "recursive/recursive_factorial", desc: "Calculates the factorial of a number using recursion." },
+  { name: "Fibonacci (Recursive)", path: "recursive/recursive_fibonacci", desc: "Generates the Fibonacci sequence using recursive calls." },
+  { name: "Permutation (Recursive)", path: "recursive/recursive_permutation", desc: "Generates all permutations of a string using backtracking." },
+  { name: "Tower of Hanoi (Recursive)", path: "recursive/recursive_tower_of_hanoi", desc: "Moves disks between rods following the Tower of Hanoi rules using recursion." },
+];
 
 export default function MainApp() {
   const location = useLocation();
@@ -22,7 +39,6 @@ export default function MainApp() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
-  // --- Core State Variables ---
   const [sidebarTab, setSidebarTab] = useState("templates"); // 'templates' | 'projects'
   const [systemTemplates, setSystemTemplates] = useState([]);
   const [userProjects, setUserProjects] = useState([]);
@@ -31,7 +47,6 @@ export default function MainApp() {
   const [currentLoadedType, setCurrentLoadedType] = useState(null); // 'project' | 'template'
   const [currentProjectTitle, setCurrentProjectTitle] = useState("Untitled Project");
 
-  // --- UI States ---
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
   const [saveModal, setSaveModal] = useState({ isOpen: false, title: "", description: "", saveType: "project" });
   const [activeTab, setActiveTab] = useState("local");
@@ -40,6 +55,8 @@ export default function MainApp() {
   
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: "", message: "", confirmText: "Confirm", isDanger: false, onConfirmAction: null });
   const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
+  
+  const toggleLine = (index) => setExpandedLines(prev => ({ ...prev, [index]: !prev[index] }));
   const [panelHeight, setPanelHeight] = useState(450);
   const isDragging = useRef(false);
   const [isEditingCode, setIsEditingCode] = useState(false);
@@ -49,23 +66,35 @@ export default function MainApp() {
     setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
   };
 
-  // --- Fetch Data from Backend ---
+  // --- Fetch Templates and Projects ---
   const fetchData = async () => {
     try {
-      // 1. Fetch Global System Templates
+      // 1. Prepare Base Hardcoded Templates
+      let baseTemplates = SIDEBAR_TEMPLATES.map(t => ({ ...t, title: t.name, description: t.desc, isSystem: true }));
+
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) {
+        setSystemTemplates(baseTemplates);
+        return;
+      }
+      
+      const user = JSON.parse(storedUser);
+
+      // 2. Fetch User's Custom Templates and combine them with Base Templates
       const tRes = await fetch('/api/templates');
       const tData = await tRes.json();
-      if (tData.status === 'success') setSystemTemplates(tData.templates || []);
+      if (tData.status === 'success') {
+        const customTemplates = tData.templates
+          .filter(t => t.owner_id === user.email)
+          .map(t => ({ ...t, isCustomTemplate: true }));
+        setSystemTemplates([...baseTemplates, ...customTemplates]);
+      }
 
-      // 2. Fetch User's Personal Projects
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        const pRes = await fetch('/api/projects');
-        const pData = await pRes.json();
-        if (pData.status === 'success') {
-          setUserProjects(pData.projects.filter(p => p.owner_id === user.email) || []);
-        }
+      // 3. Fetch User's Personal Projects
+      const pRes = await fetch('/api/projects');
+      const pData = await pRes.json();
+      if (pData.status === 'success') {
+        setUserProjects(pData.projects.filter(p => p.owner_id === user.email) || []);
       }
     } catch (e) {
       console.error("Failed to fetch data", e);
@@ -74,7 +103,6 @@ export default function MainApp() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // --- Sidebar Resize Logic ---
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isDragging.current) return;
@@ -116,16 +144,27 @@ export default function MainApp() {
     } catch (error) { console.error("Analysis Error:", error); }
   };
 
-  // --- Load Item from Sidebar ---
-  const executeLoadItem = (item, type) => {
+  const executeLoadItem = async (item, type) => {
     try {
       setAnalysisResult({ lines: [], total: "Analyzing...", space_total: "Analyzing...", is_recursive: false });
-      setCurrentLoadedId(item._id);
       setCurrentLoadedType(type);
       setCurrentProjectTitle(item.title);
 
+      let jsonToLoad;
+      if (item.isSystem) {
+        // Load Base Template from local files
+        const response = await fetch(`/templates/${item.path}.json`);
+        if (!response.ok) throw new Error("Template not found");
+        jsonToLoad = await response.json();
+        setCurrentLoadedId(null); // CRITICAL: Forces "Save" to clone it instead of overwriting
+      } else {
+        // Load Custom Template or Project from Database
+        jsonToLoad = item.data;
+        setCurrentLoadedId(item._id);
+      }
+
       if (workspaceRef.current) {
-        workspaceRef.current.loadTemplate(item.data);
+        workspaceRef.current.loadTemplate(jsonToLoad);
         setViewMode("workspace");
       }
     } catch (error) {
@@ -159,16 +198,15 @@ export default function MainApp() {
     });
   };
 
-  // --- Delete Item from Sidebar ---
   const handleDeleteItem = async (e, id, type) => {
-    e.stopPropagation(); // Prevents loading the item when clicking the trash can
+    e.stopPropagation(); 
     if (!window.confirm(`Are you sure you want to delete this ${type}?`)) return;
     try {
       const res = await fetch(`/api/${type}s/${id}`, { method: "DELETE" });
       if (res.ok) {
         showToast(`${type} deleted!`, "success");
         fetchData();
-        if (currentLoadedId === id) handleClear(); // Reset workspace if they delete what they are currently viewing
+        if (currentLoadedId === id) handleClear(); 
       } else {
         showToast(`Failed to delete ${type}`, "error");
       }
@@ -177,13 +215,9 @@ export default function MainApp() {
     }
   };
 
-  // --- Unified Save Modal Trigger ---
   const openSaveModal = () => {
     if (!blocklyJson) { showToast("The workspace is empty. Nothing to save!", "error"); return; }
-    
-    // Default the dropdown to what they are currently viewing, otherwise default to "project"
     const defaultType = currentLoadedType || "project";
-
     setSaveModal({
       isOpen: true, 
       title: currentProjectTitle !== "Untitled Project" ? currentProjectTitle : "", 
@@ -192,12 +226,12 @@ export default function MainApp() {
     });
   };
 
-  // --- Submit Unified Save Request ---
   const submitSave = async () => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (saveModal.saveType === 'project' && !user) {
-      showToast("You must be signed in to save personal projects.", "error"); return;
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      showToast("You must be signed in to save.", "error"); return;
     }
+    const user = JSON.parse(storedUser);
 
     const endpoint = saveModal.saveType === 'project' ? '/api/projects' : '/api/templates';
     
@@ -205,10 +239,9 @@ export default function MainApp() {
       title: saveModal.title || "Untitled",
       description: saveModal.description || "",
       data: blocklyJson,
-      ...(saveModal.saveType === 'project' && { owner_id: user.email })
+      owner_id: user.email // Enforces that custom templates only show for the creator
     };
 
-    // If they are editing the same type, update it. If they loaded a Template but select "Save as Project", it clones a NEW project.
     const isUpdate = currentLoadedId && currentLoadedType === saveModal.saveType;
 
     try {
@@ -221,11 +254,11 @@ export default function MainApp() {
       
       if (res.ok) {
         const result = await res.json();
-        showToast(`${saveModal.saveType} saved!`, "success");
+        showToast(`Saved as ${saveModal.saveType}!`, "success");
         setCurrentLoadedId(isUpdate ? currentLoadedId : result.id);
         setCurrentLoadedType(saveModal.saveType);
         setCurrentProjectTitle(payload.title);
-        fetchData(); // Refresh the sidebar
+        fetchData(); 
       } else {
         showToast("Failed to save", "error");
       }
@@ -235,7 +268,6 @@ export default function MainApp() {
     setSaveModal({ ...saveModal, isOpen: false });
   };
 
-  // --- Quick Update (Button in Header) ---
   const handleUpdateDB = async () => {
     if (!blocklyJson || !currentLoadedId || !currentLoadedType) return;
     const endpoint = currentLoadedType === 'project' ? '/api/projects' : '/api/templates';
@@ -260,20 +292,17 @@ export default function MainApp() {
     } catch { setConsoleOutput("> Connection Error"); }
   };
 
-  // Filter Active Tab List
   const activeList = sidebarTab === 'templates' ? systemTemplates : userProjects;
   const filteredList = activeList.filter(t => t.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="workspace-app-container">
-      {/* Toast Notification */}
       {toast.show && (
         <div style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', background: toast.type === 'error' ? '#E74C3C' : '#00b8a3', color: 'white', padding: '12px 24px', borderRadius: '8px', zIndex: 10000, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', fontWeight: 'bold' }}>
           {toast.message}
         </div>
       )}
 
-      {/* Unified Save Modal */}
       {saveModal.isOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
           <div style={{ background: '#2A1B54', padding: '24px', borderRadius: '12px', width: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', border: '1px solid #4a4a4a', color: '#EBE4FF' }}>
@@ -288,7 +317,7 @@ export default function MainApp() {
                   style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #4a4a4a', background: '#1C1236', color: 'white', outline: 'none', cursor: 'pointer'}}
                 >
                   <option value="project">My Personal Project</option>
-                  <option value="template">System Pre-Made Template</option>
+                  <option value="template">My Custom Template</option>
                 </select>
               </div>
               <div>
@@ -313,14 +342,13 @@ export default function MainApp() {
         viewMode={viewMode} setViewMode={setViewMode} runCode={runCode}
         handleExport={openSaveModal} 
         handleSaveToDB={openSaveModal} 
-        currentProjectId={currentLoadedId} // Tells the header if "Save Changes" should be active
+        currentProjectId={currentLoadedId} 
         currentProjectTitle={currentProjectTitle}
         handleUpdateDB={handleUpdateDB}
       />
 
       <Split className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} sizes={[20, 80]} minSize={[250, 400]} gutterSize={8}>
         
-        {/* NEW TABS SIDEBAR */}
         <aside className="templates-sidebar" style={{display: 'flex', flexDirection: 'column'}}>
           <div style={{ display: 'flex', borderBottom: '1px solid #4a4a4a' }}>
             <button 
@@ -342,17 +370,24 @@ export default function MainApp() {
 
           <div className="sidebar-list" style={{flex: 1, overflowY: 'auto'}}>
             {filteredList.map((item) => (
-              <div key={item._id} className="sidebar-card" onClick={() => loadItemConfirm(item, sidebarTab === 'templates' ? 'template' : 'project')}>
+              <div key={item._id || item.title} className="sidebar-card" onClick={() => loadItemConfirm(item, sidebarTab === 'templates' ? 'template' : 'project')}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                   <h4>{item.title}</h4>
-                  <button onClick={(e) => handleDeleteItem(e, item._id, sidebarTab === 'templates' ? 'template' : 'project')} style={{background: 'transparent', border: 'none', color: '#ff4d4d', cursor: 'pointer', fontSize: '1.2rem', padding: '0 5px'}} title="Delete">
-                    🗑️
-                  </button>
+                  
+                  {/* Protects base System Templates from being deleted, but allows deletion of custom ones */}
+                  {item.isSystem ? (
+                    <span style={{fontSize: '0.7rem', background: '#4a4a4a', color: 'white', padding: '2px 6px', borderRadius: '10px'}}>Base Template</span>
+                  ) : (
+                    <button onClick={(e) => handleDeleteItem(e, item._id, sidebarTab === 'templates' ? 'template' : 'project')} style={{background: 'transparent', border: 'none', color: '#ff4d4d', cursor: 'pointer', fontSize: '1.2rem', padding: '0 5px'}} title="Delete">
+                      🗑️
+                    </button>
+                  )}
+
                 </div>
                 <p>{item.description}</p>
               </div>
             ))}
-            {filteredList.length === 0 && <p className="no-results">No items found in {sidebarTab === 'templates' ? 'System Templates' : 'My Projects'}.</p>}
+            {filteredList.length === 0 && <p className="no-results">No items found.</p>}
           </div>
         </aside>
 
@@ -405,14 +440,36 @@ export default function MainApp() {
                         <tbody>
                           {analysisResult.lines.map((row, i) => {
                             const explanationText = activeTab === 'local' ? row.local_explanation : row.global_explanation;
+                            const graphComplexity = activeTab === 'local' ? row.local_time : row.global_time;
+                            const graphLabel = activeTab === 'local' ? 'Local Complexity' : 'Global Complexity';
                             return (
                               <React.Fragment key={i}>
                                 <tr className={`complexity-row ${expandedLines[i] ? 'expanded' : ''}`} onClick={() => toggleLine(i)} style={{ cursor: explanationText ? 'pointer' : 'default' }}>
                                   <td className="code-cell" style={{ color: row.color || 'white', paddingLeft: `${((row.indent || 0) * 15) + 20}px` }}>{row.lineOfCode}</td>
                                   <td style={{ color: '#000000' }}>{row.operation || '-'}</td>
                                   <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>{formatComplexity(activeTab === 'local' ? row.local_time : row.global_time)}</td>
-                                  <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>{formatComplexity(activeTab === 'local' ? row.local_space : row.global_space)}</td>
+                                  <td className="complexity-cell" style={{ fontWeight: activeTab === 'global' ? 'bold' : 'normal' }}>
+                                    {formatComplexity(activeTab === 'local' ? row.local_space : row.global_space)}
+                                    {explanationText && <span className="dropdown-chevron" style={{ marginLeft: '10px' }}>{expandedLines[i] ? '▼' : '▶'}</span>}
+                                  </td>
                                 </tr>
+                                
+                                {/* RESTORED COMPLEXITY GRAPH DROPDOWN */}
+                                {expandedLines[i] && explanationText && (
+                                  <tr className="explanation-row">
+                                    <td colSpan="4">
+                                      <div className="explanation-content" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                                        <div style={{ flex: 1 }}>
+                                          <img src="/assets/lightbulb-icon.png" alt="Lightbulb" className="tab-icon" />
+                                          <p>{explanationText}</p>
+                                        </div>
+                                        <div style={{ minWidth: '200px' }}>
+                                          <ComplexityGraph complexity={graphComplexity} color={row.color} label={graphLabel} />
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
                               </React.Fragment>
                             )
                           })}

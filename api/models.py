@@ -12,12 +12,11 @@ class ProjectUpdate(BaseModel):
     description: Optional[str] = None 
     data: Optional[dict] = None
 
-# --- NEW: System Template Models ---
 class TemplateModel(BaseModel):
     title: str
     description: Optional[str] = ""
     data: dict
-    # Note: No owner_id here because templates are global to the system!
+    owner_id: str  # Ensures templates are saved specific to the user
 
 class TemplateUpdate(BaseModel):
     title: Optional[str] = None

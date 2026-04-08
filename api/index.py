@@ -11,9 +11,9 @@ import requests # Add this to the top of your file with the other imports
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from database import projects_collection, users_collection
-from models import ProjectModel, ProjectUpdate           
-from bson import ObjectId                 
+from database import projects_collection, users_collection, templates_collection
+from models import ProjectModel, ProjectUpdate, TemplateModel, TemplateUpdate
+from bson import ObjectId             
 
 # Import the newly separated ComplexityAnalyzer
 from analyzer import ComplexityAnalyzer
