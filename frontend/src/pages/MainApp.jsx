@@ -9,8 +9,6 @@ import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
 import "../styles/MainApp.css";
 import { formatComplexity } from "../utils/formatters";
 
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { shadesOfPurple } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const SIDEBAR_TEMPLATES = [
   { name: "Linear Search", path: "search/linear_search", desc: "Sequentially checks each element until the target is found or the list is exhausted." },
@@ -104,8 +102,21 @@ export default function MainApp() {
 
   const workspaceRef = useRef(null);
 
+  const [isEditingCode, setIsEditingCode] = useState(false);
+
+  const handleSyncToBlocks = () => {
+    if (workspaceRef.current && generatedPython) {
+      workspaceRef.current.loadFromPython(generatedPython);
+      setIsEditingCode(false); // Reset edit state after syncing
+      setViewMode("workspace"); // Jump back to workspace to see the blocks
+      alert("Code successfully reverse-engineered into Raw Python Blocks.");
+    }
+  };
+
   const handleBlocklyChange = async (json, pythonCode) => {
-    setGeneratedPython(pythonCode);
+    if (!isEditingCode) { // Only overwrite the state if the user ISN'T currently typing
+      setGeneratedPython(pythonCode);
+    }
     setBlocklyJson(json);
     try {
       const response = await fetch('/api/analyze', {
@@ -387,27 +398,70 @@ export default function MainApp() {
           </button>
 
           <div className="editor-container">
+            {/* Blockly View */}
             <div style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
               <BlocklyWorkspace ref={workspaceRef} onChange={handleBlocklyChange} />
             </div>
 
-            <div style={{ display: viewMode === 'python' ? 'block' : 'none', height: '100%', background: '#1C1236', overflow: 'auto' }}>
-              <SyntaxHighlighter
-                language="python"
-                style={shadesOfPurple}
-                showLineNumbers={true}
-                customStyle={{
+            {/* Editable Python View */}
+            <div style={{ 
+              display: viewMode === 'python' ? 'flex' : 'none', 
+              flexDirection: 'column', 
+              height: '100%', 
+              background: '#1C1236' 
+            }}>
+              
+              {/* Sync Toolbar */}
+              <div style={{ 
+                padding: '10px 20px', 
+                background: '#2A1B54', 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center' 
+              }}>
+                <span style={{ color: '#EBE4FF', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                  {isEditingCode ? "✏️ Unsaved code changes..." : "Code is synced with blocks."}
+                </span>
+                <button 
+                  onClick={handleSyncToBlocks}
+                  disabled={!isEditingCode}
+                  style={{
+                    background: isEditingCode ? '#00b8a3' : '#4a4a4a',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    cursor: isEditingCode ? 'pointer' : 'not-allowed',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Sync to Blocks ↻
+                </button>
+              </div>
+
+              {/* Editable Textarea (Replaces SyntaxHighlighter) */}
+              <textarea
+                value={generatedPython}
+                onChange={(e) => {
+                  setGeneratedPython(e.target.value);
+                  setIsEditingCode(true); // Flag that user has made manual edits
+                }}
+                spellCheck={false}
+                style={{
+                  flex: 1,
                   margin: 0,
                   padding: '20px',
                   fontSize: '0.95rem',
-                  fontFamily: "'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+                  fontFamily: "'Fira Code', Consolas, Monaco, monospace",
                   background: '#1C1236',
                   color: '#EBE4FF',
-                  minHeight: '100%'
+                  border: 'none',
+                  outline: 'none',
+                  resize: 'none',
+                  whiteSpace: 'pre',
+                  lineHeight: '1.5'
                 }}
-              >
-                {generatedPython}
-              </SyntaxHighlighter>
+              />
             </div>
           </div>
 

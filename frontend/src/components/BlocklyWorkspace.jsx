@@ -31,7 +31,8 @@ const pastelTheme = Blockly.Theme.defineTheme('pastelTheme', {
     text_category: { colour: "#d5a52a" },
     list_category: { colour: "#4DB6AC" },
     variable_category: { colour: "#f38286" },
-    procedure_category: { colour: "#7a6b66" }
+    procedure_category: { colour: "#7a6b66" },
+    raw_category: { colour: "#FF6B6B" } // <--- 1. ADD THIS LINE
   },
   blockStyles: {
     logic_blocks: { colourPrimary: "#c1a0e8", colourSecondary: "#B8A0D6", colourTertiary: "#A38CC1" },
@@ -40,12 +41,13 @@ const pastelTheme = Blockly.Theme.defineTheme('pastelTheme', {
     text_blocks: { colourPrimary: "#d5a52a", colourSecondary: "#E5AF2C", colourTertiary: "#CC9A26" },
     list_blocks: { colourPrimary: "#4DB6AC", colourSecondary: "#42A097", colourTertiary: "#388C83" },
     variable_blocks: { colourPrimary: "#f38286", colourSecondary: "#DB888B", colourTertiary: "#C27679" },
-    procedure_blocks: { colourPrimary: "#7a6b66", colourSecondary: "#BDB2AE", colourTertiary: "#A89D9A" }
+    procedure_blocks: { colourPrimary: "#7a6b66", colourSecondary: "#BDB2AE", colourTertiary: "#A89D9A" },
+    raw_blocks: { colourPrimary: "#FF6B6B", colourSecondary: "#FF8787", colourTertiary: "#FFA8A8" } // <--- 2. ADD THIS LINE
   },
   fontStyle: {
-    family: "'Outfit', 'Inter', sans-serif", // Fonts imported in index.html
-    weight: "500", // Medium weight for clarity
-    size: 13       // Appropriate size for block text
+    family: "'Outfit', 'Inter', sans-serif",
+    weight: "500",
+    size: 13
   }
 });
 
@@ -207,6 +209,37 @@ const customBlocks = [
     nextStatement: null,
     colour: "#999999",
     tooltip: "Adds a multi-line comment (docstring) to the Python code"
+  },
+  {
+    type: "raw_python_statement",
+    message0: "Raw Code %1",
+    args0: [{ type: "field_input", name: "CODE", text: "print('Hello World')" }],
+    previousStatement: null,
+    nextStatement: null,
+    style: "raw_blocks", // <--- USE RED THEME STYLE
+    tooltip: "Dumps exact text string to Python code"
+  },
+  {
+    type: "raw_python_expression",
+    message0: "Raw Eval %1",
+    args0: [{ type: "field_input", name: "CODE", text: "x + y" }],
+    output: null,
+    style: "raw_blocks", // <--- USE RED THEME STYLE
+    tooltip: "Evaluates exact text string as a value"
+  },
+  {
+    type: "raw_python_multiline",
+    message0: "Raw Block %1",
+    args0: [{
+      type: "field_multilinetext",
+      name: "CODE",
+      text: "def custom_func():\n    pass",
+      spellcheck: false
+    }],
+    previousStatement: null,
+    nextStatement: null,
+    style: "raw_blocks", // <--- USE RED THEME STYLE
+    tooltip: "Dumps multi-line exact text string to Python code"
   }
 ];
 
@@ -380,70 +413,99 @@ const toolbox = {
 
     // Variables & Functions
     { kind: "category", name: "Variables", categorystyle: "variable_category", custom: "VARIABLE" },
-    { kind: "category", name: "Functions", categorystyle: "procedure_category", custom: "PROCEDURE" }
+    { kind: "category", name: "Functions", categorystyle: "procedure_category", custom: "PROCEDURE" },
+    {
+      kind: "category",
+      name: "Raw Python",
+      categorystyle: "raw_category", // <--- SETS THE TOOLBOX DOT TO RED
+      contents: [
+        { kind: "block", type: "raw_python_statement" },
+        { kind: "block", type: "raw_python_expression" },
+        { kind: "block", type: "raw_python_multiline" }
+      ]
+    }
   ]
 };
 
-// Define the BlocklyWorkspace component using React.forwardRef
-// This allows parent components to access internal methods like clear, loadTemplate, setTheme
 const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
-
-  // --- REFS ---
-  // blocklyDiv: reference to the container div where Blockly will be injected
   const blocklyDiv = useRef(null);
-
-  // workspace: reference to the Blockly workspace instance
   const workspace = useRef(null);
-
-  // onChangeRef: persistent reference to the onChange callback
-  // This avoids stale closures when the onChange prop changes
   const onChangeRef = useRef(onChange);
-
-  // --- LOADING FLAG ---
-  // isLoading: flag to tell the change listener to ignore events temporarily
-  // Useful when loading a template to prevent unwanted triggers
   const isLoading = useRef(false);
 
-  // --- EXPOSE METHODS TO PARENT USING REF ---
   useImperativeHandle(ref, () => ({
-
-    // Clears the workspace by removing all blocks
     clear: () => {
       if (workspace.current) {
-        isLoading.current = true; // prevent event listener from firing
-        workspace.current.clear(); // remove all blocks
-        isLoading.current = false; // re-enable listener
+        isLoading.current = true;
+        workspace.current.clear();
+        isLoading.current = false;
       }
     },
-
-    // Loads a workspace template from a JSON object
     loadTemplate: (json) => {
       if (workspace.current) {
-        isLoading.current = true; // temporarily disable listener
-
-        // Clear the workspace and load new JSON blocks
+        isLoading.current = true;
         workspace.current.clear();
         Blockly.serialization.workspaces.load(json, workspace.current);
+        isLoading.current = false;
 
-        isLoading.current = false; // re-enable listener
-
-        // Generate Python code and save workspace state after loading
         setTimeout(() => {
           const code = pythonGenerator.workspaceToCode(workspace.current);
           const currentJson = Blockly.serialization.workspaces.save(workspace.current);
           if (onChangeRef.current) onChangeRef.current(currentJson, code);
         }, 100);
-
-        return "";
       }
-      return "";
     },
-
-    // Dynamically change the workspace theme between dark and pastel
     setTheme: (themeName) => {
       if (workspace.current) {
         workspace.current.setTheme(themeName === 'dark' ? DarkTheme : pastelTheme);
       }
+    },
+
+    // --- REVERSE ENGINEERING (PYTHON -> BLOCKS) ---
+    loadFromPython: (pythonCode) => {
+      if (!workspace.current) return;
+      isLoading.current = true;
+      workspace.current.clear();
+
+      // Split code by newlines, ignoring pure whitespace lines
+      const lines = pythonCode.split('\n').filter(line => line.trim().length > 0);
+
+      let firstBlock = null;
+      let prevBlock = null;
+
+      // Iterate through the Python code and construct a connected chain of raw blocks
+      lines.forEach((line, index) => {
+        const newBlock = {
+          type: "raw_python_statement",
+          id: Blockly.utils.idGenerator.genUid(),
+          fields: { CODE: line } // Put exact string into the raw block
+        };
+
+        if (index === 0) {
+          // Position the very first block in the workspace
+          newBlock.x = 20;
+          newBlock.y = 20;
+          firstBlock = newBlock;
+        } else {
+          // Chain this block to the 'next' property of the previous block
+          prevBlock.next = { block: newBlock };
+        }
+        prevBlock = newBlock;
+      });
+
+      // Load the generated JSON state back into Blockly
+      if (firstBlock) {
+        const state = { blocks: { languageVersion: 0, blocks: [firstBlock] } };
+        Blockly.serialization.workspaces.load(state, workspace.current);
+      }
+
+      isLoading.current = false;
+
+      // Trigger sync back to MainApp
+      setTimeout(() => {
+        const currentJson = Blockly.serialization.workspaces.save(workspace.current);
+        if (onChangeRef.current) onChangeRef.current(currentJson, pythonCode);
+      }, 100);
     }
   }));
 
@@ -798,6 +860,18 @@ const BlocklyWorkspace = forwardRef(({ onChange }, ref) => {
         const code = '{\n    ' + pairs.join(',\n    ') + '\n}';
 
         return [code, pythonGenerator.ORDER_ATOMIC];
+      };
+
+      pythonGenerator.forBlock['raw_python_statement'] = function (block) {
+        return block.getFieldValue('CODE') + '\n';
+      };
+
+      pythonGenerator.forBlock['raw_python_expression'] = function (block) {
+        return [block.getFieldValue('CODE'), pythonGenerator.ORDER_ATOMIC];
+      };
+
+      pythonGenerator.forBlock['raw_python_multiline'] = function (block) {
+        return block.getFieldValue('CODE') + '\n';
       };
 
       // --- WORKSPACE CHANGE LISTENER ---
