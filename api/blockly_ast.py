@@ -95,7 +95,7 @@ class BlocklyASTConverter:
                 first_block = block
             else:
                 # Prevent crashing: Do not attach 'next' if the previous block is a function definition
-                if prev_block.get("type") not in ["procedures_defnoreturn", "procedures_defreturn"]:
+                if prev_block and prev_block.get("type") not in ["procedures_defnoreturn", "procedures_defreturn"]:
                     prev_block["next"] = {"block": block}
 
             # Only update prev_block if we can actually attach things to it
