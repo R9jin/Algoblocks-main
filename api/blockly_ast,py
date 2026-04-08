@@ -15,10 +15,28 @@ class BlocklyASTConverter:
             if first_block:
                 first_block["x"] = 20
                 first_block["y"] = 20
-                # ADDED "status": "success" here!
-                return {"status": "success", "blocks": {"languageVersion": 0, "blocks": [first_block]}}
+                # CRITICAL FIX: Double-nested "blocks" key. 
+                # React calls load(data.blocks). The remaining object MUST STILL 
+                # have a "blocks" key for Blockly's plugin system to recognize it!
+                return {
+                    "status": "success", 
+                    "blocks": {
+                        "blocks": {
+                            "languageVersion": 0, 
+                            "blocks": [first_block]
+                        }
+                    }
+                }
 
-            return {"status": "success", "blocks": {"languageVersion": 0, "blocks": []}}
+            return {
+                "status": "success", 
+                "blocks": {
+                    "blocks": {
+                        "languageVersion": 0, 
+                        "blocks": []
+                    }
+                }
+            }
 
         except Exception as e:
             print("AST Parsing Error:", e)
@@ -26,15 +44,17 @@ class BlocklyASTConverter:
 
     def raw_fallback(self, code):
         return {
-            "status": "error", # Explicitly tell the frontend this is a fallback
+            "status": "error",
             "blocks": {
-                "languageVersion": 0,
-                "blocks": [{
-                    "type": "raw_python_multiline",
-                    "id": gen_uid(),
-                    "x": 20, "y": 20,
-                    "fields": {"CODE": code}
-                }]
+                "blocks": {
+                    "languageVersion": 0,
+                    "blocks": [{
+                        "type": "raw_python_multiline",
+                        "id": gen_uid(),
+                        "x": 20, "y": 20,
+                        "fields": {"CODE": code}
+                    }]
+                }
             }
         }
 
@@ -69,20 +89,22 @@ class BlocklyASTConverter:
 
     def make_raw_statement(self, node):
         try:
+            code_str = ast.unparse(node) if hasattr(ast, 'unparse') else "Raw Code fallback"
             return {
                 "type": "raw_python_statement",
                 "id": gen_uid(),
-                "fields": {"CODE": ast.unparse(node)}
+                "fields": {"CODE": code_str}
             }
         except:
             return None
 
     def make_raw_expr(self, node):
         try:
+            code_str = ast.unparse(node) if hasattr(ast, 'unparse') else "Raw Expr fallback"
             return {
                 "type": "raw_python_expression",
                 "id": gen_uid(),
-                "fields": {"CODE": ast.unparse(node)}
+                "fields": {"CODE": code_str}
             }
         except:
             return None
@@ -103,6 +125,14 @@ class BlocklyASTConverter:
                     return {"type": "math_number", "id": gen_uid(), "fields": {"NUM": node.value}}
                 elif isinstance(node.value, str):
                     return {"type": "text", "id": gen_uid(), "fields": {"TEXT": node.value}}
+            
+            # --- CRITICAL FIX: Support for Python 3.7 and older ---
+            elif type(node).__name__ == 'Str':
+                return {"type": "text", "id": gen_uid(), "fields": {"TEXT": node.s}}
+            elif type(node).__name__ == 'Num':
+                return {"type": "math_number", "id": gen_uid(), "fields": {"NUM": node.n}}
+            elif type(node).__name__ == 'NameConstant':
+                return {"type": "logic_boolean", "id": gen_uid(), "fields": {"BOOL": "TRUE" if node.value else "FALSE"}}
 
             elif isinstance(node, ast.Name):
                 return {"type": "variables_get", "id": gen_uid(), "fields": {"VAR": {"id": node.id, "name": node.id}}}
@@ -377,19 +407,26 @@ class BlocklyASTConverter:
 
             # ---------- EXPRESSIONS (Print & Comments) ----------
             elif isinstance(node, ast.Expr):
-                # 1. Multi-line comment / Docstring
+                # 1. Multi-line comment / Docstring (Python 3.8+)
                 if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
                     return {
                         "type": "multi_line_comment",
                         "id": gen_uid(),
                         "fields": {"TEXT": node.value.value}
                     }
+                # Legacy Docstring support (Python < 3.8)
+                elif type(node.value).__name__ == 'Str':
+                    return {
+                        "type": "multi_line_comment",
+                        "id": gen_uid(),
+                        "fields": {"TEXT": node.value.s}
+                    }
                 # 2. Print function call
-                elif isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name) and node.value.func.id == "print":
+                elif isinstance(node.value, ast.Call) and getattr(node.value.func, 'id', '') == "print":
                     block = {"type": "text_print", "id": gen_uid()}
                     if node.value.args:
                         expr_block = self.serialize_expr(node.value.args[0])
-                        # This safely assigns the input only if the expression successfully parsed
+                        # Safely assign the input only if the expression successfully parsed
                         if expr_block:
                             block["inputs"] = {"TEXT": {"block": expr_block}}
                     return block
