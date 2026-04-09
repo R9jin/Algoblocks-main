@@ -32,7 +32,6 @@
   justify-content: space-between;
   align-items: center;
   background-color: #3A2A6B;
-  /* Deep purple */
   height: 64px;
   padding: 0 20px;
   flex-shrink: 0;
@@ -148,12 +147,129 @@
   color: #3A2A6B;
 }
 
-/* SIDEBAR */
+/* --- TOAST NOTIFICATIONS --- */
+.toast-notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-weight: bold;
+}
+
+.toast-error {
+  background: #E74C3C;
+}
+
+.toast-success {
+  background: #00b8a3;
+}
+
+/* --- SAVE MODAL --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.save-modal-content {
+  background: #2A1B54;
+  padding: 24px;
+  border-radius: 12px;
+  width: 400px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  border: 1px solid #4a4a4a;
+  color: #EBE4FF;
+}
+
+.save-modal-title {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+}
+
+.save-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.save-modal-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+  color: #B8A0D6;
+}
+
+.save-modal-input,
+.save-modal-select,
+.save-modal-textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #4a4a4a;
+  background: #1C1236;
+  color: white;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.save-modal-select {
+  cursor: pointer;
+}
+
+.save-modal-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.save-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 25px;
+}
+
+.save-modal-cancel-btn {
+  padding: 8px 16px;
+  background: transparent;
+  color: #B8A0D6;
+  border: 1px solid #B8A0D6;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.save-modal-confirm-btn {
+  padding: 8px 16px;
+  background: #00b8a3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* --- SIDEBAR --- */
 .templates-sidebar {
   background-color: #f4f4f4;
   display: flex;
   flex-direction: column;
   height: 100%;
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    min-width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 0.2s ease;
+  overflow: hidden;
 }
 
 .sidebar-search {
@@ -184,6 +300,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1;
 }
 
 .sidebar-card {
@@ -201,6 +318,12 @@
   box-shadow: 0 4px 10px rgba(90, 19, 152, 0.1);
 }
 
+.sidebar-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .sidebar-card h4 {
   margin: 0 0 5px 0;
   color: #3A2A6B;
@@ -212,6 +335,36 @@
   color: #666;
   font-size: 0.75rem;
   line-height: 1.4;
+}
+
+.badge-system {
+  font-size: 0.7rem;
+  background: #4a4a4a;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.badge-custom-group {
+  display: flex;
+  gap: 5px;
+}
+
+.badge-custom {
+  font-size: 0.7rem;
+  background: #00b8a3;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.sidebar-delete-btn {
+  background: transparent;
+  border: none;
+  color: #ff4d4d;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0 2px;
 }
 
 .no-results {
@@ -228,6 +381,7 @@
   height: 100%;
   position: relative;
   background-color: white;
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .editor-container {
@@ -236,12 +390,61 @@
   overflow: hidden;
 }
 
-.python-code-pre {
-  color: #F5F5F5;
+.workspace-view {
+  height: 100%;
+}
+
+.python-view {
+  flex-direction: column;
+  height: 100%;
+  background: #1C1236;
+}
+
+.python-header {
+  padding: 10px 20px;
+  background: #2A1B54;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.python-sync-status {
+  color: #EBE4FF;
   font-size: 0.9rem;
-  line-height: 1.5;
+  font-style: italic;
+}
+
+.python-sync-btn {
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.python-sync-btn.active {
+  background: #00b8a3;
+  cursor: pointer;
+}
+
+.python-sync-btn.disabled {
+  background: #4a4a4a;
+  cursor: not-allowed;
+}
+
+.python-textarea {
+  flex: 1;
   margin: 0;
-  font-family: 'Fira Code', monospace;
+  padding: 20px;
+  font-size: 0.95rem;
+  font-family: 'Fira Code', Consolas, Monaco, monospace;
+  background: #1C1236;
+  color: #EBE4FF;
+  border: none;
+  outline: none;
+  resize: none;
+  white-space: pre;
+  line-height: 1.5;
 }
 
 /* DOCKED FOOTER */
@@ -283,6 +486,11 @@
   color: #3A2A6B;
 }
 
+.footer-tab.big-o-btn {
+  color: #ffffff;
+  font-weight: bold;
+}
+
 .tab-icon {
   width: 16px;
   height: 16px;
@@ -319,7 +527,6 @@
 .bottom-hover-panel {
   position: absolute;
   bottom: 48px;
-  /* Matches footer height */
   left: 0;
   right: 0;
   background: rgba(31, 20, 67, 0.95);
@@ -330,7 +537,6 @@
   flex-direction: column;
 }
 
-/* The Draggable Handle */
 .panel-resizer {
   position: absolute;
   top: -4px;
@@ -351,7 +557,6 @@
   background: #E058FB;
 }
 
-/* A visual cue for the drag handle */
 .resizer-dash {
   width: 40px;
   height: 2px;
@@ -394,12 +599,19 @@
   font-family: monospace;
 }
 
-/* --- COMPLEXITY TABLE (COMPACT & CENTERED) --- */
+/* --- COMPLEXITY TABLE --- */
 .complexity-tabs {
   display: flex;
   gap: 10px;
   margin-bottom: 15px;
   align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+}
+
+.tab-btn-group {
+  display: flex;
+  gap: 10px;
 }
 
 .tab-btn {
@@ -416,6 +628,12 @@
   background: #7F57F9;
 }
 
+.total-badge-group {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
 .total-badge {
   margin-left: auto;
   color: #00ff00;
@@ -423,93 +641,194 @@
   font-size: 0.9rem;
 }
 
-/* --- COMPLEXITY TABLE (REFINED FOR READABILITY) --- */
+.total-badge.space {
+  background-color: rgba(0, 184, 163, 0.15);
+  border: 1px solid rgba(0, 184, 163, 0.3);
+  color: #00b8a3;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.total-label {
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+.total-label.space {
+  color: #00b8a3;
+}
+
 .complexity-table-wrapper {
   display: flex;
   justify-content: center;
   width: 100%;
   padding-bottom: 20px;
+  overflow-x: auto;
 }
 
 .complexity-table {
   width: 100%;
+  min-width: 800px;
   max-width: 750px;
   border-collapse: collapse;
   font-size: 0.8rem;
-  /* Decreased font size */
   background: #e7e7e7;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  text-align: left;
 }
 
-/* Distinct header styling */
 .complexity-table th {
   padding: 10px 15px;
-  /* Tighter padding */
   color: #EBE4FF;
   background: #2D1F52;
   text-align: left;
   font-weight: 600;
   letter-spacing: 0.5px;
   font-size: 0.8rem;
-  /* Smaller header font */
 }
 
 .complexity-table th.right-align {
   text-align: right;
 }
 
-/* Thicker border under the header */
 .complexity-table thead tr {
   border-bottom: 2px solid #7F57F9;
 }
 
-/* Base row styling */
 .complexity-table tbody tr {
   border-bottom: 1px solid rgba(127, 87, 249, 0.15);
   transition: background-color 0.15s ease;
 }
 
-/* Zebra striping for easy reading */
 .complexity-table tbody tr:nth-child(even) {
   background: rgba(255, 255, 255, 0.02);
 }
 
-/* Highlight row on hover so users don't lose their place */
 .complexity-table tbody tr:hover {
   background: rgba(127, 87, 249, 0.15);
 }
 
 .code-cell {
   padding: 8px 15px;
-  /* Tighter padding for a more compact table */
   font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
   font-size: 0.8rem;
-  /* Decreased font size */
   line-height: 1.4;
 }
 
 .complexity-cell {
   text-align: right;
   padding: 8px 15px;
-  /* Tighter padding */
   white-space: nowrap;
   font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
   font-size: 0.85rem;
-  /* Decreased font size but kept slightly larger than the code */
+}
+
+.operation-cell {
+  color: #000000;
+}
+
+/* --- Complexity Table Dropdown Styles --- */
+.complexity-row {
+  transition: background-color 0.2s ease;
+}
+
+.complexity-row:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.complexity-row.expanded {
+  background-color: rgba(188, 161, 252, 0.1);
+  border-left: 2px solid #BCA1FC;
+}
+
+.dropdown-chevron {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 0.8rem;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.complexity-row.expanded .dropdown-chevron {
+  transform: rotate(90deg);
+}
+
+.explanation-row td {
+  padding: 0 !important;
+  border: none;
+}
+
+.explanation-content {
+  background: rgba(255, 255, 255, 0.05);
+  margin: 0px 16px 12px 16px;
+  border-radius: 8px;
+  border-left: 3px solid #BCA1FC;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  overflow: hidden;
+  animation: slide-down-explanation 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top;
+}
+
+.explanation-text {
+  flex: 1;
+}
+
+.explanation-graph {
+  min-width: 200px;
+}
+
+.explanation-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #3912ff;
+  line-height: 1.5;
+  padding-right: 12px;
+}
+
+.explanation-icon {
+  font-size: 1.2rem;
+  margin-left: 12px;
+}
+
+@keyframes slide-down-explanation {
+  0% {
+    opacity: 0;
+    max-height: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    transform: scaleY(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    max-height: 200px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ========================= */
 /* Responsive Enhancements */
 /* ========================= */
-
-/* Large Tablets */
 @media (max-width: 1024px) {
-
   .project-name {
     display: none;
-    /* prevent header crowding */
   }
 
   .complexity-table {
@@ -517,17 +836,13 @@
   }
 }
 
-/* Tablets */
 @media (max-width: 768px) {
-
-  /* Stack sidebar and workspace vertically */
   .workspace-split {
     flex-direction: column;
   }
 
   .gutter {
     display: none;
-    /* disable drag divider on small screens */
   }
 
   .templates-sidebar {
@@ -535,7 +850,6 @@
     border-bottom: 1px solid #e0e0e0;
   }
 
-  /* Header wraps */
   .workspace-header {
     flex-wrap: wrap;
     height: auto;
@@ -555,7 +869,6 @@
     justify-content: center;
   }
 
-  /* Footer adjusts */
   .workspace-footer {
     flex-wrap: wrap;
     height: auto;
@@ -569,15 +882,12 @@
     justify-content: space-between;
   }
 
-  /* Bottom panel height safer on tablets */
   .bottom-hover-panel {
     max-height: 50%;
   }
 }
 
-/* Mobile */
 @media (max-width: 480px) {
-
   .workspace-header {
     padding: 8px 10px;
   }
@@ -611,11 +921,6 @@
   .footer-tab {
     padding: 6px 10px;
     font-size: 0.75rem;
-  }
-
-  /* Make complexity table scroll horizontally */
-  .complexity-table-wrapper {
-    overflow-x: auto;
   }
 
   .complexity-table {
@@ -665,34 +970,6 @@
   background-color: #7F57F9;
 }
 
-/* ========================= */
-/* Smooth Sidebar Transitions */
-/* ========================= */
-
-/* 1. Add smooth transitions to the panels */
-.templates-sidebar {
-  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
-    min-width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
-    opacity 0.2s ease;
-  overflow: hidden;
-  /* Clips the content smoothly as it shrinks */
-}
-
-.workspace-main {
-  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.gutter {
-  transition: width 0.3s ease, opacity 0.2s ease, background-color 0.2s;
-}
-
-/* 2. Prevent content from squishing/wrapping while the sidebar is sliding closed */
-.sidebar-search,
-.sidebar-list {
-  min-width: 250px;
-}
-
-/* 3. Animate to 0 width instead of display: none */
 .workspace-split.sidebar-hidden .templates-sidebar {
   width: 0 !important;
   min-width: 0 !important;
@@ -704,102 +981,17 @@
   width: 0 !important;
   opacity: 0;
   pointer-events: none;
-  /* Prevents grabbing the invisible divider */
 }
 
 .workspace-split.sidebar-hidden .workspace-main {
   width: 100% !important;
 }
 
-.total-label {
-  color: #a78bfa;
-  /* choose your color */
-  font-weight: 600;
+/* Utility visibility classes */
+.d-none {
+  display: none !important;
 }
 
-/* --- Complexity Table Dropdown Styles --- */
-.complexity-row {
-  transition: background-color 0.2s ease;
-}
-
-.complexity-row:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.complexity-row.expanded {
-  background-color: rgba(188, 161, 252, 0.1);
-  border-left: 2px solid #BCA1FC;
-}
-
-.dropdown-chevron {
-  display: inline-block;
-  margin-left: 8px;
-  font-size: 0.8rem;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.complexity-row.expanded .dropdown-chevron {
-  transform: rotate(90deg); /* Rotates ▶ to point downwards */
-}
-
-.explanation-row td {
-  padding: 0 !important;
-  border: none;
-}
-
-.explanation-content {
-  background: rgba(255, 255, 255, 0.05);
-  margin: 0px 16px 12px 16px; /* Spacing inside the cell */
-  border-radius: 8px;
-  border-left: 3px solid #BCA1FC;
-  display: flex;
-  gap: 12px;
-  overflow: hidden; /* Hide text while it expands */
-  
-  /* Trigger the slide-down animation when React mounts it */
-  animation: slide-down-explanation 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transform-origin: top;
-}
-
-.explanation-content p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #3912ff;
-  line-height: 1.5;
-  padding-right: 12px;
-}
-
-.explanation-icon {
-  font-size: 1.2rem;
-  margin-left: 12px;
-}
-
-/* 4. The Keyframes for the buttery smooth slide and fade */
-@keyframes slide-down-explanation {
-  0% {
-    opacity: 0;
-    max-height: 0px;
-    padding-top: 0px;
-    padding-bottom: 0px;
-    transform: scaleY(0.95);
-  }
-  100% {
-    opacity: 1;
-    max-height: 200px; /* Adjust if your explanations get very long */
-    padding-top: 12px;
-    padding-bottom: 12px;
-    transform: scaleY(1);
-  }
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.d-flex {
+  display: flex !important;
 }

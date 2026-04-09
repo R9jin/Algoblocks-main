@@ -9,7 +9,6 @@
  * - viewMode: string ('workspace' | 'python') representing the current view.
  * - setViewMode: function to switch between workspace and Python code views.
  * - runCode: function to execute the current workspace code.
- * - handleExport: function to export the current project as a JSON file.
  * - handleSaveToDB: function to save the current project to MongoDB.
  */
 
@@ -19,7 +18,6 @@ export default function WorkspaceHeader({
   viewMode,
   setViewMode,
   runCode,
-  handleExport,
   handleSaveToDB,
   currentProjectId,       // NEW
   currentProjectTitle,    // NEW
@@ -70,10 +68,6 @@ export default function WorkspaceHeader({
       <div className="header-right">
         <button onClick={runCode} className="action-btn btn-run">
           <img src="/assets/play-icon.png" alt="Run" className="btn-icon" /> Run
-        </button>
-
-        <button onClick={handleExport} className="action-btn btn-save">
-          Export
         </button>
 
         {/* Conditionally render "Save Changes" if a project is loaded, otherwise show "Save to Cloud" */}

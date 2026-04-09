@@ -4,17 +4,17 @@ import sys
 import os
 from io import StringIO
 from fastapi.middleware.cors import CORSMiddleware
+from blockly_ast import BlocklyASTConverter
 from pydantic import BaseModel
 import ast
-import requests # Add this to the top of your file with the other imports
+import requests 
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from database import projects_collection, users_collection
-from models import ProjectModel, ProjectUpdate           
-from bson import ObjectId                 
+from database import projects_collection, users_collection, templates_collection
+from models import ProjectModel, ProjectUpdate, TemplateModel, TemplateUpdate
+from bson import ObjectId             
 
-# Import the newly separated ComplexityAnalyzer
 from analyzer import ComplexityAnalyzer
 
 app = FastAPI()  
@@ -46,6 +46,19 @@ class ProgressRequest(BaseModel):
     
 class GoogleAuthRequest(BaseModel):
     access_token: str
+
+class AstRequest(BaseModel):
+    code: str
+
+@app.post("/api/ast-to-blocks")
+async def ast_to_blocks(request: AstRequest):
+    try:
+        converter = BlocklyASTConverter()
+        return converter.convert(request.code)
+    except SyntaxError as e:
+        return {"status": "error", "error_type": "SyntaxError", "line": e.lineno, "message": e.msg}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.post("/api/analyze")
 @app.post("/analyze")
@@ -104,6 +117,17 @@ def analyze_complexity(payload: CodePayload):
             "space_total": "O(n)" if analyzer.max_space_weight > 0 else "O(1)",  
             "is_recursive": is_recursive                       
         }
+    except SyntaxError as e:
+        return {
+            "status": "error",
+            "error_type": "SyntaxError",
+            "line": e.lineno,
+            "message": e.msg,
+            "total": "Syntax Error",
+            "space_total": "-",
+            "lines": [],
+            "is_recursive": False
+        }
     except Exception as e:
         return {"status": "error", "total": "Error", "total_recurrence": "Error", "lines": [], "is_recursive": False}
 
@@ -143,11 +167,7 @@ def get_projects():
 
 @app.post("/api/login")
 def login_user(req: LoginRequest):
-    print(f"Trying to log in with email: '{req.email}' and password: '{req.password}'")
-    
     user = users_collection.find_one({"email": req.email})
-    print(f"MongoDB returned: {user}")
-    
     if user and user.get("password") == req.password:
         return {"status": "success", "email": req.email, "name": user.get("name"), "progress": user.get("progress", {})}
     
@@ -202,9 +222,14 @@ def update_project(project_id: str, payload: ProjectUpdate):
     if projects_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
     try:
+        update_data = {}
+        if payload.data is not None: update_data["data"] = payload.data
+        if payload.title is not None: update_data["title"] = payload.title
+        if payload.description is not None: update_data["description"] = payload.description
+
         result = projects_collection.update_one(
             {"_id": ObjectId(project_id)},
-            {"$set": {"data": payload.data}}
+            {"$set": update_data}
         )
         if result.matched_count == 1:
             return {"status": "success", "message": "Project updated successfully"}
@@ -218,7 +243,6 @@ def google_auth(req: GoogleAuthRequest):
     if users_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
 
-    # 1. Verify the token with Google's servers
     google_response = requests.get(
         "https://www.googleapis.com/oauth2/v3/userinfo",
         headers={"Authorization": f"Bearer {req.access_token}"}
@@ -234,23 +258,74 @@ def google_auth(req: GoogleAuthRequest):
     if not email:
         raise HTTPException(status_code=400, detail="Email not provided by Google")
 
-    # 2. Check if the user already exists in your MongoDB
     user = users_collection.find_one({"email": email})
     
     if not user:
-        # 3. If they don't exist, create a new account for them automatically
         user = {
             "name": name,
             "email": email,
-            "password": "", # Leave password empty for OAuth users
+            "password": "", 
             "progress": {}
         }
         users_collection.insert_one(user)
 
-    # 4. Return the standard login payload
     return {
         "status": "success", 
         "email": email, 
         "name": name, 
         "progress": user.get("progress", {})
     }
+    
+@app.post("/api/templates")
+@app.post("/templates")
+def save_template(template: TemplateModel):
+    if templates_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    template_dict = template.model_dump()         
+    result = templates_collection.insert_one(template_dict)  
+    return {"status": "success", "message": "Template saved!", "id": str(result.inserted_id)}
+
+@app.get("/api/templates")
+@app.get("/templates")
+def get_templates():
+    if templates_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    templates = list(templates_collection.find({}))  
+    for t in templates:
+        t["_id"] = str(t["_id"])                 
+    return {"status": "success", "templates": templates}
+
+@app.delete("/api/templates/{template_id}")
+@app.delete("/templates/{template_id}")
+def delete_template(template_id: str):
+    if templates_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    try:
+        from bson import ObjectId
+        result = templates_collection.delete_one({"_id": ObjectId(template_id)})
+        if result.deleted_count == 1:
+            return {"status": "success", "message": "Template deleted"}
+        else:
+            raise HTTPException(status_code=404, detail="Template not found")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid ID format")
+
+@app.put("/api/templates/{template_id}")
+@app.put("/templates/{template_id}")
+def update_template(template_id: str, payload: TemplateUpdate):
+    if templates_collection is None:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    try:
+        from bson import ObjectId
+        update_data = {}
+        if payload.data is not None: update_data["data"] = payload.data
+        if payload.title is not None: update_data["title"] = payload.title
+        if payload.description is not None: update_data["description"] = payload.description
+
+        result = templates_collection.update_one(
+            {"_id": ObjectId(template_id)},
+            {"$set": update_data}
+        )
+        return {"status": "success", "message": "Template updated"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid update")
