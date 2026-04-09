@@ -13,18 +13,18 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from database import projects_collection, users_collection, templates_collection
 from models import ProjectModel, ProjectUpdate, TemplateModel, TemplateUpdate
-from bson import ObjectId             
+from bson import ObjectId
 
 from analyzer import ComplexityAnalyzer
 
-app = FastAPI()  
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        
-    allow_credentials=True,     
-    allow_methods=["*"],        
-    allow_headers=["*"],        
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class CodePayload(BaseModel):
@@ -64,18 +64,18 @@ async def ast_to_blocks(request: AstRequest):
 @app.post("/analyze")
 def analyze_complexity(payload: CodePayload):
     try:
-        tree = ast.parse(payload.code)                 
-        analyzer = ComplexityAnalyzer(payload.code)   
+        tree = ast.parse(payload.code)
+        analyzer = ComplexityAnalyzer(payload.code)
 
-        analyzer.bfs_first_pass(tree)                 
+        analyzer.bfs_first_pass(tree)
         for name, node in analyzer.symbol_table.items():
-            analyzer.visit(node)                      
+            analyzer.visit(node)
 
         analyzer.details = []
         analyzer.max_complexity, analyzer.max_space_weight = 0, 0
         analyzer.max_poly, analyzer.max_log, analyzer.max_sqrt = 0, 0, 0
         analyzer.current_depth, analyzer.loop_depth, analyzer.log_loop_depth, analyzer.sqrt_loop_depth = 0, 0, 0, 0
-        analyzer.visit(tree)                           
+        analyzer.visit(tree)
 
         is_recursive = any("T(n) =" in line.get('global_time', '') for line in analyzer.details)
 
@@ -87,8 +87,8 @@ def analyze_complexity(payload: CodePayload):
             if "T(n) = n * T(n-1)" in comp: asymp = "O(n!)"
             elif "2T(n/2)" in comp: asymp = "O(n log n)"
             elif "T(n-1) + T(n-2)" in comp: asymp = "O(2^n)"
-            elif "T(n/2) + O(1)" in comp: asymp = "O(log n)"   
-            elif "T(n-1) + O(n)" in comp: asymp = "O(n^2)"     
+            elif "T(n/2) + O(1)" in comp: asymp = "O(log n)"
+            elif "T(n-1) + O(n)" in comp: asymp = "O(n^2)"
             elif "T(n) = T(n/2) + O(n)" in comp: asymp = "O(n)"
             elif "T(n) = 2T(n/2) + O(1)" in comp: asymp = "O(n)"
             elif "T(n-1)" in comp: asymp = "O(n)"
@@ -111,11 +111,11 @@ def analyze_complexity(payload: CodePayload):
 
         return {
             "status": "success",
-            "total": analyzer.get_final_asymptotic_badge(),   
-            "total_recurrence": analyzer.get_final_badge(),   
-            "lines": asymptotic_lines,                        
-            "space_total": "O(n)" if analyzer.max_space_weight > 0 else "O(1)",  
-            "is_recursive": is_recursive                       
+            "total": analyzer.get_final_asymptotic_badge(),
+            "total_recurrence": analyzer.get_final_badge(),
+            "lines": asymptotic_lines,
+            "space_total": "O(n)" if analyzer.max_space_weight > 0 else "O(1)",
+            "is_recursive": is_recursive
         }
     except SyntaxError as e:
         return {
@@ -134,16 +134,16 @@ def analyze_complexity(payload: CodePayload):
 @app.post("/api/run")
 @app.post("/run")
 def run_code(payload: CodePayload):
-    old_stdout = sys.stdout                    
-    redirected_output = sys.stdout = StringIO()  
+    old_stdout = sys.stdout
+    redirected_output = sys.stdout = StringIO()
     try:
-        exec_globals = {}                     
-        exec(payload.code, exec_globals)      
+        exec_globals = {}
+        exec(payload.code, exec_globals)
         output = redirected_output.getvalue() or "> Code ran successfully."
     except Exception as e:
-        output = f"Runtime Error: {str(e)}"   
+        output = f"Runtime Error: {str(e)}"
     finally:
-        sys.stdout = old_stdout                
+        sys.stdout = old_stdout
     return {"status": "success", "output": output}
 
 @app.post("/api/projects")
@@ -151,8 +151,8 @@ def run_code(payload: CodePayload):
 def save_project(project: ProjectModel):
     if projects_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
-    project_dict = project.model_dump()         
-    result = projects_collection.insert_one(project_dict)  
+    project_dict = project.model_dump()
+    result = projects_collection.insert_one(project_dict)
     return {"status": "success", "message": "Project saved!", "id": str(result.inserted_id)}
 
 @app.get("/api/projects")
@@ -160,9 +160,9 @@ def save_project(project: ProjectModel):
 def get_projects():
     if projects_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
-    projects = list(projects_collection.find({}))  
+    projects = list(projects_collection.find({}))
     for p in projects:
-        p["_id"] = str(p["_id"])                 
+        p["_id"] = str(p["_id"])
     return {"status": "success", "projects": projects}
 
 @app.post("/api/login")
@@ -264,15 +264,15 @@ def google_auth(req: GoogleAuthRequest):
         user = {
             "name": name,
             "email": email,
-            "password": "", 
+            "password": "",
             "progress": {}
         }
         users_collection.insert_one(user)
 
     return {
-        "status": "success", 
-        "email": email, 
-        "name": name, 
+        "status": "success",
+        "email": email,
+        "name": name,
         "progress": user.get("progress", {})
     }
     
@@ -281,8 +281,8 @@ def google_auth(req: GoogleAuthRequest):
 def save_template(template: TemplateModel):
     if templates_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
-    template_dict = template.model_dump()         
-    result = templates_collection.insert_one(template_dict)  
+    template_dict = template.model_dump()
+    result = templates_collection.insert_one(template_dict)
     return {"status": "success", "message": "Template saved!", "id": str(result.inserted_id)}
 
 @app.get("/api/templates")
@@ -290,9 +290,9 @@ def save_template(template: TemplateModel):
 def get_templates():
     if templates_collection is None:
         raise HTTPException(status_code=500, detail="Database not connected")
-    templates = list(templates_collection.find({}))  
+    templates = list(templates_collection.find({}))
     for t in templates:
-        t["_id"] = str(t["_id"])                 
+        t["_id"] = str(t["_id"])
     return {"status": "success", "templates": templates}
 
 @app.delete("/api/templates/{template_id}")
