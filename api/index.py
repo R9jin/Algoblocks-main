@@ -1,23 +1,28 @@
 # api/index.py
-from fastapi import FastAPI, HTTPException
 import sys
 import os
+
+# 1. Update the path FIRST so Vercel can find your local files
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# 2. THEN do your imports
+from fastapi import FastAPI, HTTPException
 from io import StringIO
 from fastapi.middleware.cors import CORSMiddleware
-from blockly_ast import BlocklyASTConverter
 from pydantic import BaseModel
 import ast
 import requests 
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+# 3. Now local imports will work
+from blockly_ast import BlocklyASTConverter
 from database import projects_collection, users_collection, templates_collection
 from models import ProjectModel, ProjectUpdate, TemplateModel, TemplateUpdate
 from bson import ObjectId
-
 from analyzer import ComplexityAnalyzer
 
 app = FastAPI()
+
+# ... rest of your code ...
 
 app.add_middleware(
     CORSMiddleware,
