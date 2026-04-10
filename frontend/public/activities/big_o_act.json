@@ -1,0 +1,39 @@
+{
+  "blocks": {
+    "languageVersion": 0,
+    "blocks": [
+      {
+        "type": "procedures_defreturn",
+        "id": "big_o_func_1",
+        "x": 50,
+        "y": 50,
+        "extraState": {
+          "params": [
+            {
+              "name": "n",
+              "id": "var_n"
+            }
+          ]
+        },
+        "fields": {
+          "NAME": "generate_steps"
+        },
+        "statement": {
+          "name": "STACK",
+          "block": {
+            "type": "comment_block",
+            "fields": {
+              "TEXT": "Create an empty list, loop n times adding 'Step' to it, then return the list."
+            }
+          }
+        }
+      }
+    ]
+  },
+  "variables": [
+    {
+      "name": "n",
+      "id": "var_n"
+    }
+  ]
+}

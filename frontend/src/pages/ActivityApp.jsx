@@ -30,7 +30,7 @@ Output: "Hello World"
   },
   {
     id: "l1-t2",
-    templatePath: "intro/logic_flow",
+    templatePath: "activities/logic_flow_act",
     title: "2. Logic & Flow",
     difficulty: "Easy",
     task: `In programming, computers make decisions using conditional statements. You are given a boolean variable \`condition\` which can either be \`true\` or \`false\`. 
@@ -51,7 +51,7 @@ Output: "No"
   },
   {
     id: "l1-t3",
-    templatePath: "intro/big_o",
+    templatePath: "activities/big_o_act",
     title: "3. Big O Notation",
     difficulty: "Easy",
     task: `Big O notation evaluates how the runtime or space requirements of an algorithm grow as the input size increases. It gives us a high-level understanding of an algorithm's efficiency.
