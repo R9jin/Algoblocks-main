@@ -332,6 +332,18 @@ export default function MainApp() {
 
   const filteredTemplates = allTemplates.filter(t => t.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
+  /* Inside your MainApp component */
+
+  const consoleEndRef = useRef(null);
+
+  // Auto-scroll logic: whenever consoleOutput or isWaitingForInput changes
+  useEffect(() => {
+    if (consoleEndRef.current) {
+      consoleEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [consoleOutput, isWaitingForInput]);
+
+
   return (
     <div className="workspace-app-container">
       {toast.show && (
@@ -491,6 +503,7 @@ export default function MainApp() {
                         />
                       </div>
                     )}
+                    <div ref={consoleEndRef} />
                   </div>
                 ) : (
                   <div className="complexity-content">

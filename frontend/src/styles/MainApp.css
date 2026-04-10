@@ -995,3 +995,60 @@
 .d-flex {
   display: flex !important;
 }
+
+/* Add or update these classes in your CSS files */
+
+.console-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #0d0d0d; /* Deep black for terminal feel */
+  padding: 12px 16px;
+  font-family: 'Fira Code', 'Cascadia Code', 'Ubuntu Mono', monospace;
+  overflow-y: auto;
+  border-top: 1px solid #333;
+}
+
+.console-output {
+  margin: 0;
+  padding: 0;
+  white-space: pre-wrap;     /* Critical: Wraps long lines instead of horizontal scroll */
+  word-wrap: break-word;
+  color: #e0e0e0;            /* Soft white for readability */
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.console-input-line {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.console-cursor {
+  color: #c800ff;            /* Classic terminal green cursor */
+  margin-right: 8px;
+  font-weight: bold;
+  user-select: none;
+}
+
+.console-input-field {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f0bcff;            /* User input is green to distinguish it */
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 0;
+}
+
+/* Scrollbar styling for a cleaner look */
+.console-container::-webkit-scrollbar {
+  width: 8px;
+}
+.console-container::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
