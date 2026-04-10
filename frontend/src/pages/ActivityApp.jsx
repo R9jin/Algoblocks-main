@@ -286,50 +286,15 @@ const renderFormattedTask = (text) => {
 const ActivityApp = () => {
   const location = useLocation();
   const navigate = useNavigate();
-
-  const saveLessonProgress = async (lessonId, score) => {
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) return;
-
-    const user = JSON.parse(storedUser);
-
-    try {
-      const response = await fetch("/api/update-progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: user.email,
-          lesson_id: lessonId,
-          score: score
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        user.progress = data.progress;
-        localStorage.setItem("user", JSON.stringify(user));
-        console.log(`Progress saved! Lesson: ${lessonId}, Score: ${score}`);
-      }
-    } catch (error) {
-      console.error("Failed to save progress:", error);
-    }
-  };
-
-  const handleSuccess = async () => {
-    const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act";
-    const finalScore = 100;
-    await saveLessonProgress(currentLessonId, finalScore);
-
-    alert("Activity Completed!");
-    setTimeout(() => navigate("/learning-path"), 1500);
-  };
+  const workspaceRef = useRef(null);
+  const consoleEndRef = useRef(null); // Reference for auto-scrolling terminal
+  const socketRef = useRef(null);      // WebSocket reference for interactive sessions
 
   const activityData = location.state?.activityData || null;
   const initialTemplate = location.state?.templatePath || "";
   const currentTask = ACTIVITY_TASKS.find(t => t.templatePath === initialTemplate);
 
-  const workspaceRef = useRef(null);
-
+  // --- UI & Analysis States ---
   const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
   const [consoleOutput, setConsoleOutput] = useState("");
   const [viewMode, setViewMode] = useState("workspace");
@@ -338,9 +303,11 @@ const ActivityApp = () => {
   const [isLeftPanelVisible, setIsLeftPanelVisible] = useState(true);
   const [expandedTests, setExpandedTests] = useState({ 0: true });
   const [bottomPanel, setBottomPanel] = useState(null);
-
-  // Set default active tab
   const [activeTab, setActiveTab] = useState("local");
+
+  // --- Interactive Terminal States ---
+  const [isWaitingForInput, setIsWaitingForInput] = useState(false);
+  const [userInput, setUserInput] = useState("");
 
   const [analysisResult, setAnalysisResult] = useState({
     lines: [], total: "O(1)", space_total: "O(1)", is_recursive: false
@@ -366,6 +333,13 @@ const ActivityApp = () => {
 
   const [panelHeight, setPanelHeight] = useState(300);
   const isDragging = useRef(false);
+
+  // Auto-scroll logic for terminal
+  useEffect(() => {
+    if (consoleEndRef.current) {
+      consoleEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [consoleOutput, isWaitingForInput]);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -403,6 +377,39 @@ const ActivityApp = () => {
   useEffect(() => {
     if (!activityData) navigate("/learning-path");
   }, [activityData, navigate]);
+
+  const saveLessonProgress = async (lessonId, score) => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) return;
+    const user = JSON.parse(storedUser);
+    try {
+      const response = await fetch("/api/update-progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          lesson_id: lessonId,
+          score: score
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        user.progress = data.progress;
+        localStorage.setItem("user", JSON.stringify(user));
+        console.log(`Progress saved! Lesson: ${lessonId}, Score: ${score}`);
+      }
+    } catch (error) {
+      console.error("Failed to save progress:", error);
+    }
+  };
+
+  const handleSuccess = async () => {
+    const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act";
+    const finalScore = 100;
+    await saveLessonProgress(currentLessonId, finalScore);
+    alert("Activity Completed!");
+    setTimeout(() => navigate("/learning-path"), 1500);
+  };
 
   const loadActivityTemplate = async (path) => {
     try {
@@ -454,23 +461,56 @@ const ActivityApp = () => {
     }
   };
 
-  const runCode = async () => {
+  // UPDATED: Interactive runCode using WebSockets
+  const runCode = () => {
+    setConsoleOutput("> Initializing session...\n");
     setBottomPanel("console");
-    setConsoleOutput("> Running Code...\n");
-    setExpandedLines({});
+    setIsWaitingForInput(false);
 
-    try {
-      const response = await fetch("/api/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: generatedPython }),
-      });
-      const data = await response.json();
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const host = window.location.host; 
+    const socket = new WebSocket(`${protocol}://${host}/api/ws/run`);
 
-      const outputText = data.status === "success" ? data.output : "> Error: " + data.output;
-      setConsoleOutput(outputText);
-    } catch {
-      setConsoleOutput("> Connection Error while running code.");
+    socketRef.current = socket;
+
+    socket.onopen = () => {
+      socket.send(JSON.stringify({ type: "run", code: generatedPython }));
+      setConsoleOutput(""); 
+    };
+
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === "output") {
+        setConsoleOutput((prev) => prev + msg.data);
+      } else if (msg.type === "input_request") {
+        setConsoleOutput((prev) => prev + msg.prompt);
+        setIsWaitingForInput(true);
+      } else if (msg.type === "error") {
+        setConsoleOutput((prev) => prev + "\nRuntime Error: " + msg.data);
+      } else if (msg.type === "done") {
+        setConsoleOutput((prev) => prev + "\n> Program finished.");
+        setIsWaitingForInput(false);
+        socket.close();
+      }
+    };
+
+    socket.onerror = (e) => {
+      console.error("WebSocket error:", e);
+      setConsoleOutput("❌ Failed to connect to backend for execution.");
+    };
+
+    socket.onclose = () => {
+      console.log("Execution session closed.");
+    };
+  };
+
+  const handleSendInput = (e) => {
+    if (e.key === "Enter" && isWaitingForInput && socketRef.current) {
+      setConsoleOutput((prev) => prev + userInput + "\n");
+      socketRef.current.send(JSON.stringify({ type: "input_response", data: userInput }));
+      setUserInput("");
+      setIsWaitingForInput(false);
     }
   };
 
@@ -481,6 +521,7 @@ const ActivityApp = () => {
     setConsoleOutput("> Running Tests...\n");
     setPassedTests(0);
     setExpandedLines({});
+    setIsWaitingForInput(false);
 
     let testHarness = `\n\n# --- System Test Cases ---\nprint("\\n--- Running Test Cases ---")\n`;
     testHarness += `passed = 0\ntotal = ${activityData.testCasesList.length}\n`;
@@ -671,7 +712,23 @@ except Exception as e:
 
               <div className="panel-body">
                 {bottomPanel === 'console' ? (
-                  <pre className="console-output">{consoleOutput}</pre>
+                  <div className="console-container">
+                    <pre className="console-output">{consoleOutput}</pre>
+                    {isWaitingForInput && (
+                      <div className="console-input-line">
+                        <span className="console-cursor">❯</span>
+                        <input
+                          autoFocus
+                          value={userInput}
+                          onChange={(e) => setUserInput(e.target.value)}
+                          onKeyDown={handleSendInput}
+                          className="console-input-field"
+                          placeholder="Type here and press Enter..."
+                        />
+                      </div>
+                    )}
+                    <div ref={consoleEndRef} />
+                  </div>
                 ) : (
                   <div className="complexity-content">
                     <div className="complexity-tabs" style={{ justifyContent: 'space-between', padding: '0 15px' }}>
