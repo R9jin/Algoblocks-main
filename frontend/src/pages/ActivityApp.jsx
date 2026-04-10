@@ -274,7 +274,7 @@ Output: [[0,1],[1,0]]
 ];
 
 const renderFormattedTask = (text) => {
-  if (!text) return null;
+  if (!text || typeof text !== "string") return null;
   const formattedHtml = text
     .replace(/\n/g, '<br/>')
     .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #26004a;">$1</strong>')
@@ -287,8 +287,8 @@ const ActivityApp = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const workspaceRef = useRef(null);
-  const consoleEndRef = useRef(null); // Reference for auto-scrolling terminal
-  const socketRef = useRef(null);      // WebSocket reference for interactive sessions
+  const consoleEndRef = useRef(null);
+  const socketRef = useRef(null);
 
   const activityData = location.state?.activityData || null;
   const initialTemplate = location.state?.templatePath || "";
@@ -378,6 +378,7 @@ const ActivityApp = () => {
     if (!activityData) navigate("/learning-path");
   }, [activityData, navigate]);
 
+  // FIX: Save exactly the number of passed test cases
   const saveLessonProgress = async (lessonId, score) => {
     const storedUser = localStorage.getItem("user");
     if (!storedUser) return;
@@ -389,40 +390,52 @@ const ActivityApp = () => {
         body: JSON.stringify({
           email: user.email,
           lesson_id: lessonId,
-          score: score
+          score: score // Saves the exact number of successful test cases
         })
       });
       if (response.ok) {
         const data = await response.json();
         user.progress = data.progress;
         localStorage.setItem("user", JSON.stringify(user));
-        console.log(`Progress saved! Lesson: ${lessonId}, Score: ${score}`);
+        console.log(`Progress saved! Lesson: ${lessonId}, Tests Passed: ${score}`);
       }
     } catch (error) {
       console.error("Failed to save progress:", error);
     }
   };
 
-  const handleSuccess = async () => {
-    const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act";
-    const finalScore = 100;
-    await saveLessonProgress(currentLessonId, finalScore);
-    alert("Activity Completed!");
-    setTimeout(() => navigate("/learning-path"), 1500);
+  // FIX: Triggers a styled cohesive Modal instead of a raw browser alert.
+  const handleSuccess = (passed, total) => {
+    setModalConfig({
+      isOpen: true,
+      title: "Activity Completed! 🎉",
+      message: `Excellent work! You successfully passed all ${passed} out of ${total} test cases.`,
+      confirmText: "Return to Dashboard",
+      isDanger: false,
+      onConfirmAction: () => {
+        closeModal();
+        navigate("/learning-path");
+      }
+    });
   };
 
-  const loadActivityTemplate = async (path) => {
+  const loadActivityTemplate = async (path, dataFromState) => {
     try {
-      const fetchUrl = path.startsWith("activities/")
-        ? `/${path}.json`
-        : `/templates/${path}.json`;
+      let json = null;
 
-      const response = await fetch(fetchUrl);
-      if (!response.ok) throw new Error(`Template not found at ${fetchUrl}`);
+      if (dataFromState && dataFromState.blocks) {
+        json = dataFromState;
+      } else if (path) {
+        const fetchUrl = path.startsWith("activities/")
+          ? `/${path}.json`
+          : `/templates/${path}.json`;
 
-      const json = await response.json();
+        const response = await fetch(fetchUrl);
+        if (!response.ok) throw new Error(`Template not found at ${fetchUrl}`);
+        json = await response.json();
+      }
 
-      if (workspaceRef.current) {
+      if (json && workspaceRef.current) {
         workspaceRef.current.loadTemplate(json);
       }
     } catch (error) {
@@ -431,12 +444,13 @@ const ActivityApp = () => {
   };
 
   useEffect(() => {
-    if (initialTemplate) {
-      setTimeout(() => {
-        loadActivityTemplate(initialTemplate);
+    if (initialTemplate || activityData) {
+      const timer = setTimeout(() => {
+        loadActivityTemplate(initialTemplate, activityData);
       }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [initialTemplate]);
+  }, [initialTemplate, activityData]);
 
   const handleWorkspaceChange = async (json, pythonCode) => {
     setGeneratedPython(pythonCode);
@@ -461,21 +475,20 @@ const ActivityApp = () => {
     }
   };
 
-  // UPDATED: Interactive runCode using WebSockets
   const runCode = () => {
     setConsoleOutput("> Initializing session...\n");
     setBottomPanel("console");
     setIsWaitingForInput(false);
 
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const host = window.location.host; 
+    const host = window.location.host;
     const socket = new WebSocket(`${protocol}://${host}/api/ws/run`);
 
     socketRef.current = socket;
 
     socket.onopen = () => {
       socket.send(JSON.stringify({ type: "run", code: generatedPython }));
-      setConsoleOutput(""); 
+      setConsoleOutput("");
     };
 
     socket.onmessage = (event) => {
@@ -556,11 +569,16 @@ except Exception as e:
       const match = outputText.match(/Result: (\d+)\//);
       if (match) {
         const passed = parseInt(match[1]);
+        const total = activityData.testCasesList.length;
+
         setPassedTests(passed);
 
-        const total = activityData.testCasesList.length;
-        if (passed === total) {
-          handleSuccess();
+        // FIX: Always save the exact amount of correct test cases (no 100/100 score)
+        const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act";
+        saveLessonProgress(currentLessonId, passed);
+
+        if (passed === total && total > 0) {
+          handleSuccess(passed, total);
         }
       }
 
@@ -641,7 +659,7 @@ except Exception as e:
           <div className="activity-panel-content">
             <div className="activity-task-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', marginTop: '10px' }}>
               <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#2b005c', fontWeight: 'bold' }}>
-                {currentTask?.title || activityData.title}
+                {currentTask?.title || activityData.title || "Activity"}
               </h2>
               <span style={{
                 padding: '4px 10px',
@@ -663,7 +681,10 @@ except Exception as e:
               padding: '0',
               color: '#2f2f2f'
             }}>
-              {renderFormattedTask(currentTask?.task || activityData.task)}
+              {renderFormattedTask(
+                currentTask?.task || 
+                (typeof activityData.task === "string" ? activityData.task : "Complete the algorithm requested in the workspace.")
+              )}
             </div>
           </div>
         </aside>

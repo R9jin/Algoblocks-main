@@ -5,8 +5,10 @@
       {
         "type": "procedures_defreturn",
         "id": "logic_func_1",
-        "x": 50,
-        "y": 50,
+        "x": 20,
+        "y": 20,
+        "deletable": false,
+        "editable": false,
         "extraState": {
           "params": [
             {
@@ -18,12 +20,14 @@
         "fields": {
           "NAME": "check_logic"
         },
-        "statement": {
-          "name": "STACK",
-          "block": {
-            "type": "comment_block",
-            "fields": {
-              "TEXT": "Use an If-Else block. If condition is true, return 'Yes'. Else return 'No'."
+        "inputs": {
+          "STACK": {
+            "block": {
+              "type": "comment_block",
+              "id": "comment_logic_1",
+              "fields": {
+                "TEXT": "Use an If-Else block. If condition is true, return 'Yes'. Else return 'No'."
+              }
             }
           }
         }
@@ -35,5 +39,6 @@
       "name": "condition",
       "id": "var_condition"
     }
-  ]
+  ],
+  "backpack": []
 }

@@ -216,6 +216,47 @@
   gap: 15px;
 }
 
+/* NEW STATUS BADGES SECTION */
+.lp-topic-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.score-badge {
+  font-size: .75rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Full score style */
+.score-badge.perfect {
+  background: #EAF8F1;
+  color: #27AE60;
+  border: 1px solid #C3E6D3;
+}
+
+/* Partially complete style */
+.score-badge.partial {
+  background: #FFF8E8;
+  color: #F5A623;
+  border: 1px solid #FFDDA6;
+}
+
+.pending-badge {
+  font-size: .75rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: #F3F4F6;
+  color: #6B7280;
+  border: 1px solid #E5E7EB;
+}
+
 .lp-topic-arrow {
   color: #BCA1FC;
   font-weight: bold;
@@ -427,6 +468,22 @@
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+.lp-review-btn {
+  background: #EAF8F1;
+  border: 1px solid #27AE60;
+  padding: 10px 22px;
+  border-radius: 8px;
+  color: #27AE60;
+  font-weight: 600;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.lp-review-btn:hover {
+  background: #D5EFE1;
 }
 
 .lp-start-btn {

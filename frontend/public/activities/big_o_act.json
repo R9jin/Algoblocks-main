@@ -5,8 +5,10 @@
       {
         "type": "procedures_defreturn",
         "id": "big_o_func_1",
-        "x": 50,
-        "y": 50,
+        "x": 20,
+        "y": 20,
+        "deletable": false,
+        "editable": false,
         "extraState": {
           "params": [
             {
@@ -18,12 +20,14 @@
         "fields": {
           "NAME": "generate_steps"
         },
-        "statement": {
-          "name": "STACK",
-          "block": {
-            "type": "comment_block",
-            "fields": {
-              "TEXT": "Create an empty list, loop n times adding 'Step' to it, then return the list."
+        "inputs": {
+          "STACK": {
+            "block": {
+              "type": "comment_block",
+              "id": "comment_big_o_1",
+              "fields": {
+                "TEXT": "Create an empty list, loop n times adding 'Step' to it, then return the list."
+              }
             }
           }
         }
@@ -35,5 +39,6 @@
       "name": "n",
       "id": "var_n"
     }
-  ]
+  ],
+  "backpack": []
 }
