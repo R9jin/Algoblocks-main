@@ -31,7 +31,7 @@ const pastelTheme = Blockly.Theme.defineTheme('pastelTheme', {
     list_category: { colour: "#4DB6AC" },
     variable_category: { colour: "#f38286" },
     procedure_category: { colour: "#7a6b66" },
-    raw_category: { colour: "#FF6B6B" } 
+    raw_category: { colour: "#FF6B6B" }
   },
   blockStyles: {
     logic_blocks: { colourPrimary: "#c1a0e8", colourSecondary: "#B8A0D6", colourTertiary: "#A38CC1" },
@@ -41,7 +41,7 @@ const pastelTheme = Blockly.Theme.defineTheme('pastelTheme', {
     list_blocks: { colourPrimary: "#4DB6AC", colourSecondary: "#42A097", colourTertiary: "#388C83" },
     variable_blocks: { colourPrimary: "#f38286", colourSecondary: "#DB888B", colourTertiary: "#C27679" },
     procedure_blocks: { colourPrimary: "#7a6b66", colourSecondary: "#BDB2AE", colourTertiary: "#A89D9A" },
-    raw_blocks: { colourPrimary: "#FF6B6B", colourSecondary: "#FF8787", colourTertiary: "#FFA8A8" } 
+    raw_blocks: { colourPrimary: "#FF6B6B", colourSecondary: "#FF8787", colourTertiary: "#FFA8A8" }
   },
   fontStyle: {
     family: "'Outfit', 'Inter', sans-serif",
@@ -178,7 +178,7 @@ const customBlocks = [
       { type: "input_value", "name": "VALUE" }
     ],
     inputsInline: true,
-    output: "DictPair", 
+    output: "DictPair",
     style: "list_blocks",
     tooltip: "Creates a single Key-Value pair (e.g., 'A': 1)"
   },
@@ -194,7 +194,7 @@ const customBlocks = [
   },
   {
     type: "multi_line_comment",
-    message0: 'comment %1', 
+    message0: 'comment %1',
     args0: [{
       type: "field_multilinetext",
       name: "TEXT",
@@ -208,29 +208,29 @@ const customBlocks = [
   },
   {
     type: "raw_python_statement",
-    message0: "Raw Code \n %1", 
-    args0: [{ 
-      type: "field_multilinetext", 
-      name: "CODE", 
+    message0: "Raw Code \n %1",
+    args0: [{
+      type: "field_multilinetext",
+      name: "CODE",
       text: "print('Hello World')",
       spellcheck: false
     }],
     previousStatement: null,
     nextStatement: null,
-    style: "raw_blocks", 
+    style: "raw_blocks",
     tooltip: "Dumps exact text string to Python code"
   },
   {
     type: "raw_python_expression",
-    message0: "Raw Eval \n %1", 
-    args0: [{ 
+    message0: "Raw Eval \n %1",
+    args0: [{
       type: "field_multilinetext",
-      name: "CODE", 
+      name: "CODE",
       text: "x + y",
       spellcheck: false
     }],
     output: null,
-    style: "raw_blocks", 
+    style: "raw_blocks",
     tooltip: "Evaluates exact text string as a value"
   },
   {
@@ -244,7 +244,7 @@ const customBlocks = [
     }],
     previousStatement: null,
     nextStatement: null,
-    style: "raw_blocks", 
+    style: "raw_blocks",
     tooltip: "Dumps multi-line exact text string to Python code"
   }
 ];
@@ -429,23 +429,25 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
   useImperativeHandle(ref, () => ({
     clear: () => {
       if (workspace.current) {
-        Blockly.Events.disable(); 
+        Blockly.Events.disable();
         try {
           workspace.current.clear();
         } finally {
-          Blockly.Events.enable(); 
+          Blockly.Events.enable();
         }
       }
     },
+    // Inside BlocklyWorkspace.jsx
     loadTemplate: (json) => {
       if (workspace.current) {
-        Blockly.Events.disable(); 
+        // 1. Removed Blockly.Events.disable();
         try {
           workspace.current.clear();
           Blockly.serialization.workspaces.load(json, workspace.current);
-        } finally {
-          Blockly.Events.enable(); 
+        } catch (err) {
+          console.error("Error loading workspace JSON:", err);
         }
+        // 2. Removed Blockly.Events.enable();
 
         setTimeout(() => {
           const code = pythonGenerator.workspaceToCode(workspace.current);
@@ -461,7 +463,7 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
     },
     loadFromPython: async (pythonCode) => {
       if (!workspace.current) return;
-      
+
       try {
         const response = await fetch('/api/ast-to-blocks', {
           method: 'POST',
@@ -472,17 +474,17 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
 
         // Enforce throwing an explicit error on Syntax Errors to prevent block overwrites
         if (data.status === "error") {
-            throw new Error(data.message);
+          throw new Error(data.message);
         }
 
-        Blockly.Events.disable(); 
+        Blockly.Events.disable();
         try {
           workspace.current.clear();
           if (data.status === "success" && data.blocks) {
             Blockly.serialization.workspaces.load(data.blocks, workspace.current);
           }
         } finally {
-          Blockly.Events.enable(); 
+          Blockly.Events.enable();
         }
       } catch (error) {
         console.error("AST Parsing connection failed", error);
@@ -501,7 +503,7 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
   }, [onChange]);
 
   useEffect(() => {
-    if (workspace.current) return; 
+    if (workspace.current) return;
 
     let searchPlugin, minimapPlugin, modalPlugin, backpackPlugin, highlightPlugin;
 
@@ -511,25 +513,25 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
       }
 
       workspace.current = Blockly.inject(blocklyDiv.current, {
-        toolbox: toolbox, 
-        trashcan: true, 
-        move: { scrollbars: true, drag: true, wheel: true }, 
-        zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 }, 
-        renderer: "geras", 
-        theme: pastelTheme, 
-        grid: { spacing: 25, length: 3, colour: '#6e6e6e', snap: true } 
+        toolbox: toolbox,
+        trashcan: true,
+        move: { scrollbars: true, drag: true, wheel: true },
+        zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
+        renderer: "geras",
+        theme: pastelTheme,
+        grid: { spacing: 25, length: 3, colour: '#6e6e6e', snap: true }
       });
 
       try {
-        searchPlugin = new WorkspaceSearch(workspace.current); 
+        searchPlugin = new WorkspaceSearch(workspace.current);
         searchPlugin.init();
-        minimapPlugin = new PositionedMinimap(workspace.current); 
+        minimapPlugin = new PositionedMinimap(workspace.current);
         minimapPlugin.init();
-        modalPlugin = new Modal(workspace.current); 
+        modalPlugin = new Modal(workspace.current);
         modalPlugin.init();
-        backpackPlugin = new Backpack(workspace.current); 
+        backpackPlugin = new Backpack(workspace.current);
         backpackPlugin.init();
-        highlightPlugin = new ContentHighlight(workspace.current); 
+        highlightPlugin = new ContentHighlight(workspace.current);
         highlightPlugin.init();
         workspace.current.addChangeListener(shadowBlockConversionChangeListener);
       } catch (e) {
@@ -541,7 +543,7 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
         pythonGenerator.init = function (workspace) {
           pythonGenerator.__originalInit.call(this, workspace);
           if (this.definitions_['variables']) {
-            delete this.definitions_['variables']; 
+            delete this.definitions_['variables'];
           }
         };
       }
@@ -632,7 +634,7 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
 
         let indexCode = '0';
         if (where === 'FIRST') indexCode = '0';
-        else if (where === 'LAST') indexCode = '-1'; 
+        else if (where === 'LAST') indexCode = '-1';
         else if (where === 'FROM_START') indexCode = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '0';
         else if (where === 'FROM_END') {
           const at = pythonGenerator.valueToCode(block, 'AT', pythonGenerator.ORDER_NONE) || '1';
@@ -781,7 +783,7 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
           } catch (e) {
             console.warn("Blockly Workspace Update Error: ", e);
           }
-        }, 400); 
+        }, 400);
       });
 
       let resizeFrame;
@@ -820,7 +822,7 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <div ref={blocklyDiv} style={{ height: "100%", width: "100%" }} />
-      
+
       {/* VSCode-style Workspace Floating Syntax Error Indicator */}
       {syntaxError && (
         <div style={{

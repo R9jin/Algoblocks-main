@@ -14,7 +14,7 @@ import { formatComplexity } from "../utils/formatters";
 const ACTIVITY_TASKS = [
   {
     id: "l1-t1",
-    templatePath: "intro/what_is_algo",
+    templatePath: "activities/what_is_algo",
     title: "1. Hello World",
     difficulty: "Easy",
     task: `Welcome to AlgoBlocks! Every great programmer starts their journey with a simple tradition: greeting the world. Your very first task is to write a program that prints a specific greeting message to the system console. 
@@ -291,7 +291,7 @@ const ActivityApp = () => {
   const socketRef = useRef(null);
 
   const activityData = location.state?.activityData || null;
-  const initialTemplate = location.state?.templatePath || "";
+  const initialTemplate = location.state?.templatePath || location.state?.activityData?.templatePath || "";
   const currentTask = ACTIVITY_TASKS.find(t => t.templatePath === initialTemplate);
 
   // --- UI & Analysis States ---
@@ -682,7 +682,7 @@ except Exception as e:
               color: '#2f2f2f'
             }}>
               {renderFormattedTask(
-                currentTask?.task || 
+                currentTask?.task ||
                 (typeof activityData.task === "string" ? activityData.task : "Complete the algorithm requested in the workspace.")
               )}
             </div>
