@@ -150,7 +150,6 @@ class BlocklyASTConverter:
                 self.variables.add(node.id) 
                 return {"type": "variables_get", "id": gen_uid(), "fields": {"VAR": {"id": node.id, "name": node.id}}}
 
-            # --- ADDED: LIST SUPPORT ---
             elif isinstance(node, ast.List):
                 block = {"type": "lists_create_with", "id": gen_uid(), "extraState": {"itemCount": len(node.elts)}}
                 for i, elt in enumerate(node.elts):
@@ -211,7 +210,6 @@ class BlocklyASTConverter:
                         self.add_input(block, "DELIMITER", self.serialize_expr(node.func.value))
                         self.add_input(block, "LIST", self.serialize_expr(node.args[0]))
                         return block
-                    # --- ADDED: MATH.SQRT SUPPORT ---
                     if node.func.attr == "sqrt":
                         block = {"type": "math_single", "id": gen_uid(), "fields": {"OP": "ROOT"}}
                         self.add_input(block, "NUM", self.serialize_expr(node.args[0]))
@@ -238,21 +236,14 @@ class BlocklyASTConverter:
                         if node.args: self.add_input(block, "STRING", self.serialize_expr(node.args[0]))
                         return block
                     
-                    # ==========================================
-                    # ADD THIS NEW BLOCK FOR INPUT SUPPORT
-                    # ==========================================
+                    # --- ADDED: INPUT SUPPORT ---
                     elif name == "input":
-                        block = {
-                            "type": "text_prompt_ext", 
-                            "id": gen_uid(), 
-                            "extraState": {"type": "TEXT"}
-                        }
-                        if node.args: 
+                        block = {"type": "text_prompt_ext", "id": gen_uid(), "fields": {"TYPE": "TEXT"}}
+                        if node.args:
+                            # Map the first argument of input() to the prompt text input
                             self.add_input(block, "TEXT", self.serialize_expr(node.args[0]))
                         return block
-                    # ==========================================
-
-                    # Fallback for custom user-defined functions
+                    
                     block = {"type": "procedures_callreturn", "id": gen_uid(), "extraState": {"name": name}}
                     for i, arg in enumerate(node.args):
                         self.add_input(block, f"ARG{i}", self.serialize_expr(arg))
@@ -261,7 +252,7 @@ class BlocklyASTConverter:
         except Exception:
             pass
         return self.make_raw_expr(node)
-
+    
     def map_compare(self, op):
         return {ast.Eq: "EQ", ast.NotEq: "NEQ", ast.Lt: "LT", ast.LtE: "LTE", ast.Gt: "GT", ast.GtE: "GTE"}.get(type(op), "EQ")
 
