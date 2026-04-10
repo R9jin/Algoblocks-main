@@ -176,7 +176,7 @@
 }
 
 .auth-links a {
-  color: #C994FF;
+  color: rgb(141, 105, 176);
   text-decoration: none;
   font-size: 0.9rem;
   transition: color 0.2s;
@@ -189,7 +189,7 @@
 
 .auth-card p {
   text-align: center;
-  color: #C994FF;
+  color: #622d98;
   margin-bottom: 1.5rem;
 }
 

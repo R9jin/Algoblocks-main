@@ -238,6 +238,21 @@ class BlocklyASTConverter:
                         if node.args: self.add_input(block, "STRING", self.serialize_expr(node.args[0]))
                         return block
                     
+                    # ==========================================
+                    # ADD THIS NEW BLOCK FOR INPUT SUPPORT
+                    # ==========================================
+                    elif name == "input":
+                        block = {
+                            "type": "text_prompt_ext", 
+                            "id": gen_uid(), 
+                            "extraState": {"type": "TEXT"}
+                        }
+                        if node.args: 
+                            self.add_input(block, "TEXT", self.serialize_expr(node.args[0]))
+                        return block
+                    # ==========================================
+
+                    # Fallback for custom user-defined functions
                     block = {"type": "procedures_callreturn", "id": gen_uid(), "extraState": {"name": name}}
                     for i, arg in enumerate(node.args):
                         self.add_input(block, f"ARG{i}", self.serialize_expr(arg))

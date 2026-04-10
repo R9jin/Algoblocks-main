@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { FaGithub } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 import { FiLock, FiMail, FiUser } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import "../styles/Auth.css";
@@ -90,21 +88,7 @@ export default function SignUp() {
           </div>
           <button type="submit" className="auth-button">Sign Up</button>
         </form>
-        <div className="social-auth">
-          <div className="social-divider">
-            <span>Or sign up with</span>
-          </div>
-          <div className="social-buttons">
-            <button type="button" className="social-btn">
-              <FcGoogle className="social-icon" aria-hidden="true" />
-              Google
-            </button>
-            <button type="button" className="social-btn">
-              <FaGithub className="social-icon" aria-hidden="true" />
-              GitHub
-            </button>
-          </div>
-        </div>
+
         <div className="auth-links">
           <p>Already have an account?<Link to="/signin">Sign in</Link></p>
         </div>
