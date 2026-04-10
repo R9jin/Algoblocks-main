@@ -276,7 +276,10 @@ export default function MainApp() {
     setConsoleOutput("> Initializing session...\n");
     setBottomPanel("console");
 
-    const socket = new WebSocket("ws://127.0.0.1:8000/api/ws/run");
+    // Use window.location.host to automatically handle localhost:5173
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${protocol}://${window.location.host}/api/ws/run`);
+
     socketRef.current = socket;
 
     setIsWaitingForInput(false);

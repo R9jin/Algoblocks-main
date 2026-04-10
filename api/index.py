@@ -1,13 +1,16 @@
 # api/index.py
+import threading
+import queue
 import sys
 import os
 
 # 1. Update the path FIRST so Vercel can find your local files
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# 2. THEN do your imports
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+# 2. THEN do your imports\
 import asyncio
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+
 from io import StringIO
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -351,6 +354,10 @@ from fastapi import WebSocket, WebSocketDisconnect
 @app.websocket("/api/ws/run")
 async def websocket_run(websocket: WebSocket):
     await websocket.accept()
+    loop = asyncio.get_running_loop()
+    
+    # This queue holds the user's input until Python is ready for it
+    input_queue = queue.Queue()
 
     try:
         while True:
@@ -359,27 +366,49 @@ async def websocket_run(websocket: WebSocket):
             if data["type"] == "run":
                 code = data["code"]
 
-                # Redirect output
-                old_stdout = sys.stdout
-                redirected_output = sys.stdout = StringIO()
+                # 1. Custom input function to pause Python and ask React
+                def custom_input(prompt=""):
+                    # Tell frontend to show the input box
+                    asyncio.run_coroutine_threadsafe(
+                        websocket.send_json({"type": "input_request", "prompt": str(prompt)}), 
+                        loop
+                    ).result()
+                    # PAUSE this thread until the user types something and hits Enter
+                    return input_queue.get()
 
-                try:
-                    exec(code, {})
-                    output = redirected_output.getvalue() or "> Code ran successfully.\n"
-                except Exception as e:
-                    output = f"Runtime Error: {str(e)}\n"
-                finally:
-                    sys.stdout = old_stdout
+                # 2. Custom print function to send output to React in real-time
+                class WSWriter:
+                    def write(self, text):
+                        if text:
+                            asyncio.run_coroutine_threadsafe(
+                                websocket.send_json({"type": "output", "data": text}), 
+                                loop
+                            )
+                    def flush(self): pass
 
-                # Send output back to frontend
-                await websocket.send_json({
-                    "type": "output",
-                    "data": output
-                })
+                # 3. Worker function that runs the code
+                def worker():
+                    old_stdout = sys.stdout
+                    sys.stdout = WSWriter()
+                    try:
+                        # Inject our custom input function
+                        exec(code, {"input": custom_input})
+                        asyncio.run_coroutine_threadsafe(websocket.send_json({"type": "done"}), loop)
+                    except Exception as e:
+                        asyncio.run_coroutine_threadsafe(
+                            websocket.send_json({"type": "error", "data": str(e)}), 
+                            loop
+                        )
+                    finally:
+                        sys.stdout = old_stdout
 
-                await websocket.send_json({
-                    "type": "done"
-                })
+                # Start the code execution in a background thread so the server doesn't freeze
+                threading.Thread(target=worker).start()
+
+            # 4. Handle the response from the React frontend
+            elif data["type"] == "input_response":
+                # Feed the queue, which un-pauses `custom_input`
+                input_queue.put(data["data"])
 
     except WebSocketDisconnect:
         print("Client disconnected")
