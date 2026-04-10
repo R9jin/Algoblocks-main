@@ -6,8 +6,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8000', // Your local Python FastAPI/Flask server
+        target: 'http://localhost:8000', // Your local Python FastAPI server
         changeOrigin: true,
+        ws: true, // IMPORTANT: Enables WebSocket proxying for real-time input
       }
     }
   }

@@ -1,0 +1,61 @@
+{
+  "blocks": {
+    "languageVersion": 0,
+    "blocks": [
+      {
+        "type": "procedures_defreturn",
+        "id": "logic_flow_check",
+        "x": 13,
+        "y": -87,
+        "deletable": false,
+        "editable": false,
+        "extraState": {
+          "params": [
+            {
+              "name": "condition",
+              "id": "var_condition_id_001"
+            }
+          ]
+        },
+        "icons": {
+          "comment": {
+            "text": "Describe this function...",
+            "pinned": false,
+            "height": 80,
+            "width": 160
+          }
+        },
+        "fields": {
+          "NAME": "check_logic"
+        },
+        "inputs": {
+          "STACK": {
+            "block": {
+              "type": "comment_block",
+              "id": "comment_logic_1",
+              "fields": {
+                "TEXT": "condition: boolean input (true or false)"
+              },
+              "next": {
+                "block": {
+                  "type": "comment_block",
+                  "id": "comment_logic_2",
+                  "fields": {
+                    "TEXT": "Use an If-Else block: if condition is true return 'Yes', otherwise return 'No'"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "variables": [
+    {
+      "name": "condition",
+      "id": "var_condition_id_001"
+    }
+  ],
+  "backpack": []
+}

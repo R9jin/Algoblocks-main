@@ -1,0 +1,61 @@
+{
+  "blocks": {
+    "languageVersion": 0,
+    "blocks": [
+      {
+        "type": "procedures_defreturn",
+        "id": "big_o_generate_steps",
+        "x": 13,
+        "y": -87,
+        "deletable": false,
+        "editable": false,
+        "extraState": {
+          "params": [
+            {
+              "name": "n",
+              "id": "var_n_id_001"
+            }
+          ]
+        },
+        "icons": {
+          "comment": {
+            "text": "Describe this function...",
+            "pinned": false,
+            "height": 80,
+            "width": 160
+          }
+        },
+        "fields": {
+          "NAME": "generate_steps"
+        },
+        "inputs": {
+          "STACK": {
+            "block": {
+              "type": "comment_block",
+              "id": "comment_big_o_1",
+              "fields": {
+                "TEXT": "n: number of times to repeat the operation"
+              },
+              "next": {
+                "block": {
+                  "type": "comment_block",
+                  "id": "comment_big_o_2",
+                  "fields": {
+                    "TEXT": "Create a loop that runs n times and outputs 'Step' each iteration (O(n) behavior)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "variables": [
+    {
+      "name": "n",
+      "id": "var_n_id_001"
+    }
+  ],
+  "backpack": []
+}

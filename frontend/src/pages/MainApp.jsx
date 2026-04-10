@@ -55,7 +55,7 @@ export default function MainApp() {
   const [activeTab, setActiveTab] = useState("local");
   const [expandedLines, setExpandedLines] = useState({});
   const toggleLine = (index) => setExpandedLines(prev => ({ ...prev, [index]: !prev[index] }));
-  
+
   const [panelHeight, setPanelHeight] = useState(450);
   const isDragging = useRef(false);
   const [isEditingCode, setIsEditingCode] = useState(false);
@@ -100,7 +100,7 @@ export default function MainApp() {
       const user = JSON.parse(storedUser);
       const res = await fetch('/api/projects');
       const data = await res.json();
-      
+
       if (data.status === 'success') {
         const userTemplates = data.projects
           .filter(p => p.owner_id === user.email)
@@ -127,7 +127,7 @@ export default function MainApp() {
         const response = await fetch(`/templates/${item.path}.json`);
         if (!response.ok) throw new Error("Template not found");
         json = await response.json();
-        setCurrentLoadedId(null); 
+        setCurrentLoadedId(null);
       } else {
         json = item.data;
         setCurrentLoadedId(item._id);
@@ -157,7 +157,7 @@ export default function MainApp() {
     try {
       const response = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: pythonCode }) });
       const data = await response.json();
-      
+
       if (data.status === "success") {
         setAnalysisResult({ total: data.total, space_total: data.space_total || "O(1)", lines: data.lines || [], is_recursive: data.is_recursive || false });
         setSyntaxError(null);
@@ -184,7 +184,7 @@ export default function MainApp() {
           setSyntaxError({ line: data.line, message: data.message });
           setAnalysisResult({ lines: [], total: "Syntax Error", space_total: "-", is_recursive: false });
         } else {
-           setSyntaxError(null);
+          setSyntaxError(null);
         }
       } catch (error) { console.error("Analysis Error:", error); }
     }, 500); // 500ms delay to feel exactly like VSCode live syntax checking
@@ -230,7 +230,7 @@ export default function MainApp() {
   const submitSave = async () => {
     const storedUser = localStorage.getItem("user");
     if (!storedUser) { showToast("You must be signed in to save.", "error"); return; }
-    
+
     const user = JSON.parse(storedUser);
     const payload = { title: saveModal.title || "My Custom Template", description: saveModal.description || "", data: blocklyJson, owner_id: user.email };
 
@@ -241,13 +241,13 @@ export default function MainApp() {
       } else {
         res = await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       }
-      
+
       if (res.ok) {
         const result = await res.json();
         showToast("Template saved!", "success");
         if (!currentLoadedId && result.id) setCurrentLoadedId(result.id);
         setCurrentProjectTitle(payload.title);
-        fetchTemplates(); 
+        fetchTemplates();
       } else {
         showToast("Failed to save", "error");
       }
@@ -256,28 +256,93 @@ export default function MainApp() {
   };
 
   const handleDeleteItem = async (e, id) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this custom template?")) return;
     try {
       const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       if (res.ok) {
         showToast("Template deleted!", "success");
         fetchTemplates();
-        if (currentLoadedId === id) handleClear(); 
+        if (currentLoadedId === id) handleClear();
       } else { showToast("Failed to delete", "error"); }
-    } catch(e) { showToast("Connection error", "error"); }
+    } catch (e) { showToast("Connection error", "error"); }
   };
 
-  const runCode = async () => {
-    setConsoleOutput("> Running..."); setBottomPanel("console"); setExpandedLines({});
-    try {
-      const response = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: generatedPython }) });
-      const data = await response.json();
-      setConsoleOutput(data.status === "success" ? data.output : "> Error: " + data.output);
-    } catch { setConsoleOutput("> Connection Error"); }
+  const [isWaitingForInput, setIsWaitingForInput] = useState(false);
+  const [userInput, setUserInput] = useState("");
+  const socketRef = useRef(null);
+
+  const runCode = () => {
+    setConsoleOutput("> Initializing session...\n");
+    setBottomPanel("console");
+
+    // Use window.location.host to automatically handle localhost:5173
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${protocol}://${window.location.host}/api/ws/run`);
+
+    socketRef.current = socket;
+
+    setIsWaitingForInput(false);
+
+    socket.onopen = () => {
+      console.log("✅ Connected");
+      socket.send(JSON.stringify({ type: "run", code: generatedPython }));
+      setConsoleOutput("");
+    };
+
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === "output") {
+        setConsoleOutput((prev) => prev + msg.data);
+      } else if (msg.type === "input_request") {
+        setConsoleOutput((prev) => prev + msg.prompt);
+        setIsWaitingForInput(true);
+      } else if (msg.type === "error") {
+        setConsoleOutput((prev) => prev + "\nRuntime Error: " + msg.data);
+      } else if (msg.type === "done") {
+        setConsoleOutput((prev) => prev + "\n> Program finished.");
+        setIsWaitingForInput(false);
+        socket.close();
+      }
+    };
+
+    socket.onerror = (e) => {
+      console.error("❌ WebSocket error:", e);
+      setConsoleOutput("❌ Failed to connect to backend.");
+    };
+
+    socket.onclose = () => {
+      console.log("⚠️ Socket closed");
+    };
+  };
+
+  const handleSendInput = (e) => {
+    if (e.key === "Enter" && isWaitingForInput && socketRef.current) {
+      setConsoleOutput((prev) => prev + userInput + "\n");
+
+      socketRef.current.send(
+        JSON.stringify({ type: "input_response", data: userInput })
+      );
+
+      setUserInput("");
+      setIsWaitingForInput(false);
+    }
   };
 
   const filteredTemplates = allTemplates.filter(t => t.title.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  /* Inside your MainApp component */
+
+  const consoleEndRef = useRef(null);
+
+  // Auto-scroll logic: whenever consoleOutput or isWaitingForInput changes
+  useEffect(() => {
+    if (consoleEndRef.current) {
+      consoleEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [consoleOutput, isWaitingForInput]);
+
 
   return (
     <div className="workspace-app-container">
@@ -294,15 +359,15 @@ export default function MainApp() {
             <div className="save-modal-form">
               <div>
                 <label className="save-modal-label">Template Name</label>
-                <input type="text" value={saveModal.title} onChange={e => setSaveModal({...saveModal, title: e.target.value})} placeholder="e.g. My Optimized Sort" className="save-modal-input" />
+                <input type="text" value={saveModal.title} onChange={e => setSaveModal({ ...saveModal, title: e.target.value })} placeholder="e.g. My Optimized Sort" className="save-modal-input" />
               </div>
               <div>
                 <label className="save-modal-label">Description</label>
-                <textarea value={saveModal.description} onChange={e => setSaveModal({...saveModal, description: e.target.value})} placeholder="What does this do?" className="save-modal-textarea" />
+                <textarea value={saveModal.description} onChange={e => setSaveModal({ ...saveModal, description: e.target.value })} placeholder="What does this do?" className="save-modal-textarea" />
               </div>
             </div>
             <div className="save-modal-actions">
-              <button onClick={() => setSaveModal({...saveModal, isOpen: false})} className="save-modal-cancel-btn">Cancel</button>
+              <button onClick={() => setSaveModal({ ...saveModal, isOpen: false })} className="save-modal-cancel-btn">Cancel</button>
               <button onClick={submitSave} className="save-modal-confirm-btn">Save</button>
             </div>
           </div>
@@ -312,7 +377,7 @@ export default function MainApp() {
       <WorkspaceHeader viewMode={viewMode} setViewMode={setViewMode} runCode={runCode} handleExport={openSaveModal} handleSaveToDB={openSaveModal} currentProjectId={currentLoadedId} currentProjectTitle={currentProjectTitle} handleUpdateDB={submitSave} />
 
       <Split className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} sizes={[20, 80]} minSize={[250, 400]} gutterSize={8}>
-        
+
         <aside className="templates-sidebar">
           <div className="sidebar-search">
             <img src="/assets/search-icon.png" alt="Search" className="search-icon" />
@@ -358,7 +423,7 @@ export default function MainApp() {
               </div>
 
               <div style={{ position: 'relative', flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-                
+
                 {/* VSCode-style Dynamic Line Error Highlight */}
                 {syntaxError && (
                   <div style={{
@@ -381,32 +446,32 @@ export default function MainApp() {
                   </div>
                 )}
 
-                <textarea 
-                  value={generatedPython} 
-                  onChange={(e) => { 
-                    setGeneratedPython(e.target.value); 
-                    setIsEditingCode(true); 
+                <textarea
+                  value={generatedPython}
+                  onChange={(e) => {
+                    setGeneratedPython(e.target.value);
+                    setIsEditingCode(true);
                     if (syntaxError) setSyntaxError(null); // Temporarily hide error while user fixes it
-                  }} 
-                  spellCheck={false} 
-                  style={{ 
+                  }}
+                  spellCheck={false}
+                  style={{
                     display: 'block',
                     width: '100%',
                     minHeight: '100%',
-                    margin: 0, 
-                    padding: '20px', 
+                    margin: 0,
+                    padding: '20px',
                     fontSize: '15px', // Fixed sizing to guarantee 1-to-1 sync with error highlight
-                    fontFamily: "'Fira Code', Consolas, Monaco, monospace", 
-                    background: 'transparent', 
-                    color: '#EBE4FF', 
-                    border: 'none', 
-                    outline: 'none', 
-                    resize: 'none', 
-                    whiteSpace: 'pre', 
+                    fontFamily: "'Fira Code', Consolas, Monaco, monospace",
+                    background: 'transparent',
+                    color: '#EBE4FF',
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'none',
+                    whiteSpace: 'pre',
                     lineHeight: '24px', // Fixed mapping
                     zIndex: 2,
                     position: 'relative'
-                  }} 
+                  }}
                 />
               </div>
             </div>
@@ -422,7 +487,24 @@ export default function MainApp() {
               </div>
               <div className="panel-body">
                 {bottomPanel === 'console' ? (
-                  <pre className="console-output">{consoleOutput}</pre>
+                  <div className="console-container">
+                    <pre className="console-output">{consoleOutput}</pre>
+
+                    {isWaitingForInput && (
+                      <div className="console-input-line">
+                        <span className="console-cursor">❯</span>
+                        <input
+                          autoFocus
+                          value={userInput}
+                          onChange={(e) => setUserInput(e.target.value)}
+                          onKeyDown={handleSendInput}
+                          className="console-input-field"
+                          placeholder="Type here and press Enter..."
+                        />
+                      </div>
+                    )}
+                    <div ref={consoleEndRef} />
+                  </div>
                 ) : (
                   <div className="complexity-content">
                     <div className="complexity-tabs">
@@ -454,7 +536,7 @@ export default function MainApp() {
                                     {explanationText && <span className="dropdown-chevron">{expandedLines[i] ? '▼' : '▶'}</span>}
                                   </td>
                                 </tr>
-                                
+
                                 {expandedLines[i] && explanationText && (
                                   <tr className="explanation-row">
                                     <td colSpan="4">

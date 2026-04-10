@@ -1,12 +1,16 @@
 # api/index.py
+import threading
+import queue
 import sys
 import os
 
 # 1. Update the path FIRST so Vercel can find your local files
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# 2. THEN do your imports
-from fastapi import FastAPI, HTTPException
+# 2. THEN do your imports\
+import asyncio
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+
 from io import StringIO
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -141,14 +145,24 @@ def analyze_complexity(payload: CodePayload):
 def run_code(payload: CodePayload):
     old_stdout = sys.stdout
     redirected_output = sys.stdout = StringIO()
+    
+    # 1. Create a fake input function
+    def simulated_input(prompt=""):
+        print(prompt, end="") # Print the prompt so the user sees it in the console
+        print(" [Simulated User Input]") # Show what was "typed"
+        return "Simulated User Input"
+
     try:
-        exec_globals = {}
+        # 2. Inject the fake input function into the execution environment
+        exec_globals = {"input": simulated_input}
+        
         exec(payload.code, exec_globals)
         output = redirected_output.getvalue() or "> Code ran successfully."
     except Exception as e:
         output = f"Runtime Error: {str(e)}"
     finally:
         sys.stdout = old_stdout
+        
     return {"status": "success", "output": output}
 
 @app.post("/api/projects")
@@ -334,3 +348,67 @@ def update_template(template_id: str, payload: TemplateUpdate):
         return {"status": "success", "message": "Template updated"}
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid update")
+    
+from fastapi import WebSocket, WebSocketDisconnect
+
+@app.websocket("/api/ws/run")
+async def websocket_run(websocket: WebSocket):
+    await websocket.accept()
+    loop = asyncio.get_running_loop()
+    
+    # This queue holds the user's input until Python is ready for it
+    input_queue = queue.Queue()
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+
+            if data["type"] == "run":
+                code = data["code"]
+
+                # 1. Custom input function to pause Python and ask React
+                def custom_input(prompt=""):
+                    # Tell frontend to show the input box
+                    asyncio.run_coroutine_threadsafe(
+                        websocket.send_json({"type": "input_request", "prompt": str(prompt)}), 
+                        loop
+                    ).result()
+                    # PAUSE this thread until the user types something and hits Enter
+                    return input_queue.get()
+
+                # 2. Custom print function to send output to React in real-time
+                class WSWriter:
+                    def write(self, text):
+                        if text:
+                            asyncio.run_coroutine_threadsafe(
+                                websocket.send_json({"type": "output", "data": text}), 
+                                loop
+                            )
+                    def flush(self): pass
+
+                # 3. Worker function that runs the code
+                def worker():
+                    old_stdout = sys.stdout
+                    sys.stdout = WSWriter()
+                    try:
+                        # Inject our custom input function
+                        exec(code, {"input": custom_input})
+                        asyncio.run_coroutine_threadsafe(websocket.send_json({"type": "done"}), loop)
+                    except Exception as e:
+                        asyncio.run_coroutine_threadsafe(
+                            websocket.send_json({"type": "error", "data": str(e)}), 
+                            loop
+                        )
+                    finally:
+                        sys.stdout = old_stdout
+
+                # Start the code execution in a background thread so the server doesn't freeze
+                threading.Thread(target=worker).start()
+
+            # 4. Handle the response from the React frontend
+            elif data["type"] == "input_response":
+                # Feed the queue, which un-pauses `custom_input`
+                input_queue.put(data["data"])
+
+    except WebSocketDisconnect:
+        print("Client disconnected")
