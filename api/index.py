@@ -6,7 +6,8 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # 2. THEN do your imports
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import asyncio
 from io import StringIO
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -141,14 +142,24 @@ def analyze_complexity(payload: CodePayload):
 def run_code(payload: CodePayload):
     old_stdout = sys.stdout
     redirected_output = sys.stdout = StringIO()
+    
+    # 1. Create a fake input function
+    def simulated_input(prompt=""):
+        print(prompt, end="") # Print the prompt so the user sees it in the console
+        print(" [Simulated User Input]") # Show what was "typed"
+        return "Simulated User Input"
+
     try:
-        exec_globals = {}
+        # 2. Inject the fake input function into the execution environment
+        exec_globals = {"input": simulated_input}
+        
         exec(payload.code, exec_globals)
         output = redirected_output.getvalue() or "> Code ran successfully."
     except Exception as e:
         output = f"Runtime Error: {str(e)}"
     finally:
         sys.stdout = old_stdout
+        
     return {"status": "success", "output": output}
 
 @app.post("/api/projects")
@@ -334,3 +345,41 @@ def update_template(template_id: str, payload: TemplateUpdate):
         return {"status": "success", "message": "Template updated"}
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid update")
+    
+from fastapi import WebSocket, WebSocketDisconnect
+
+@app.websocket("/api/ws/run")
+async def websocket_run(websocket: WebSocket):
+    await websocket.accept()
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+
+            if data["type"] == "run":
+                code = data["code"]
+
+                # Redirect output
+                old_stdout = sys.stdout
+                redirected_output = sys.stdout = StringIO()
+
+                try:
+                    exec(code, {})
+                    output = redirected_output.getvalue() or "> Code ran successfully.\n"
+                except Exception as e:
+                    output = f"Runtime Error: {str(e)}\n"
+                finally:
+                    sys.stdout = old_stdout
+
+                # Send output back to frontend
+                await websocket.send_json({
+                    "type": "output",
+                    "data": output
+                })
+
+                await websocket.send_json({
+                    "type": "done"
+                })
+
+    except WebSocketDisconnect:
+        print("Client disconnected")
