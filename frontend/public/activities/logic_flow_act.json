@@ -41,7 +41,7 @@
                   "type": "comment_block",
                   "id": "comment_logic_2",
                   "fields": {
-                    "TEXT": "Use an If-Else block: if condition is true return 'Yes', otherwise return 'No'"
+                    "TEXT": "Use an If-Else block to check a condition. If the condition is true, output 'Yes', otherwise output 'No'."
                   }
                 }
               }

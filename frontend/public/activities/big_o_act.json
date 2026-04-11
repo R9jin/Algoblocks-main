@@ -41,7 +41,7 @@
                   "type": "comment_block",
                   "id": "comment_big_o_2",
                   "fields": {
-                    "TEXT": "Create a loop that runs n times and outputs 'Step' each iteration (O(n) behavior)"
+                    "TEXT": "Given a number 'n', construct a loop that outputs the string 'Step' exactly 'n' times."
                   }
                 }
               }

@@ -103,7 +103,7 @@ const LESSONS = [
         ],
         task: "Familiarize yourself with the visual blocks. Connect a simple sequence of Output blocks to print 'Hello' and 'World'.",
         testCount: 1,
-        templatePath: "intro/what_is_algo"
+        templatePath: "activities/what_is_algo"
       },
       {
         id: "l1-t2",
@@ -118,7 +118,7 @@ const LESSONS = [
         ],
         task: "Use an If-Else block to check a condition. If the condition is true, output 'Yes', otherwise output 'No'.",
         testCount: 2,
-        templatePath: "intro/logic_flow"
+        templatePath: "activities/logic_flow_act"
       },
       {
         id: "l1-t3",
@@ -133,7 +133,7 @@ const LESSONS = [
         ],
         task: `Build a simple algorithm with O(n) time complexity.\n\nGiven a number 'n', construct a loop that outputs the string "Step" exactly 'n' times.`,
         testCount: 3,
-        templatePath: "intro/big_o"
+        templatePath: "activities/big_o_act"
       }
     ]
   },
