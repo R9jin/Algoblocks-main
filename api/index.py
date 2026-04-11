@@ -74,7 +74,10 @@ def safe_exec(code: str, globals_dict: dict):
     exec(code, {
         "__builtins__": safe_builtins  # <-- CRITICAL FIX
     })
-
+    
+@app.get("/")
+def health_check():
+    return {"status": "online", "message": "AlgoBlocks API is running on Back4App"}
 # =========================
 # AST → BLOCKS
 # =========================
