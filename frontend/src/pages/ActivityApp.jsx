@@ -6,6 +6,8 @@ import Split from "react-split";
 import BigOModal from "../components/BigOModal.jsx";
 import ComplexityGraph from '../components/ComplexityGraph.jsx';
 import ConfirmModal from "../components/ConfirmModal.jsx";
+// ADD THIS IMPORT:
+import BlocklyWorkspace from "../components/BlocklyWorkspace.jsx";
 import { formatComplexity } from "../utils/formatters";
 
 const ACTIVITY_TASKS = [
@@ -810,74 +812,89 @@ const ActivityApp = () => {
             <span className="toggle-icon">{isLeftPanelVisible ? '❮' : '❯'}</span>
           </button>
 
-          <div className={viewMode === 'python' ? 'python-view d-flex' : 'python-view d-none'}
-            style={{ display: viewMode === 'python' ? 'flex' : 'none', flexDirection: 'column', height: '100%', background: '#1C1236' }}>
-
-            <div className="python-header" style={{ padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)' }}>
-              <span className="python-sync-status" style={{ color: '#EBE4FF', fontSize: '0.85rem' }}>
-                {isEditingCode ? "✏️ Unsaved code changes..." : "Code is synced with blocks."}
-              </span>
-              <button
-                onClick={handleSyncToBlocks}
-                disabled={!isEditingCode}
-                className={`python-sync-btn ${isEditingCode ? 'active' : 'disabled'}`}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: '4px',
-                  cursor: isEditingCode ? 'pointer' : 'not-allowed',
-                  backgroundColor: isEditingCode ? '#6C5CE7' : '#444',
-                  color: 'white',
-                  border: 'none'
-                }}
-              >
-                Sync to Blocks ↻
-              </button>
+          {/* ADD THE EDITOR CONTAINER WRAPPER */}
+          <div className="editor-container" style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            
+            {/* ADD THIS MISSING WORKSPACE VIEW */}
+            <div className={viewMode === 'workspace' ? 'workspace-view d-block' : 'workspace-view d-none'} 
+                 style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
+              <BlocklyWorkspace 
+                ref={workspaceRef} 
+                onChange={handleWorkspaceChange} 
+                templatePath={initialTemplate} 
+                syntaxError={syntaxError} 
+              />
             </div>
 
-            <div style={{ position: 'relative', flex: 1, overflowY: 'auto' }}>
-              {/* Dynamic Line Error Highlight (same as MainApp) */}
-              {syntaxError && (
-                <div style={{
-                  position: 'absolute',
-                  top: `${(syntaxError.line - 1) * 24 + 20}px`,
-                  left: 0, right: 0, height: '24px',
-                  backgroundColor: 'rgba(231, 76, 60, 0.15)',
-                  borderLeft: '4px solid #E74C3C',
-                  pointerEvents: 'none', zIndex: 1
-                }}>
-                  <span style={{ color: '#E74C3C', position: 'absolute', right: '20px', fontSize: '0.8rem', fontStyle: 'italic', fontWeight: 'bold' }}>
-                    ⚠️ {syntaxError.message}
-                  </span>
-                </div>
-              )}
+            {/* EXISTING PYTHON VIEW */}
+            <div className={viewMode === 'python' ? 'python-view d-flex' : 'python-view d-none'}
+              style={{ display: viewMode === 'python' ? 'flex' : 'none', flexDirection: 'column', height: '100%', background: '#1C1236' }}>
 
-              <textarea
-                value={generatedPython}
-                onChange={(e) => {
-                  setGeneratedPython(e.target.value);
-                  setIsEditingCode(true);
-                  if (syntaxError) setSyntaxError(null);
-                }}
-                spellCheck={false}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  minHeight: '100%',
-                  margin: 0,
-                  padding: '20px',
-                  fontSize: '15px',
-                  fontFamily: "'Fira Code', Consolas, Monaco, monospace",
-                  background: 'transparent',
-                  color: '#EBE4FF',
-                  border: 'none',
-                  outline: 'none',
-                  resize: 'none',
-                  whiteSpace: 'pre',
-                  lineHeight: '24px',
-                  zIndex: 2,
-                  position: 'relative'
-                }}
-              />
+              <div className="python-header" style={{ padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)' }}>
+                <span className="python-sync-status" style={{ color: '#EBE4FF', fontSize: '0.85rem' }}>
+                  {isEditingCode ? "✏️ Unsaved code changes..." : "Code is synced with blocks."}
+                </span>
+                <button
+                  onClick={handleSyncToBlocks}
+                  disabled={!isEditingCode}
+                  className={`python-sync-btn ${isEditingCode ? 'active' : 'disabled'}`}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '4px',
+                    cursor: isEditingCode ? 'pointer' : 'not-allowed',
+                    backgroundColor: isEditingCode ? '#6C5CE7' : '#444',
+                    color: 'white',
+                    border: 'none'
+                  }}
+                >
+                  Sync to Blocks ↻
+                </button>
+              </div>
+
+              <div style={{ position: 'relative', flex: 1, overflowY: 'auto' }}>
+                {syntaxError && (
+                  <div style={{
+                    position: 'absolute',
+                    top: `${(syntaxError.line - 1) * 24 + 20}px`,
+                    left: 0, right: 0, height: '24px',
+                    backgroundColor: 'rgba(231, 76, 60, 0.15)',
+                    borderLeft: '4px solid #E74C3C',
+                    pointerEvents: 'none', zIndex: 1
+                  }}>
+                    <span style={{ color: '#E74C3C', position: 'absolute', right: '20px', fontSize: '0.8rem', fontStyle: 'italic', fontWeight: 'bold' }}>
+                      ⚠️ {syntaxError.message}
+                    </span>
+                  </div>
+                )}
+
+                <textarea
+                  value={generatedPython}
+                  onChange={(e) => {
+                    setGeneratedPython(e.target.value);
+                    setIsEditingCode(true);
+                    if (syntaxError) setSyntaxError(null);
+                  }}
+                  spellCheck={false}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    minHeight: '100%',
+                    margin: 0,
+                    padding: '20px',
+                    fontSize: '15px',
+                    fontFamily: "'Fira Code', Consolas, Monaco, monospace",
+                    background: 'transparent',
+                    color: '#EBE4FF',
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'none',
+                    whiteSpace: 'pre',
+                    lineHeight: '24px',
+                    zIndex: 2,
+                    position: 'relative'
+                  }}
+                />
+              </div>
             </div>
           </div>
 
