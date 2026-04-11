@@ -426,7 +426,11 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
   const workspace = useRef(null);
   const onChangeRef = useRef(onChange);
 
+<<<<<<< HEAD
   const API_URL = import.meta.env.VITE_BACKEND_URL || "";
+=======
+  const API_URL = import.meta.env.VITE_BACKEND_URL || ""
+>>>>>>> 5328ff5 (transferring backend to render)
 
   useImperativeHandle(ref, () => ({
     clear: () => {
