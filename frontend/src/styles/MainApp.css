@@ -388,6 +388,10 @@
   flex: 1;
   position: relative;
   overflow: hidden;
+  /* ADD THESE THREE LINES: */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .workspace-view {

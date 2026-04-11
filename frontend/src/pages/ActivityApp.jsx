@@ -445,7 +445,7 @@ const ActivityApp = () => {
 
     const timeoutId = setTimeout(async () => {
       try {
-        const response = await fetch(`${API_URL}/api/analyze`, {
+        const response = await fetch(`${VERCEL_URL}/api/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: generatedPython }),
@@ -511,7 +511,7 @@ const ActivityApp = () => {
     const user = JSON.parse(storedUser);
 
     try {
-      const response = await fetch(`${API_URL}/api/update-progress`, {
+      const response = await fetch(`${VERCEL_URL}/api/update-progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -583,7 +583,7 @@ const ActivityApp = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/analyze`, {
+      const response = await fetch(`${VERCEL_URL}/api/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: pythonCode }),
@@ -747,7 +747,7 @@ const ActivityApp = () => {
       }
 
       try {
-        const response = await fetch(`${API_URL}/api/run`, {
+        const response = await fetch(`${RENDER_URL}/api/run`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: codeToRun }),

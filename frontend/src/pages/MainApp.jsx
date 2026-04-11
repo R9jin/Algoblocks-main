@@ -102,7 +102,7 @@ export default function MainApp() {
       }
 
       const user = JSON.parse(storedUser);
-      const res = await fetch(`${API_URL}/api/projects`);
+      const res = await fetch(`${VERCEL_URL}/api/projects`);
       const data = await res.json();
 
       if (data.status === 'success') {
@@ -160,7 +160,7 @@ export default function MainApp() {
     if (!isEditingCode) setGeneratedPython(pythonCode);
     setBlocklyJson(json);
     try {
-      const response = await fetch(`${API_URL}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: pythonCode }) });
+      const response = await fetch(`${VERCEL_URL}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: pythonCode }) });
       const data = await response.json();
 
       if (data.status === "success") {
@@ -180,7 +180,7 @@ export default function MainApp() {
     if (!isEditingCode) return;
     const timeoutId = setTimeout(async () => {
       try {
-        const response = await fetch(`${API_URL}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: generatedPython }) });
+        const response = await fetch(`${VERCEL_URL}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: generatedPython }) });
         const data = await response.json();
         if (data.status === "success") {
           setAnalysisResult({ total: data.total, space_total: data.space_total || "O(1)", lines: data.lines || [], is_recursive: data.is_recursive || false });
@@ -242,9 +242,9 @@ export default function MainApp() {
     try {
       let res;
       if (currentLoadedId) {
-        res = await fetch(`${API_URL}/api/projects/${currentLoadedId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        res = await fetch(`${VERCEL_URL}/api/projects/${currentLoadedId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       } else {
-        res = await fetch(`${API_URL}/api/projects`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        res = await fetch(`${VERCEL_URL}/api/projects`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       }
 
       if (res.ok) {
@@ -264,7 +264,7 @@ export default function MainApp() {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this custom template?")) return;
     try {
-      const res = await fetch(`${API_URL}/api/projects/${id}`, { method: "DELETE" });
+      const res = await fetch(`${VERCEL_URL}/api/projects/${id}`, { method: "DELETE" });
       if (res.ok) {
         showToast("Template deleted!", "success");
         fetchTemplates();
