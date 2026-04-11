@@ -409,6 +409,24 @@ export default function MainApp() {
     }
   }, [consoleOutput, isWaitingForInput]);
 
+  const handleTabKey = (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const { selectionStart, selectionEnd, value } = e.target;
+    
+    // Insert 4 spaces (standard for Python) at the current cursor position
+    const newValue = value.substring(0, selectionStart) + "    " + value.substring(selectionEnd);
+    
+    setGeneratedPython(newValue);
+    setIsEditingCode(true);
+
+    // Reset cursor position after React re-renders
+    setTimeout(() => {
+      e.target.selectionStart = e.target.selectionEnd = selectionStart + 4;
+    }, 0);
+  }
+};
+
 
   return (
     <div className="workspace-app-container">
