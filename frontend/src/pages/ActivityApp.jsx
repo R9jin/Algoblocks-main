@@ -47,7 +47,12 @@ Output: "No"
 
 **Constraints:**
 • You must use an If-Else conditional block to control the flow of execution.
-• The output must match the casing exactly.`
+• The output must match the casing exactly.`,
+    // New Test Cases for Topic 2
+    testCasesList: [
+      { call: "condition = True", expected: "Yes" },
+      { call: "condition = False", expected: "No" }
+    ]
   },
   {
     id: "l1-t3",
@@ -69,7 +74,14 @@ Output:
 
 **Constraints:**
 • 0 <= n <= 10
-• You must use a Loop block that executes exactly \`n\` times, demonstrating linear growth.`
+• You must use a Loop block that executes exactly \`n\` times, demonstrating linear growth.`,
+    // New Test Cases for Topic 3
+    testCasesList: [
+      { call: "n = 3", expected: "Step\\nStep\\nStep" },
+      { call: "n = 1", expected: "Step" },
+      { call: "n = 0", expected: "" },
+      { call: "n = 5", expected: "Step\\nStep\\nStep\\nStep\\nStep" }
+    ]
   },
   {
     id: "l2-t1",
@@ -548,7 +560,7 @@ const ActivityApp = () => {
     };
   };
 
-const runTestCases = async () => {
+  const runTestCases = async () => {
     if (!activityData.testCasesList) return;
 
     setBottomPanel("console");
@@ -576,11 +588,11 @@ const runTestCases = async () => {
       } else {
         // Mode 2: Raw Output Testing (Intro Levels 1-3)
         if (tc.call) {
-           // Prepend variable setups (e.g., "condition = True") before running the workspace code
-           codeToRun = tc.call + "\n" + generatedPython;
+          // Prepend variable setups (e.g., "condition = True") before running the workspace code
+          codeToRun = tc.call + "\n" + generatedPython;
         } else {
-           // Empty call, just run the raw workspace code (e.g., "Hello World")
-           codeToRun = generatedPython;
+          // Empty call, just run the raw workspace code (e.g., "Hello World")
+          codeToRun = generatedPython;
         }
       }
 
@@ -590,36 +602,36 @@ const runTestCases = async () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: codeToRun }),
         });
-        
+
         const data = await response.json();
         let actualOutput = data.output.replace("> Code ran successfully.", "").trim();
 
         if (isFunctionCall) {
-            if (actualOutput.includes("TEST_PASSED_FLAG")) {
-                fullOutput += `Test ${i + 1} Passed: ${tc.call} == ${tc.expected}\n`;
-                passed++;
-            } else if (actualOutput.includes("TEST_ERROR_FLAG")) {
-                const errMsg = actualOutput.split("TEST_ERROR_FLAG: ")[1] || "Execution error";
-                fullOutput += `Test ${i + 1} Error: ${errMsg}\n`;
-                newExpanded[i] = true;
-            } else {
-                fullOutput += `Test ${i + 1} Failed: ${tc.call} did not equal ${tc.expected}\n`;
-                newExpanded[i] = true;
-            }
+          if (actualOutput.includes("TEST_PASSED_FLAG")) {
+            fullOutput += `Test ${i + 1} Passed: ${tc.call} == ${tc.expected}\n`;
+            passed++;
+          } else if (actualOutput.includes("TEST_ERROR_FLAG")) {
+            const errMsg = actualOutput.split("TEST_ERROR_FLAG: ")[1] || "Execution error";
+            fullOutput += `Test ${i + 1} Error: ${errMsg}\n`;
+            newExpanded[i] = true;
+          } else {
+            fullOutput += `Test ${i + 1} Failed: ${tc.call} did not equal ${tc.expected}\n`;
+            newExpanded[i] = true;
+          }
         } else {
-            // Mode 2 Evaluation: Compare the raw console output
-            // Strip surrounding quotes from the expected JSON string to match console output
-            let expectedOutput = String(tc.expected).replace(/^['"]|['"]$/g, '').trim(); 
-            // Ensure visual newlines match literal newlines
-            expectedOutput = expectedOutput.replace(/\\n/g, '\n').trim();
+          // Mode 2 Evaluation: Compare the raw console output
+          // Strip surrounding quotes from the expected JSON string to match console output
+          let expectedOutput = String(tc.expected).replace(/^['"]|['"]$/g, '').trim();
+          // Ensure visual newlines match literal newlines
+          expectedOutput = expectedOutput.replace(/\\n/g, '\n').trim();
 
-            if (actualOutput === expectedOutput || actualOutput.includes(expectedOutput)) {
-                fullOutput += `Test ${i + 1} Passed: Output matched\n`;
-                passed++;
-            } else {
-                fullOutput += `Test ${i + 1} Failed: Expected '${expectedOutput}', got '${actualOutput}'\n`;
-                newExpanded[i] = true;
-            }
+          if (actualOutput === expectedOutput || actualOutput.includes(expectedOutput)) {
+            fullOutput += `Test ${i + 1} Passed: Output matched\n`;
+            passed++;
+          } else {
+            fullOutput += `Test ${i + 1} Failed: Expected '${expectedOutput}', got '${actualOutput}'\n`;
+            newExpanded[i] = true;
+          }
         }
       } catch (err) {
         fullOutput += `Test ${i + 1} Error: Connection failed\n`;
