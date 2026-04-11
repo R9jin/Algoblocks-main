@@ -90,7 +90,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   // Fetch projects to populate the Recent Projects sidebar
-  // Fetch projects to populate the Recent Projects sidebar
   useEffect(() => {
     const fetchRecentProjects = async () => {
       const storedUser = localStorage.getItem("user");
@@ -100,17 +99,10 @@ export default function Dashboard() {
       }
 
       const user = JSON.parse(storedUser);
-      
-      // Create an AbortController to timeout the request if the DB hangs
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
 
       try {
-        const response = await fetch("/api/projects", {
-          signal: controller.signal // Attach the timeout signal
-        });
-        
-        clearTimeout(timeoutId); // Clear timeout if successful
+        // No AbortController. Just wait for the backend like the develop branch does.
+        const response = await fetch("/api/projects");
         const result = await response.json();
 
         if (response.ok && result.status === "success") {
@@ -120,13 +112,8 @@ export default function Dashboard() {
           setRecentProjects(userProjects.reverse().slice(0, 5));
         }
       } catch (error) {
-        if (error.name === 'AbortError') {
-          console.error("Fetch recent projects timed out (Database might be offline)");
-        } else {
-          console.error("Failed to fetch recent projects:", error);
-        }
+        console.error("Failed to fetch recent projects:", error);
       } finally {
-        // Ensure loading is ALWAYS set to false, even on errors
         setLoading(false);
       }
     };
@@ -134,7 +121,7 @@ export default function Dashboard() {
     fetchRecentProjects();
   }, []);
 
-  
+
   // Handle opening pre-made templates
   const handleTemplateClick = (template) => {
     const confirmStart = window.confirm(`Do you want to start a new project using the "${template.name}" template? Any unsaved progress in your current workspace will be lost.`);
