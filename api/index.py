@@ -1,3 +1,4 @@
+import builtins
 import threading
 import queue
 import sys
@@ -67,7 +68,12 @@ def clean_python_code(code: str) -> str:
     return code.replace('\xa0', ' ').replace('\u200b', '').replace('\t', '    ')
 
 def safe_exec(code: str, globals_dict: dict):
-    exec(code, {"__builtins__": {"print": print, "input": globals_dict.get("input", input)}})
+    safe_builtins = builtins.__dict__.copy()
+    safe_builtins["print"] = print
+    safe_builtins["input"] = globals_dict.get("input", input)
+    exec(code, {
+        "__builtins__": safe_builtins  # <-- CRITICAL FIX
+    })
 
 # =========================
 # AST → BLOCKS
