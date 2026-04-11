@@ -4,16 +4,16 @@
     "blocks": [
       {
         "type": "procedures_defreturn",
-        "id": "logic_flow_check",
-        "x": 13,
+        "id": ":Y4O}qUUt|X+~#ZCO?xK",
+        "x": 38,
         "y": -87,
         "deletable": false,
         "editable": false,
         "extraState": {
           "params": [
             {
-              "name": "condition",
-              "id": "var_condition_id_001"
+              "name": "n",
+              "id": "tyO.pA9F`9/^|V^HlXAR"
             }
           ]
         },
@@ -26,22 +26,22 @@
           }
         },
         "fields": {
-          "NAME": "check_logic"
+          "NAME": "factorial"
         },
         "inputs": {
           "STACK": {
             "block": {
               "type": "comment_block",
-              "id": "comment_logic_1",
+              "id": ")wx!U(]gWv|{:lTZB;3X",
               "fields": {
-                "TEXT": "condition: boolean input (true or false)"
+                "TEXT": "n: integer to calculate factorial"
               },
               "next": {
                 "block": {
                   "type": "comment_block",
-                  "id": "comment_logic_2",
+                  "id": "f!K9@vZxQp3^Lr8mWcT1",
                   "fields": {
-                    "TEXT": "Use an If-Else block to check a condition. If the condition is true, output 'Yes', otherwise output 'No'."
+                    "TEXT": "Compute factorial using recursion: n * factorial(n - 1), base case n = 0"
                   }
                 }
               }
@@ -53,8 +53,12 @@
   },
   "variables": [
     {
-      "name": "condition",
-      "id": "var_condition_id_001"
+      "name": "arr",
+      "id": "$L!%sGDV9_/`aC?YYQdf"
+    },
+    {
+      "name": "n",
+      "id": "tyO.pA9F`9/^|V^HlXAR"
     }
   ],
   "backpack": []

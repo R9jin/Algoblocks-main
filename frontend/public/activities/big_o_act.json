@@ -4,8 +4,8 @@
     "blocks": [
       {
         "type": "procedures_defreturn",
-        "id": "big_o_generate_steps",
-        "x": 13,
+        "id": ":Y4O}qUUt|X+~#ZCO?xK",
+        "x": 38,
         "y": -87,
         "deletable": false,
         "editable": false,
@@ -13,7 +13,7 @@
           "params": [
             {
               "name": "n",
-              "id": "var_n_id_001"
+              "id": "tyO.pA9F`9/^|V^HlXAR"
             }
           ]
         },
@@ -32,16 +32,16 @@
           "STACK": {
             "block": {
               "type": "comment_block",
-              "id": "comment_big_o_1",
+              "id": ")wx!U(]gWv|{:lTZB;3X",
               "fields": {
                 "TEXT": "n: number of times to repeat the operation"
               },
               "next": {
                 "block": {
                   "type": "comment_block",
-                  "id": "comment_big_o_2",
+                  "id": "big_o_comment_2",
                   "fields": {
-                    "TEXT": "Given a number 'n', construct a loop that outputs the string 'Step' exactly 'n' times."
+                    "TEXT": "Loop runs n times and outputs 'Step' each iteration (O(n) complexity)"
                   }
                 }
               }
@@ -54,7 +54,7 @@
   "variables": [
     {
       "name": "n",
-      "id": "var_n_id_001"
+      "id": "tyO.pA9F`9/^|V^HlXAR"
     }
   ],
   "backpack": []

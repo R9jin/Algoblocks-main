@@ -638,7 +638,7 @@ except Exception as e:
 
       <header className="activity-topbar">
         <div className="activity-back-btn" onClick={() => navigate('/learning-path')}>
-          <span>›</span> Back to Dashboard
+          <img src="/assets/back-icon.png" alt="Back" className="btn-icon" /> Back to Dashboard
         </div>
 
         <div className="activity-toggle-group">

@@ -740,8 +740,8 @@
   background-color: rgba(108, 92, 231, 0.15);
   color: #6c5ce7;
   border: 1px solid rgba(108, 92, 231, 0.3);
-  font-size: 0.85rem;
-  font-weight: bold;
+  font-size: 1.0rem;
+  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
 }
 
 .total-label {

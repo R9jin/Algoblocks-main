@@ -638,7 +638,8 @@
   margin-left: auto;
   color: #00ff00;
   font-weight: bold;
-  font-size: 0.9rem;
+  font-size: 1.0rem;
+  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
 }
 
 .total-badge.space {

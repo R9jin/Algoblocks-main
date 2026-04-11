@@ -66,7 +66,7 @@ export default function DashboardHeader() {
           </h1>
         </div>
         <Link to="/home" className="back-home">
-          &gt; Back to Home
+          <img src="/assets/back-icon.png" alt="Back" className="btn-icon" /> Back to Home
         </Link>
       </div>
 

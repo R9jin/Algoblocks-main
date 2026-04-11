@@ -513,8 +513,12 @@ export default function MainApp() {
                         <button onClick={() => { setActiveTab("global"); setExpandedLines({}); }} className={`tab-btn ${activeTab === 'global' ? 'active' : ''}`}>Global Complexity</button>
                       </div>
                       <div className="total-badge-group">
-                        <span className="total-badge"><span className="total-label">Total Time:</span> {analysisResult.total}</span>
-                        <span className="total-badge space"><span className="total-label space">Total Space:</span> {analysisResult.space_total}</span>
+                        <span className="total-badge">
+                          <span className="total-label">Total Time:</span> {formatComplexity(analysisResult.total)}
+                        </span>
+                        <span className="total-badge space">
+                          <span className="total-label space">Total Space:</span> {formatComplexity(analysisResult.space_total)}
+                        </span>
                       </div>
                     </div>
                     <div className="complexity-table-wrapper">
