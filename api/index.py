@@ -382,4 +382,4 @@ async def websocket_run(websocket: WebSocket):
                 input_queue.put(data["data"])
 
     except WebSocketDisconnect:
-        print("Client disconnected")
+        print("")

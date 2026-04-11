@@ -246,6 +246,16 @@ const customBlocks = [
     nextStatement: null,
     style: "raw_blocks",
     tooltip: "Dumps multi-line exact text string to Python code"
+  },
+  {
+    type: "python_input",
+    message0: "ask user for input with prompt %1", // More human-readable label
+    args0: [
+      { type: "input_value", name: "PROMPT", check: "String" }
+    ],
+    output: "String",
+    colour: "#d5a52a",
+    tooltip: "Displays a message and waits for the user to type something in the console."
   }
 ];
 
@@ -355,8 +365,15 @@ const toolbox = {
         { kind: "block", type: "text_trim" },
         { kind: "block", type: "text_print" },
         {
-          kind: "block", type: "text_prompt_ext", inputs: {
-            TEXT: { shadow: { type: "text", fields: { TEXT: "abc" } } }
+          kind: "block",
+          type: "python_input",
+          inputs: {
+            PROMPT: {
+              shadow: {
+                type: "text",
+                fields: { TEXT: "Enter your name: " } // Example of a clear default
+              }
+            }
           }
         }
       ]
@@ -768,6 +785,11 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
 
       pythonGenerator.forBlock['raw_python_multiline'] = function (block) {
         return block.getFieldValue('CODE') + '\n';
+      };
+
+      pythonGenerator.forBlock['python_input'] = function (block) {
+        const promptMsg = pythonGenerator.valueToCode(block, 'PROMPT', pythonGenerator.ORDER_NONE) || "''";
+        return [`input(${promptMsg})`, pythonGenerator.ORDER_FUNCTION_CALL];
       };
 
       let changeTimeout = null;
