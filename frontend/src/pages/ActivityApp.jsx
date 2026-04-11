@@ -549,44 +549,106 @@ const ActivityApp = () => {
     try {
       let json = null;
 
-      // 1. Prioritize state data if it exists and has blocks
+      // =========================
+      // 1. GET TEMPLATE SOURCE
+      // =========================
       if (dataFromState && dataFromState.blocks) {
         json = dataFromState;
-      }
-      // 2. Otherwise, fetch it from the public directory
-      else if (path) {
+      } else if (path) {
         const fetchUrl = path.startsWith("activities/")
           ? `/${path}.json`
-          : `/templates/${path}.json`;
+          : `/activities/${path}.json`;
 
         const response = await fetch(fetchUrl);
 
         if (!response.ok) {
-          throw new Error(`Template not found at ${fetchUrl} (${response.status})`);
+          throw new Error(`Template not found at ${fetchUrl}`);
         }
 
-        json = await response.json(); // Use .json() instead of .text() -> JSON.parse()
+        json = await response.json();
       }
 
-      // 3. Load it into the workspace
-      if (json && workspaceRef.current) {
-        // FIX: Use the correct clear method defined in BlocklyWorkspace.jsx
-        if (workspaceRef.current.clear) {
-          workspaceRef.current.clear();
+      console.log("📦 Raw Template:", json);
+
+      // =========================
+      // 2. STRICT NORMALIZATION (FIXED)
+      // =========================
+      let payload = null;
+
+      // CASE 1: { data: { blocks: { blocks: [...] } } }
+      if (json?.data?.blocks?.blocks) {
+        payload = json.data.blocks;
+      }
+      // CASE 2: { data: { blocks: [...] } }
+      else if (json?.data?.blocks && Array.isArray(json.data.blocks)) {
+        payload = { blocks: json.data.blocks };
+      }
+      // CASE 3: { blocks: { blocks: [...] } }
+      else if (json?.blocks?.blocks) {
+        payload = json.blocks;
+      }
+      // CASE 4: { blocks: [...] }
+      else if (json?.blocks && Array.isArray(json.blocks)) {
+        payload = { blocks: json.blocks };
+      }
+      // CASE 5: already correct
+      else if (json?.blocks) {
+        payload = json;
+      }
+
+      console.log("✅ Normalized Payload:", payload);
+
+      // =========================
+      // 3. VALIDATION (STRONGER)
+      // =========================
+      if (!payload || !payload.blocks || !Array.isArray(payload.blocks)) {
+        console.error("❌ Invalid Blockly JSON format:", payload);
+        return;
+      }
+
+      // =========================
+      // 4. WAIT FOR WORKSPACE (FIXED)
+      // =========================
+      const tryLoad = (retries = 10) => {
+        if (!workspaceRef.current) {
+          if (retries > 0) {
+            console.warn("⏳ Waiting for Blockly workspace...");
+            setTimeout(() => tryLoad(retries - 1), 100);
+          } else {
+            console.error("❌ Workspace never became ready.");
+          }
+          return;
         }
 
-        // FIX: Some saved templates might have the data nested inside a "data" object
-        // Ensure we are passing the root serialization object
-        const payload = json.data ? json.data : json;
+        try {
+          // =========================
+          // CLEAR WORKSPACE (SAFE)
+          // =========================
+          if (workspaceRef.current.clear) {
+            workspaceRef.current.clear();
+          }
 
-        workspaceRef.current.loadTemplate(payload);
+          // =========================
+          // LOAD TEMPLATE (FINAL FIX)
+          // =========================
+          workspaceRef.current.loadTemplate(payload);
 
-        // Force the view mode back to workspace when loading a new template
-        setViewMode("workspace");
-        setIsEditingCode(false);
-      }
+          // =========================
+          // RESET UI STATE
+          // =========================
+          setViewMode("workspace");
+          setIsEditingCode(false);
+
+          console.log("🎉 Template loaded successfully");
+        } catch (err) {
+          console.error("❌ Blockly load error:", err);
+        }
+      };
+
+      tryLoad(); // <-- retry-based loader
+
     } catch (error) {
-      console.error("Failed to load activity template:", error);
+      console.error("❌ Load Error:", error.message);
     }
   };
 
