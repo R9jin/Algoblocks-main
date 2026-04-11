@@ -564,16 +564,16 @@ const ActivityApp = () => {
   };
 
   const runTestCases = async () => {
-    if (!activityData.testCasesList) return;
+    // Use currentTask instead of activityData
+    const testCases = currentTask?.testCasesList || activityData?.testCasesList;
+    if (!testCases) return;
 
     setBottomPanel("console");
     setConsoleOutput("> Running Tests...\n");
     setPassedTests(0);
-    setExpandedLines({});
-    setIsWaitingForInput(false);
 
     let passed = 0;
-    const total = activityData.testCasesList.length;
+    const total = testCases.length;
     let fullOutput = "> --- Running Test Cases ---\n";
     let newExpanded = { ...expandedTests };
 
@@ -621,18 +621,20 @@ const ActivityApp = () => {
             fullOutput += `Test ${i + 1} Failed: ${tc.call} did not equal ${tc.expected}\n`;
             newExpanded[i] = true;
           }
+          // Inside the for-loop of runTestCases in ActivityApp.jsx
         } else {
-          // Mode 2 Evaluation: Compare the raw console output
-          // Strip surrounding quotes from the expected JSON string to match console output
-          let expectedOutput = String(tc.expected).replace(/^['"]|['"]$/g, '').trim();
-          // Ensure visual newlines match literal newlines
-          expectedOutput = expectedOutput.replace(/\\n/g, '\n').trim();
+          // Normalize both outputs: remove quotes, handle newlines, and lowercase for comparison
+          let expectedOutput = String(tc.expected).replace(/^['"]|['"]$/g, '').trim().toLowerCase();
+          expectedOutput = expectedOutput.replace(/\\n/g, '\n');
 
-          if (actualOutput === expectedOutput || actualOutput.includes(expectedOutput)) {
+          // Clean actual output
+          let cleanActual = actualOutput.trim().toLowerCase();
+
+          if (cleanActual === expectedOutput || cleanActual.includes(expectedOutput)) {
             fullOutput += `Test ${i + 1} Passed: Output matched\n`;
             passed++;
           } else {
-            fullOutput += `Test ${i + 1} Failed: Expected '${expectedOutput}', got '${actualOutput}'\n`;
+            fullOutput += `Test ${i + 1} Failed: Expected '${expectedOutput}', got '${cleanActual}'\n`;
             newExpanded[i] = true;
           }
         }
@@ -814,15 +816,15 @@ const ActivityApp = () => {
 
           {/* ADD THE EDITOR CONTAINER WRAPPER */}
           <div className="editor-container" style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-            
+
             {/* ADD THIS MISSING WORKSPACE VIEW */}
-            <div className={viewMode === 'workspace' ? 'workspace-view d-block' : 'workspace-view d-none'} 
-                 style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
-              <BlocklyWorkspace 
-                ref={workspaceRef} 
-                onChange={handleWorkspaceChange} 
-                templatePath={initialTemplate} 
-                syntaxError={syntaxError} 
+            <div className={viewMode === 'workspace' ? 'workspace-view d-block' : 'workspace-view d-none'}
+              style={{ display: viewMode === 'workspace' ? 'block' : 'none', height: '100%' }}>
+              <BlocklyWorkspace
+                ref={workspaceRef}
+                onChange={handleWorkspaceChange}
+                templatePath={initialTemplate}
+                syntaxError={syntaxError}
               />
             </div>
 
