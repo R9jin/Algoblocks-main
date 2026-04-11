@@ -1,12 +1,9 @@
 {
+  "version": 2,
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.py"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/frontend/dist/index.html"
+      "destination": "https://algoblocks-main.onrender.com/api/$1"
     }
   ]
 }

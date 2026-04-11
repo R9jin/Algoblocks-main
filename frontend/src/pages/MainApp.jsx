@@ -288,13 +288,10 @@ export default function MainApp() {
     // =========================
     // SOCKET SETUP
     // =========================
-    const baseWS =
-      import.meta.env.VITE_BACKEND_WS_URL ||
-      (window.location.protocol === "https:"
-        ? `wss://${window.location.host}`
-        : `ws://${window.location.host}`);
+    const wsUrl = import.meta.env.VITE_BACKEND_WS_URL || 
+             (window.location.protocol === "https:" ? "wss" : "ws") + 
+             `://${window.location.host}/api/ws/run`;
 
-    const wsUrl = `${baseWS}/api/ws/run`;
     const socket = new WebSocket(wsUrl);
 
     socketRef.current = socket;
