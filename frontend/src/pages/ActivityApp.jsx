@@ -557,19 +557,13 @@ const ActivityApp = () => {
           : `/templates/${path}.json`;
 
         const response = await fetch(fetchUrl);
-
-        if (!response.ok) {
-          throw new Error(
-            `Template not found at ${fetchUrl} (${response.status})`
-          );
-        }
-
-        const text = await response.text();
-        json = JSON.parse(text);
+        if (!response.ok) throw new Error(`404: ${fetchUrl}`);
+        json = await response.json();
       }
 
       if (json && workspaceRef.current) {
-        workspaceRef.current.clearWorkspace?.();
+        // FIX: Use 'clear' instead of 'clearWorkspace'
+        workspaceRef.current.clear();
         workspaceRef.current.loadTemplate(json);
       }
     } catch (error) {
