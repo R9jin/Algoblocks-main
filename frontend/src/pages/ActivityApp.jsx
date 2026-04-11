@@ -549,9 +549,12 @@ const ActivityApp = () => {
     try {
       let json = null;
 
+      // 1. Prioritize state data if it exists and has blocks
       if (dataFromState && dataFromState.blocks) {
         json = dataFromState;
-      } else if (path) {
+      }
+      // 2. Otherwise, fetch it from the public directory
+      else if (path) {
         const fetchUrl = path.startsWith("activities/")
           ? `/${path}.json`
           : `/templates/${path}.json`;
@@ -559,21 +562,31 @@ const ActivityApp = () => {
         const response = await fetch(fetchUrl);
 
         if (!response.ok) {
-          throw new Error(
-            `Template not found at ${fetchUrl} (${response.status})`
-          );
+          throw new Error(`Template not found at ${fetchUrl} (${response.status})`);
         }
 
-        const text = await response.text();
-        json = JSON.parse(text);
+        json = await response.json(); // Use .json() instead of .text() -> JSON.parse()
       }
 
+      // 3. Load it into the workspace
       if (json && workspaceRef.current) {
-        workspaceRef.current.clearWorkspace?.();
-        workspaceRef.current.loadTemplate(json);
+        // FIX: Use the correct clear method defined in BlocklyWorkspace.jsx
+        if (workspaceRef.current.clear) {
+          workspaceRef.current.clear();
+        }
+
+        // FIX: Some saved templates might have the data nested inside a "data" object
+        // Ensure we are passing the root serialization object
+        const payload = json.data ? json.data : json;
+
+        workspaceRef.current.loadTemplate(payload);
+
+        // Force the view mode back to workspace when loading a new template
+        setViewMode("workspace");
+        setIsEditingCode(false);
       }
     } catch (error) {
-      console.error("Failed to load template:", error);
+      console.error("Failed to load activity template:", error);
     }
   };
 
