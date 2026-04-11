@@ -26,7 +26,12 @@
     "@blockly/workspace-backpack": "^7.0.9",
     "@blockly/workspace-content-highlight": "^6.0.8",
     "@blockly/workspace-minimap": "^0.3.8",
+<<<<<<< HEAD
     "@monaco-editor/react": "^4.7.0",
+=======
+    "@blockly/zoom-to-fit": "^7.0.8",
+    "@react-oauth/google": "^0.13.4",
+>>>>>>> be23490945c749bb28642e35e6bf469b5b4f86c4
     "blockly": "^12.3.1",
     "mongodb": "^7.1.0",
     "react": "^18.3.1",

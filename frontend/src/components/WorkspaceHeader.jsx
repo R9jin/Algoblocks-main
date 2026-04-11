@@ -1,10 +1,26 @@
+<<<<<<< HEAD
+=======
+/**
+ * WorkspaceHeader Component
+ *
+ * This component renders the top header of the AlgoBlocks workspace page.
+ * It provides navigation, view toggling between Workspace and Python code,
+ * and action buttons for running and saving projects.
+ *
+ * Props:
+ * - viewMode: string ('workspace' | 'python') representing the current view.
+ * - setViewMode: function to switch between workspace and Python code views.
+ * - runCode: function to execute the current workspace code.
+ * - handleSaveToDB: function to save the current project to MongoDB.
+ */
+
+>>>>>>> be23490945c749bb28642e35e6bf469b5b4f86c4
 import { useNavigate } from "react-router-dom";
 
 export default function WorkspaceHeader({
   viewMode,
   setViewMode,
   runCode,
-  handleExport,
   handleSaveToDB,
   currentProjectId,
   currentProjectTitle,
@@ -55,10 +71,14 @@ export default function WorkspaceHeader({
           <img src="/assets/play-icon.png" alt="Run" className="btn-icon" /> Run
         </button>
 
+<<<<<<< HEAD
         <button onClick={handleExport} className="action-btn btn-save">
           Export
         </button>
 
+=======
+        {/* Conditionally render "Save Changes" if a project is loaded, otherwise show "Save to Cloud" */}
+>>>>>>> be23490945c749bb28642e35e6bf469b5b4f86c4
         {currentProjectId ? (
           <button onClick={handleUpdateDB} className="action-btn btn-save" style={{ backgroundColor: '#27ae60', color: 'white' }}>
             Save Changes

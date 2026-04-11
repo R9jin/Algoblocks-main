@@ -307,31 +307,32 @@
   left: 0;
   font-weight: bold;
 }
+/* Responsive Enhancements */
 
-.code-snippet {
+/* --- NEW IMAGE STYLES --- */
+.feature-image-container {
   flex: 1;
   min-width: 300px;
-  background: #1F1443;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.feature-example-image {
+  width: 100%;
+  max-width: 550px;
+  height: auto;
   border-radius: 12px;
-  padding: 1.5rem;
-  border: 1px solid #4830A0;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  object-fit: contain; /* prevents stretching */
 }
 
-.code-snippet pre {
-  margin: 0;
-  overflow-x: auto;
-  color: #C994FF;
-  font-family: 'Fira Code', monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
+.feature-example-image:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
 }
-
-.code-snippet code {
-  color: #F5F5F5;
-}
-
-/* Responsive Enhancements */
 
 /* Large tablets */
 @media (max-width: 1024px) {
@@ -353,6 +354,10 @@
 
   .features-list {
     gap: 2rem;
+  }
+
+  .feature-example-image {
+    max-width: 450px;
   }
 }
 
@@ -413,9 +418,13 @@
     gap: 2rem;
   }
 
-  .features-content,
-  .code-snippet {
-    min-width: 100%;
+  .feature-image-container {
+    width: 100%;
+    order: -1; /* moves image above text (optional, nicer UX) */
+  }
+
+  .feature-example-image {
+    max-width: 380px;
   }
 }
 
@@ -470,11 +479,12 @@
     font-size: 1rem;
   }
 
-  .code-snippet pre {
-    font-size: 0.8rem;
-  }
-
   .landing-footer {
     font-size: 0.85rem;
+  }
+
+  .feature-example-image {
+    max-width: 280px;
+    border-radius: 10px;
   }
 }

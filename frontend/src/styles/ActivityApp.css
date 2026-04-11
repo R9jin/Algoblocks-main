@@ -500,6 +500,10 @@
   padding: 20px;
 }
 
+.panel-body:has(.console-container) {
+  padding: 0;
+}
+
 .console-output {
   margin: 0;
   color: #00ff00;
@@ -681,4 +685,66 @@
   width: 0 !important;
   opacity: 0;
   pointer-events: none;
+}
+
+/* Terminal Console Styling */
+.console-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #0d0d0d;
+  padding: 12px 16px;
+  font-family: 'Fira Code', 'Cascadia Code', 'Ubuntu Mono', monospace;
+  overflow-y: auto;
+}
+
+.console-output {
+  margin: 0;
+  padding: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #e0e0e0;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.console-input-line {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.console-cursor {
+  color: #c800ff;
+  margin-right: 8px;
+  font-weight: bold;
+  user-select: none;
+}
+
+.console-input-field {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f0bcff;
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 0;
+}
+
+/* Complexity and Panel Styling */
+.total-badge {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background-color: rgba(108, 92, 231, 0.15);
+  color: #6c5ce7;
+  border: 1px solid rgba(108, 92, 231, 0.3);
+  font-size: 1.0rem;
+  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+}
+
+.total-label {
+  opacity: 0.8;
+  margin-right: 4px;
 }

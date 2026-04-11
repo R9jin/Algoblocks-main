@@ -36,7 +36,6 @@ const generateFibonacciTest = (testCount) => {
   return tests;
 };
 
-// Change this line:
 const generateSortTest = (testCount, funcName) => {
   const tests = [];
   for (let i = 0; i < testCount; i++) {
@@ -45,7 +44,6 @@ const generateSortTest = (testCount, funcName) => {
     const sortedArr = [...arr].sort((a, b) => a - b);
 
     tests.push({
-      // Update the call to use the dynamic function name
       call: `${funcName}([${arr.join(", ")}])`,
       expected: `[${sortedArr.join(", ")}]`
     });
@@ -53,7 +51,6 @@ const generateSortTest = (testCount, funcName) => {
   return tests;
 };
 
-// Change this line:
 const generateSearchTest = (testCount, funcName) => {
   const tests = [];
   for (let i = 0; i < testCount; i++) {
@@ -77,7 +74,6 @@ const generateSearchTest = (testCount, funcName) => {
     }
 
     tests.push({
-      // Update the call to use the dynamic function name
       call: `${funcName}([${arr.join(", ")}], ${target})`,
       expected: `${expected}`
     });
@@ -107,7 +103,7 @@ const LESSONS = [
         ],
         task: "Familiarize yourself with the visual blocks. Connect a simple sequence of Output blocks to print 'Hello' and 'World'.",
         testCount: 1,
-        templatePath: "intro/what_is_algo"
+        templatePath: "activities/what_is_algo"
       },
       {
         id: "l1-t2",
@@ -122,7 +118,7 @@ const LESSONS = [
         ],
         task: "Use an If-Else block to check a condition. If the condition is true, output 'Yes', otherwise output 'No'.",
         testCount: 2,
-        templatePath: "intro/logic_flow"
+        templatePath: "activities/logic_flow_act"
       },
       {
         id: "l1-t3",
@@ -136,8 +132,8 @@ const LESSONS = [
           { text: "GeeksforGeeks: Analysis of Algorithms | Big-O analysis", url: "https://www.geeksforgeeks.org/analysis-of-algorithms-set-3asymptotic-notations/" }
         ],
         task: `Build a simple algorithm with O(n) time complexity.\n\nGiven a number 'n', construct a loop that outputs the string "Step" exactly 'n' times.`,
-        testCount: 3, // Adjust test count based on the JSON template you eventually create
-        templatePath: "intro/big_o"
+        testCount: 4,
+        templatePath: "activities/big_o_act"
       }
     ]
   },
@@ -405,12 +401,13 @@ export default function LearningPath() {
                           </div>
                         </div>
 
+                        {/* UPDATED RIGHT PANEL WITH NEW SCORE BADGE */}
                         <div className="lp-topic-right">
                           <div className="lp-topic-badge">{topic.level}</div>
 
                           {isCompleted ? (
-                            <span className="score-badge">
-                              ✅ Completed (Score: {score}/100)
+                            <span className={`score-badge ${score == topic.testCount ? 'perfect' : 'partial'}`}>
+                              {score}/{topic.testCount} Tests Passed
                             </span>
                           ) : (
                             <span className="pending-badge">Not Started</span>

@@ -101,6 +101,7 @@ export default function Dashboard() {
       const user = JSON.parse(storedUser);
 
       try {
+        // No AbortController. Just wait for the backend like the develop branch does.
         const response = await fetch("/api/projects");
         const result = await response.json();
 
@@ -119,6 +120,7 @@ export default function Dashboard() {
 
     fetchRecentProjects();
   }, []);
+
 
   // Handle opening pre-made templates
   const handleTemplateClick = (template) => {

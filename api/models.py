@@ -1,19 +1,24 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
-from datetime import datetime
-
-# Pydantic models define the structure of the data we expect from the React frontend
+from pydantic import BaseModel
+from typing import Optional
 
 class ProjectModel(BaseModel):
     title: str
-    data: Dict[str, Any] = Field(default_factory=dict) # This will hold your Blockly JSON tree
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    owner_id: Optional[str] = None
+    description: Optional[str] = "" 
+    data: dict
+    owner_id: str
 
 class ProjectUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None 
+    data: Optional[dict] = None
+
+class TemplateModel(BaseModel):
+    title: str
+    description: Optional[str] = ""
     data: dict
+    owner_id: str  # Ensures templates are saved specific to the user
 
-class UserModel(BaseModel):
-    username: str
-    hashed_password: str
-
+class TemplateUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    data: Optional[dict] = None

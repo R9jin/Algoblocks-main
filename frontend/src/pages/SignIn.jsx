@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { FaGithub } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
 import { FiLock, FiMail } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import "../styles/Auth.css";
@@ -10,39 +8,42 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
+  const API_BASE = import.meta.env.VITE_API_URL || "";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      // Send a POST request to your FastAPI backend
-      const response = await fetch("/api/login", {
+      const response = await fetch(`${API_BASE}/api/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
 
-        localStorage.setItem("user", JSON.stringify({
+      if (!response.ok) {
+        alert(data.detail || "Invalid email or password");
+        return;
+      }
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
           email: data.email,
           name: data.name,
-          progress: data.progress || {} // <-- Add this
-        }));
+          progress: data.progress || {},
+        })
+      );
 
-        navigate("/home");
-      } else {
-        // If backend returns a 401 error, show an alert
-        alert("Invalid email or password. Please try again.");
-      }
+      navigate("/dashboard");
     } catch (error) {
-      console.error("Error connecting to server:", error);
-      alert("Failed to connect to the server.");
+      console.error(error);
+      alert("Server not reachable. Check backend connection.");
     }
   };
 
+  
   return (
     <div className="auth-container">
       <div className="auth-card">
@@ -76,21 +77,7 @@ export default function SignIn() {
           </div>
           <button type="submit" className="auth-button">Sign In</button>
         </form>
-        <div className="social-auth">
-          <div className="social-divider">
-            <span>Or sign in with</span>
-          </div>
-          <div className="social-buttons">
-            <button type="button" className="social-btn">
-              <FcGoogle className="social-icon" aria-hidden="true" />
-              Google
-            </button>
-            <button type="button" className="social-btn">
-              <FaGithub className="social-icon" aria-hidden="true" />
-              GitHub
-            </button>
-          </div>
-        </div>
+
         <div className="auth-links">
           <Link to="/forgot-password">Forgot password?</Link>
           <p>Don't have an account?<Link to="/signup">Sign up</Link></p>

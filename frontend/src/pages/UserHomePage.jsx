@@ -151,6 +151,7 @@ export default function UserHomePage() {
             </ul>
           </div>
 
+<<<<<<< HEAD
           <div className="code-snippet">
             <pre>
               <code>
@@ -165,6 +166,14 @@ def bubble_sort(arr):
 # Overall Time: O(n^2)   Space: O(1)`}
               </code>
             </pre>
+=======
+          <div className="feature-image-container">
+            <img
+              src="/assets/example.png"
+              alt="AlgoBlocks Interface Example"
+              className="feature-example-image"
+            />
+>>>>>>> be23490945c749bb28642e35e6bf469b5b4f86c4
           </div>
         </section>
       </main>
