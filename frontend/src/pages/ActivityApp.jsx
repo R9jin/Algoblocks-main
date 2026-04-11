@@ -50,8 +50,8 @@ Output: "No"
 • The output must match the casing exactly.`,
     // New Test Cases for Topic 2
     testCasesList: [
-      { call: "condition = True", expected: "Yes" },
-      { call: "condition = False", expected: "No" }
+      { call: "condition_checker(True)", expected: "Yes" },
+      { call: "condition_checker(False)", expected: "No" }
     ]
   },
   {
@@ -77,10 +77,10 @@ Output:
 • You must use a Loop block that executes exactly \`n\` times, demonstrating linear growth.`,
     // New Test Cases for Topic 3
     testCasesList: [
-      { call: "n = 3", expected: "Step\\nStep\\nStep" },
-      { call: "n = 1", expected: "Step" },
-      { call: "n = 0", expected: "" },
-      { call: "n = 5", expected: "Step\\nStep\\nStep\\nStep\\nStep" }
+      { call: "print_steps(3)", expected: "Step\\nStep\\nStep" },
+      { call: "print_steps(1)", expected: "Step" },
+      { call: "print_steps(0)", expected: "" },
+      { call: "print_steps(5)", expected: "Step\\nStep\\nStep\\nStep\\nStep" }
     ]
   },
   {
@@ -494,9 +494,11 @@ const ActivityApp = () => {
     return () => clearTimeout(timer);
   }, [initialTemplate, activityData]);
 
+  // UPDATE: handleWorkspaceChange to respect manual editing
   const handleWorkspaceChange = async (json, pythonCode) => {
-    setGeneratedPython(pythonCode);
+    if (!isEditingCode) setGeneratedPython(pythonCode);
 
+    // Existing analysis logic follows...
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -511,12 +513,14 @@ const ActivityApp = () => {
           lines: data.lines || [],
           is_recursive: data.is_recursive || false
         });
+        setSyntaxError(null); // Reset syntax error on block change
       }
     } catch (error) {
       console.error("Analysis Error:", error);
     }
   };
 
+  
   const runCode = () => {
     setConsoleOutput("> Initializing session...\n");
     setBottomPanel("console");
@@ -579,20 +583,20 @@ const ActivityApp = () => {
       const tc = activityData.testCasesList[i];
       let codeToRun = "";
 
-      // Detect if the test case is a function call (has parentheses) or raw variables/output
       const isFunctionCall = tc.call && String(tc.call).includes('(') && String(tc.call).includes(')');
+      // Detect if this is a Level 1 task (which uses console output instead of return values)
+      const isIntroLevel = currentTask?.id?.startsWith("l1");
 
-      if (isFunctionCall) {
-        // Mode 1: Function Testing (AlgoBlocks Level 2+)
+      if (isFunctionCall && !isIntroLevel) {
+        // Mode 1: Function Testing (Return-based, Level 2+)
         codeToRun = generatedPython + `\n\ntry:\n    assert ${tc.call} == ${tc.expected}\n    print("TEST_PASSED_FLAG")\nexcept AssertionError:\n    print("TEST_FAILED_FLAG")\nexcept Exception as e:\n    print(f"TEST_ERROR_FLAG: {e}")`;
       } else {
-        // Mode 2: Raw Output Testing (Intro Levels 1-3)
-        if (tc.call) {
-          // Prepend variable setups (e.g., "condition = True") before running the workspace code
-          codeToRun = tc.call + "\n" + generatedPython;
+        // Mode 2: Output Testing (Print-based, Level 1)
+        // Append function calls to the end; prepend variable setups
+        if (isFunctionCall) {
+          codeToRun = generatedPython + "\n\n" + tc.call;
         } else {
-          // Empty call, just run the raw workspace code (e.g., "Hello World")
-          codeToRun = generatedPython;
+          codeToRun = tc.call ? (tc.call + "\n" + generatedPython) : generatedPython;
         }
       }
 
@@ -659,6 +663,59 @@ const ActivityApp = () => {
   const totalTests = activityData?.testCasesList?.length || 0;
 
   if (!activityData) return null;
+
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [syntaxError, setSyntaxError] = useState(null);
+
+  const handleSyncToBlocks = async () => {
+    if (workspaceRef.current && generatedPython) {
+      try {
+        await workspaceRef.current.loadFromPython(generatedPython);
+        setIsEditingCode(false);
+        setViewMode("workspace");
+        // Optional: show success modal or log
+        console.log("Code successfully synced to Blocks");
+      } catch (e) {
+        setModalConfig({
+          isOpen: true,
+          title: "Sync Error",
+          message: "Cannot sync to blocks until syntax errors are fixed.",
+          confirmText: "Close",
+          isDanger: true,
+          onConfirmAction: closeModal
+        });
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!isEditingCode) return;
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: generatedPython })
+        });
+        const data = await response.json();
+        if (data.status === "success") {
+          setAnalysisResult({
+            total: data.total,
+            space_total: data.space_total || "O(1)",
+            lines: data.lines || [],
+            is_recursive: data.is_recursive || false
+          });
+          setSyntaxError(null);
+        } else if (data.status === "error" && data.error_type === "SyntaxError") {
+          setSyntaxError({ line: data.line, message: data.message });
+          setAnalysisResult({ lines: [], total: "Syntax Error", space_total: "-", is_recursive: false });
+        }
+      } catch (error) {
+        console.error("Analysis Error:", error);
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [generatedPython, isEditingCode]);
 
   return (
     <div className="activity-app-container">
