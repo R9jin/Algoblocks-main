@@ -6,9 +6,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8000', // Your local Python FastAPI server
+        target: 'http://127.0.0.1:8000', // <-- CHANGE THIS FROM localhost TO 127.0.0.1
         changeOrigin: true,
-        ws: true, // IMPORTANT: Enables WebSocket proxying for real-time input
+        ws: true,
       }
     }
   }

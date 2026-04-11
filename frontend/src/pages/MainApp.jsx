@@ -90,13 +90,15 @@ export default function MainApp() {
 
   // --- Fetch Combined Templates: System First, then User's Custom Templates ---
   const fetchTemplates = async () => {
+    // 1. Immediately load the system templates so the screen is never blank
+    const baseTemplates = SIDEBAR_TEMPLATES.map(t => ({ ...t, title: t.name, description: t.desc, isSystem: true }));
+    setAllTemplates(baseTemplates);
+
     try {
-      const baseTemplates = SIDEBAR_TEMPLATES.map(t => ({ ...t, title: t.name, description: t.desc, isSystem: true }));
       const storedUser = localStorage.getItem("user");
-      if (!storedUser) {
-        setAllTemplates(baseTemplates);
-        return;
-      }
+      if (!storedUser) return; // Stop here if no user is signed in
+
+      // 2. Fetch custom projects in the background
       const user = JSON.parse(storedUser);
       const res = await fetch('/api/projects');
       const data = await res.json();
@@ -107,13 +109,13 @@ export default function MainApp() {
           .map(p => ({
             _id: p._id, title: p.title, description: p.description || "Custom saved template", isSystem: false, data: p.data
           }));
+
+        // 3. Append the user projects below the system templates
         setAllTemplates([...baseTemplates, ...userTemplates]);
-      } else {
-        setAllTemplates(baseTemplates);
       }
     } catch (e) {
-      console.error("Failed to load templates", e);
-      setAllTemplates(SIDEBAR_TEMPLATES.map(t => ({ ...t, title: t.name, description: t.desc, isSystem: true })));
+      console.error("Failed to load user templates. Backend or DB might be down.", e);
+      // The base templates will still be visible because we set them on line 3!
     }
   };
 
