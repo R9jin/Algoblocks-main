@@ -626,14 +626,30 @@ const ActivityApp = () => {
     }
   };
 
+  const runStandardCode = async () => {
+    setConsoleOutput("> Running on Vercel (Non-interactive mode)...\n");
+    setBottomPanel("console");
+
+    try {
+      const response = await fetch(`${VERCEL_URL}/api/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: generatedPython }),
+      });
+
+      const data = await response.json();
+      setConsoleOutput(data.output || "> Program finished with no output.");
+    } catch (error) {
+      setConsoleOutput("❌ Vercel execution failed. Fallback to local if running locally.");
+    }
+  };
+
   const handleActivityRun = () => {
     const hasInput = generatedPython.includes("input(") || generatedPython.includes("input()");
     if (hasInput) {
       runCode(); // Hits Render WebSocket
     } else {
-      // Existing runCode logic can be modified to accept a 'standard' mode 
-      // or just use a fetch to VERCEL_URL/api/run
-      executeStandardRunOnVercel();
+      runStandardCode(); // Hits Vercel standard API
     }
   };
 
@@ -757,8 +773,9 @@ const ActivityApp = () => {
         codeToRun = `${generatedPython}\n${tc.call || ""}`;
       }
 
+      // Inside runTestCases() loop:
       try {
-        const response = await fetch(`${RENDER_URL}/api/run`, {
+        const response = await fetch(`${VERCEL_URL}/api/run`, { // <-- CHANGE THIS from RENDER_URL
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: codeToRun }),
@@ -862,7 +879,7 @@ const ActivityApp = () => {
         <div className="activity-actions" style={{ display: 'flex', gap: '10px' }}>
           <button
             className="activity-action-btn"
-            onClick={runCode}
+            onClick={handleActivityRun}
             style={{ backgroundColor: '#2D234A', border: '1px solid #6C5CE7', color: '#EBE4FF' }}
             title="Run code in console without submitting to test cases"
           >

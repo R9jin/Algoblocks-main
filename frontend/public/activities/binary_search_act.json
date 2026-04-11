@@ -46,6 +46,15 @@
                   "id": "K*[,*oSzE8*`v6WZghFe",
                   "fields": {
                     "TEXT": "target: elements to search"
+                  },
+                  "next": {
+                    "block": {
+                      "type": "comment_block",
+                      "id": "FIX_MID_NOTE_001",
+                      "fields": {
+                        "TEXT": "FIXED: mid = left + (right - left) // 2 (correct midpoint calculation)"
+                      }
+                    }
                   }
                 }
               }
