@@ -67,7 +67,9 @@ def clean_python_code(code: str) -> str:
 async def ast_to_blocks(request: AstRequest):
     try:
         converter = BlocklyASTConverter()
-        return converter.convert(request.code)
+        # Clean the code before converting to avoid AST parsing errors
+        safe_code = clean_python_code(request.code)
+        return converter.convert(safe_code)
     except SyntaxError as e:
         return {"status": "error", "error_type": "SyntaxError", "line": e.lineno, "message": e.msg}
     except Exception as e:
@@ -155,12 +157,10 @@ def run_code(payload: CodePayload):
         return "Simulated User Input"
 
     try:
-        # FIX: Call the cleaner here
         cleaned_code = clean_python_code(payload.code)
-        
         exec_globals = {"input": simulated_input}
-        # Use cleaned_code instead of payload.code
-        exec(cleaned_code, exec_globals) 
+        exec(cleaned_code, exec_globals)
+        
         output = redirected_output.getvalue() or "> Code ran successfully."
     except Exception as e:
         output = f"Runtime Error: {str(e)}"
