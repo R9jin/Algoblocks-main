@@ -487,15 +487,19 @@ const ActivityApp = () => {
   // template loader (single version kept)
   useEffect(() => {
     if (!initialTemplate || !activityData) return;
-    if (hasLoadedRef.current) return;
 
-    hasLoadedRef.current = true;
+    // Use a retry mechanism to ensure workspaceRef is ready
+    let retryCount = 0;
+    const tryLoad = () => {
+      if (workspaceRef.current) {
+        loadActivityTemplate(initialTemplate, activityData);
+      } else if (retryCount < 10) {
+        retryCount++;
+        setTimeout(tryLoad, 100);
+      }
+    };
 
-    const timer = setTimeout(() => {
-      loadActivityTemplate(initialTemplate, activityData);
-    }, 300);
-
-    return () => clearTimeout(timer);
+    tryLoad();
   }, [initialTemplate, activityData]);
 
   // =========================================================
@@ -555,19 +559,13 @@ const ActivityApp = () => {
           : `/templates/${path}.json`;
 
         const response = await fetch(fetchUrl);
-
-        if (!response.ok) {
-          throw new Error(
-            `Template not found at ${fetchUrl} (${response.status})`
-          );
-        }
-
-        const text = await response.text();
-        json = JSON.parse(text);
+        if (!response.ok) throw new Error(`404: ${fetchUrl}`);
+        json = await response.json();
       }
 
       if (json && workspaceRef.current) {
-        workspaceRef.current.clearWorkspace?.();
+        // FIX: Use 'clear' instead of 'clearWorkspace'
+        workspaceRef.current.clear();
         workspaceRef.current.loadTemplate(json);
       }
     } catch (error) {
