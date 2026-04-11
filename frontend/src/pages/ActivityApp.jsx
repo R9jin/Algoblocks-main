@@ -549,106 +549,25 @@ const ActivityApp = () => {
     try {
       let json = null;
 
-      // =========================
-      // 1. GET TEMPLATE SOURCE
-      // =========================
       if (dataFromState && dataFromState.blocks) {
         json = dataFromState;
       } else if (path) {
         const fetchUrl = path.startsWith("activities/")
           ? `/${path}.json`
-          : `/activities/${path}.json`;
+          : `/templates/${path}.json`;
 
         const response = await fetch(fetchUrl);
-
-        if (!response.ok) {
-          throw new Error(`Template not found at ${fetchUrl}`);
-        }
-
+        if (!response.ok) throw new Error(`404: ${fetchUrl}`);
         json = await response.json();
       }
 
-      console.log("📦 Raw Template:", json);
-
-      // =========================
-      // 2. STRICT NORMALIZATION (FIXED)
-      // =========================
-      let payload = null;
-
-      // CASE 1: { data: { blocks: { blocks: [...] } } }
-      if (json?.data?.blocks?.blocks) {
-        payload = json.data.blocks;
+      if (json && workspaceRef.current) {
+        // FIX: Use 'clear' instead of 'clearWorkspace'
+        workspaceRef.current.clear();
+        workspaceRef.current.loadTemplate(json);
       }
-      // CASE 2: { data: { blocks: [...] } }
-      else if (json?.data?.blocks && Array.isArray(json.data.blocks)) {
-        payload = { blocks: json.data.blocks };
-      }
-      // CASE 3: { blocks: { blocks: [...] } }
-      else if (json?.blocks?.blocks) {
-        payload = json.blocks;
-      }
-      // CASE 4: { blocks: [...] }
-      else if (json?.blocks && Array.isArray(json.blocks)) {
-        payload = { blocks: json.blocks };
-      }
-      // CASE 5: already correct
-      else if (json?.blocks) {
-        payload = json;
-      }
-
-      console.log("✅ Normalized Payload:", payload);
-
-      // =========================
-      // 3. VALIDATION (STRONGER)
-      // =========================
-      if (!payload || !payload.blocks || !Array.isArray(payload.blocks)) {
-        console.error("❌ Invalid Blockly JSON format:", payload);
-        return;
-      }
-
-      // =========================
-      // 4. WAIT FOR WORKSPACE (FIXED)
-      // =========================
-      const tryLoad = (retries = 10) => {
-        if (!workspaceRef.current) {
-          if (retries > 0) {
-            console.warn("⏳ Waiting for Blockly workspace...");
-            setTimeout(() => tryLoad(retries - 1), 100);
-          } else {
-            console.error("❌ Workspace never became ready.");
-          }
-          return;
-        }
-
-        try {
-          // =========================
-          // CLEAR WORKSPACE (SAFE)
-          // =========================
-          if (workspaceRef.current.clear) {
-            workspaceRef.current.clear();
-          }
-
-          // =========================
-          // LOAD TEMPLATE (FINAL FIX)
-          // =========================
-          workspaceRef.current.loadTemplate(payload);
-
-          // =========================
-          // RESET UI STATE
-          // =========================
-          setViewMode("workspace");
-          setIsEditingCode(false);
-
-          console.log("🎉 Template loaded successfully");
-        } catch (err) {
-          console.error("❌ Blockly load error:", err);
-        }
-      };
-
-      tryLoad(); // <-- retry-based loader
-
     } catch (error) {
-      console.error("❌ Load Error:", error.message);
+      console.error("Failed to load template:", error);
     }
   };
 
