@@ -461,7 +461,6 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
         workspace.current.setTheme(themeName === 'dark' ? DarkTheme : pastelTheme);
       }
     },
-    
     // Inside BlocklyWorkspace.jsx - replace loadFromPython
     loadFromPython: async (pythonCode) => {
       if (!workspace.current) return;

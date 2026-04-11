@@ -256,15 +256,14 @@ class BlocklyASTConverter:
     def map_compare(self, op):
         return {ast.Eq: "EQ", ast.NotEq: "NEQ", ast.Lt: "LT", ast.LtE: "LTE", ast.Gt: "GT", ast.GtE: "GTE"}.get(type(op), "EQ")
 
-    def serialize_node(self, node):
+def serialize_node(self, node):
         try:
             if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name):
                 self.variables.add(node.targets[0].id) 
                 block = {"type": "variables_set", "id": gen_uid(), "fields": {"VAR": {"id": node.targets[0].id, "name": node.targets[0].id}}}
                 self.add_input(block, "VALUE", self.serialize_expr(node.value))
                 return block
-
-            if isinstance(node, ast.FunctionDef):
+            elif isinstance(node, ast.FunctionDef):
                 has_ret = any(isinstance(n, ast.Return) for n in ast.walk(node))
                 block = {"type": "procedures_defreturn" if has_ret else "procedures_defnoreturn", "id": gen_uid(), "fields": {"NAME": node.name}}
                 params = [{"name": a.arg, "id": a.arg} for a in node.args.args]
@@ -272,102 +271,27 @@ class BlocklyASTConverter:
                 if params: block["extraState"] = {"params": params}
                 self.add_input(block, "STACK", self.serialize_body(node.body))
                 return block
-
-            if isinstance(node, ast.Return):
-                block = {"type": "procedure_return_value", "id": gen_uid()}
-                if node.value: self.add_input(block, "VALUE", self.serialize_expr(node.value))
-                return block
-
-            elif isinstance(node, ast.AugAssign):
-                op_map = {ast.Add: "ADD", ast.Sub: "MINUS", ast.Mult: "MULTIPLY", ast.Div: "DIVIDE"}
-                if type(node.op) in op_map and isinstance(node.target, ast.Name):
-                    self.variables.add(node.target.id)
-                    block = {"type": "math_assignment", "id": gen_uid(), "fields": {"VAR": {"id": node.target.id, "name": node.target.id}, "OP": op_map[type(node.op)]}}
-                    self.add_input(block, "DELTA", self.serialize_expr(node.value))
-                    return block
-
             elif isinstance(node, ast.If):
                 block = {"type": "controls_if", "id": gen_uid()}
-                self.add_input(block, "IF0", self.serialize_expr(node.test))
-                self.add_input(block, "DO0", self.serialize_body(node.body))
-                if node.orelse:
-                    block["extraState"] = {"hasElse": True}
-                    self.add_input(block, "ELSE", self.serialize_body(node.orelse))
+                self.add_input(block, "IF0", self.serialize_expr(node.test)); self.add_input(block, "DO0", self.serialize_body(node.body))
+                if node.orelse: block["extraState"] = {"hasElse": True}; self.add_input(block, "ELSE", self.serialize_body(node.orelse))
                 return block
-
-            elif isinstance(node, ast.While):
-                block = {"type": "controls_whileUntil", "id": gen_uid(), "fields": {"MODE": "WHILE"}}
-                self.add_input(block, "BOOL", self.serialize_expr(node.test))
-                self.add_input(block, "DO", self.serialize_body(node.body))
-                return block
-
-            elif isinstance(node, ast.For):
-                if isinstance(node.iter, ast.Call) and isinstance(node.iter.func, ast.Name) and node.iter.func.id == "range":
-                    args = node.iter.args
-                    start = args[0] if len(args) > 1 else ast.parse("0").body[0].value
-                    stop = args[1] if len(args) > 1 else args[0]
-                    step = args[2] if len(args) > 2 else ast.parse("1").body[0].value
-
-                    target_id = node.target.id if isinstance(node.target, ast.Name) else "i"
-                    self.variables.add(target_id)
-                    
-                    block = {"type": "controls_for", "id": gen_uid(), "fields": {"VAR": {"id": target_id, "name": target_id}}}
-                    self.add_input(block, "FROM", self.serialize_expr(start))
-                    self.add_input(block, "TO", self.serialize_expr(stop))
-                    self.add_input(block, "BY", self.serialize_expr(step))
-                    self.add_input(block, "DO", self.serialize_body(node.body))
-                    return block
-                return self.make_raw_statement(node)
-
-            elif isinstance(node, ast.FunctionDef):
-                # Detect if the function has a return statement to use the correct Blockly block type
-                has_return = any(isinstance(n, ast.Return) for n in ast.walk(node))
-                block_type = "procedures_defreturn" if has_return else "procedures_defnoreturn"
-                
-                block = {"type": block_type, "id": gen_uid(), "fields": {"NAME": node.name}}
-                
-                # --- FIX: Extract Function Parameters ---
-                params = []
-                for arg in node.args.args:
-                    arg_name = arg.arg
-                    self.variables.add(arg_name) # Registers parameter in the workspace variables
-                    params.append({"name": arg_name, "id": arg_name})
-                    
-                if params:
-                    block["extraState"] = {"params": params}
-                    
-                self.add_input(block, "STACK", self.serialize_body(node.body))
-                return block
-
-            elif isinstance(node, ast.Expr):
-                if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                    return {"type": "multi_line_comment", "id": gen_uid(), "fields": {"TEXT": node.value.value}}
-                elif type(node.value).__name__ == 'Str':
-                    return {"type": "multi_line_comment", "id": gen_uid(), "fields": {"TEXT": node.value.s}}
-                
-                # --- ADDED: MULTI-ARGUMENT PRINT SUPPORT ---
-                elif isinstance(node.value, ast.Call) and getattr(node.value.func, 'id', '') == "print":
+            elif isinstance(node, ast.Expr) and isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name):
+                name = node.value.func.id
+                if name == "print":
                     block = {"type": "text_print", "id": gen_uid()}
-                    if len(node.value.args) == 1:
-                        self.add_input(block, "TEXT", self.serialize_expr(node.value.args[0]))
-                    elif len(node.value.args) > 1:
-                        join_block = {"type": "text_join", "id": gen_uid(), "extraState": {"itemCount": len(node.value.args)}}
-                        for i, arg in enumerate(node.value.args):
-                            self.add_input(join_block, f"ADD{i}", self.serialize_expr(arg))
-                        self.add_input(block, "TEXT", join_block)
+                    if node.value.args: self.add_input(block, "TEXT", self.serialize_expr(node.value.args[0]))
                     return block
-
-                # --- NEW FIX: STANDALONE FUNCTION CALLS ---
-                # (This maps `bubble_sort(list2)` directly to the procedures_callnoreturn block)
-                elif isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name):
-                    name = node.value.func.id
-                    block = {"type": "procedures_callnoreturn", "id": gen_uid(), "extraState": {"name": name}}
-                    for i, arg in enumerate(node.value.args):
-                        self.add_input(block, f"ARG{i}", self.serialize_expr(arg))
-                    return block
-
-                return self.make_raw_statement(node)
-
-        except Exception as e:
-            pass
+                
+                # FIX: Standalone Procedure Calls (e.g. bubble_sort(arr))
+                params = [f"arg{i}" for i in range(len(node.value.args))]
+                block = {
+                    "type": "procedures_callnoreturn", 
+                    "id": gen_uid(), 
+                    "extraState": {"name": name, "params": params}
+                }
+                for i, arg in enumerate(node.value.args):
+                    self.add_input(block, f"ARG{i}", self.serialize_expr(arg))
+                return block
+        except: pass
         return None

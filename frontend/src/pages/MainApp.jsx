@@ -202,8 +202,8 @@ export default function MainApp() {
         setViewMode("workspace");
         showToast("Code successfully synced to Blocks");
       } catch (e) {
-        // FIX: Use the actual error message from the exception
-        showToast(`Cannot Sync: ${e.message}`, "error");
+        // Display the actual error message (e.g., the ARG0 error or Python Indentation errors)
+        showToast(`Sync Failed: ${e.message}`, "error");
       }
     }
   };
