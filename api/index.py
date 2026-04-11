@@ -77,7 +77,8 @@ def safe_exec(code: str, globals_dict: dict):
     
 @app.get("/")
 def health_check():
-    return {"status": "online", "message": "AlgoBlocks API is running on Back4App"}
+    return {"status": "online", "message": "AlgoBlocks API is running"}
+
 # =========================
 # AST → BLOCKS
 # =========================

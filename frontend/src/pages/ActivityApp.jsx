@@ -636,7 +636,8 @@ const ActivityApp = () => {
     // =========================
     // SOCKET SETUP
     // =========================
-    const wsUrl = import.meta.env.VITE_BACKEND_WS_URL || "ws://localhost:8000/api/ws/run";
+    const wsUrl = import.meta.env.VITE_BACKEND_WS_URL || `ws://${window.location.host}/api/ws/run`;
+    const socket = new WebSocket(wsUrl);
 
     socketRef.current = socket;
 
