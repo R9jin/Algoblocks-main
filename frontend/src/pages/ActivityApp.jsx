@@ -34,7 +34,7 @@ Output: "Hello World"
     difficulty: "Easy",
     task: `In programming, computers make decisions using conditional statements. You are given a boolean variable \`condition\` which can either be \`true\` or \`false\`. 
 
-Your task is to evaluate this condition and output a specific string based on its truth value. If the condition evaluates to \`true\`, your program must output the string "Yes". If the condition evaluates to \`false\`, your program must output the string "No".
+Your task is to evaluate this condition and **return** a specific string based on its truth value. If the condition evaluates to \`true\`, your program must return the string "Yes". If the condition evaluates to \`false\`, your program must return the string "No".
 
 **Example 1:**
 Input: condition = true
@@ -47,10 +47,9 @@ Output: "No"
 **Constraints:**
 • You must use an If-Else conditional block to control the flow of execution.
 • The output must match the casing exactly.`,
-    // New Test Cases for Topic 2
     testCasesList: [
-      { call: "condition_checker(True)", expected: "Yes" },
-      { call: "condition_checker(False)", expected: "No" }
+      { call: "condition_checker(True)", expected: "'Yes'" },
+      { call: "condition_checker(False)", expected: "'No'" }
     ]
   },
   {
@@ -295,18 +294,40 @@ const renderFormattedTask = (text) => {
 };
 
 const ActivityApp = () => {
+  // =========================================================
+  // 1. ROUTING + REFS
+  // =========================================================
   const location = useLocation();
   const navigate = useNavigate();
+
   const workspaceRef = useRef(null);
   const consoleEndRef = useRef(null);
   const socketRef = useRef(null);
+  const isDragging = useRef(false);
+  const hasLoadedRef = useRef(false);
 
+  // =========================================================
+  // 2. DERIVED DATA
+  // =========================================================
   const activityData = location.state?.activityData || null;
-  const initialTemplate = location.state?.templatePath || location.state?.activityData?.templatePath || "";
-  const currentTask = ACTIVITY_TASKS.find(t => t.templatePath === initialTemplate);
 
-  // --- UI & Analysis States ---
-  const [generatedPython, setGeneratedPython] = useState("# Drag blocks to generate Python code");
+  const initialTemplate =
+    location.state?.templatePath ||
+    location.state?.activityData?.templatePath ||
+    "";
+
+  const currentTask = ACTIVITY_TASKS.find(
+    (t) => t.templatePath === initialTemplate
+  );
+
+  const totalTests = activityData?.testCasesList?.length || 0;
+
+  // =========================================================
+  // 3. UI STATE
+  // =========================================================
+  const [generatedPython, setGeneratedPython] = useState(
+    "# Drag blocks to generate Python code"
+  );
   const [consoleOutput, setConsoleOutput] = useState("");
   const [viewMode, setViewMode] = useState("workspace");
   const [passedTests, setPassedTests] = useState(0);
@@ -316,12 +337,14 @@ const ActivityApp = () => {
   const [bottomPanel, setBottomPanel] = useState(null);
   const [activeTab, setActiveTab] = useState("local");
 
-  // --- Interactive Terminal States ---
   const [isWaitingForInput, setIsWaitingForInput] = useState(false);
   const [userInput, setUserInput] = useState("");
 
   const [analysisResult, setAnalysisResult] = useState({
-    lines: [], total: "O(1)", space_total: "O(1)", is_recursive: false
+    lines: [],
+    total: "O(1)",
+    space_total: "O(1)",
+    is_recursive: false,
   });
 
   const [modalConfig, setModalConfig] = useState({
@@ -330,43 +353,75 @@ const ActivityApp = () => {
     message: "",
     confirmText: "Confirm",
     isDanger: false,
-    onConfirmAction: null
+    onConfirmAction: null,
   });
+
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [syntaxError, setSyntaxError] = useState(null);
 
   const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
   const [expandedLines, setExpandedLines] = useState({});
 
+  const [panelHeight, setPanelHeight] = useState(300);
+
+  // =========================================================
+  // 4. UI HELPERS
+  // =========================================================
   const toggleLine = (index) => {
-    setExpandedLines(prev => ({ ...prev, [index]: !prev[index] }));
+    setExpandedLines((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
   };
 
-  const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
+  const closeModal = () =>
+    setModalConfig({ ...modalConfig, isOpen: false });
 
-  const [panelHeight, setPanelHeight] = useState(300);
-  const isDragging = useRef(false);
+  const handleDragStart = (e) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+  };
 
-  // Auto-scroll logic for terminal
+  // =========================================================
+  // 5. EFFECTS (LIFECYCLE)
+  // =========================================================
+
+  // redirect if no data
+  useEffect(() => {
+    if (!activityData) navigate("/learning-path");
+  }, [activityData, navigate]);
+
+  // auto scroll terminal
   useEffect(() => {
     if (consoleEndRef.current) {
       consoleEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [consoleOutput, isWaitingForInput]);
 
+  // resize panel drag logic
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isDragging.current) return;
-      const newHeight = window.innerHeight - e.clientY - 48;
-      if (newHeight >= 150 && newHeight <= window.innerHeight - 150) {
+
+      const newHeight =
+        window.innerHeight - e.clientY - 48;
+
+      if (
+        newHeight >= 150 &&
+        newHeight <= window.innerHeight - 150
+      ) {
         setPanelHeight(newHeight);
       }
     };
 
     const handleMouseUp = () => {
-      if (isDragging.current) {
-        isDragging.current = false;
-        document.body.style.cursor = "default";
-        document.body.style.userSelect = "auto";
-      }
+      if (!isDragging.current) return;
+
+      isDragging.current = false;
+      document.body.style.cursor = "default";
+      document.body.style.userSelect = "auto";
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -378,22 +433,77 @@ const ActivityApp = () => {
     };
   }, []);
 
-  const handleDragStart = (e) => {
-    e.preventDefault();
-    isDragging.current = true;
-    document.body.style.cursor = "ns-resize";
-    document.body.style.userSelect = "none";
-  };
-
+  // analysis effect
   useEffect(() => {
-    if (!activityData) navigate("/learning-path");
-  }, [activityData, navigate]);
+    if (!isEditingCode) return;
 
-  // FIX: Save exactly the number of passed test cases
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: generatedPython }),
+        });
+
+        const data = await response.json();
+
+        if (data.status === "success") {
+          setAnalysisResult({
+            total: data.total,
+            space_total: data.space_total || "O(1)",
+            lines: data.lines || [],
+            is_recursive: data.is_recursive || false,
+          });
+
+          setSyntaxError(null);
+        } else if (
+          data.status === "error" &&
+          data.error_type === "SyntaxError"
+        ) {
+          setSyntaxError({
+            line: data.line,
+            message: data.message,
+          });
+
+          setAnalysisResult({
+            lines: [],
+            total: "Syntax Error",
+            space_total: "-",
+            is_recursive: false,
+          });
+        }
+      } catch (error) {
+        console.error("Analysis Error:", error);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [generatedPython, isEditingCode]);
+
+  // template loader (single version kept)
+  useEffect(() => {
+    if (!initialTemplate || !activityData) return;
+    if (hasLoadedRef.current) return;
+
+    hasLoadedRef.current = true;
+
+    const timer = setTimeout(() => {
+      loadActivityTemplate(initialTemplate, activityData);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [initialTemplate, activityData]);
+
+  // =========================================================
+  // 6. CORE FUNCTIONS
+  // =========================================================
+
   const saveLessonProgress = async (lessonId, score) => {
     const storedUser = localStorage.getItem("user");
     if (!storedUser) return;
+
     const user = JSON.parse(storedUser);
+
     try {
       const response = await fetch("/api/update-progress", {
         method: "POST",
@@ -401,21 +511,20 @@ const ActivityApp = () => {
         body: JSON.stringify({
           email: user.email,
           lesson_id: lessonId,
-          score: score // Saves the exact number of successful test cases
-        })
+          score,
+        }),
       });
+
       if (response.ok) {
         const data = await response.json();
         user.progress = data.progress;
         localStorage.setItem("user", JSON.stringify(user));
-        console.log(`Progress saved! Lesson: ${lessonId}, Tests Passed: ${score}`);
       }
     } catch (error) {
       console.error("Failed to save progress:", error);
     }
   };
 
-  // FIX: Triggers a styled cohesive Modal instead of a raw browser alert.
   const handleSuccess = (passed, total) => {
     setModalConfig({
       isOpen: true,
@@ -426,7 +535,7 @@ const ActivityApp = () => {
       onConfirmAction: () => {
         closeModal();
         navigate("/learning-path");
-      }
+      },
     });
   };
 
@@ -444,95 +553,91 @@ const ActivityApp = () => {
         const response = await fetch(fetchUrl);
 
         if (!response.ok) {
-          throw new Error(`Template not found at ${fetchUrl} (HTTP ${response.status})`);
+          throw new Error(
+            `Template not found at ${fetchUrl} (${response.status})`
+          );
         }
 
         const text = await response.text();
-
-        try {
-          json = JSON.parse(text);
-        } catch (err) {
-          console.error("❌ Invalid JSON received from:", fetchUrl);
-          console.error("Raw response:", text);
-          throw new Error("Template file is not valid JSON");
-        }
+        json = JSON.parse(text);
       }
 
       if (json && workspaceRef.current) {
         workspaceRef.current.clearWorkspace?.();
         workspaceRef.current.loadTemplate(json);
       }
-
     } catch (error) {
-      console.error("Failed to load activity template:", error);
+      console.error("Failed to load template:", error);
     }
   };
 
-  useEffect(() => {
-    if (!initialTemplate && !activityData) return;
-
-    const timer = setTimeout(() => {
-      loadActivityTemplate(initialTemplate, activityData);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [initialTemplate, activityData]);
-
-  const hasLoadedRef = useRef(false);
-
-  useEffect(() => {
-    if (!initialTemplate || !activityData) return;
-    if (hasLoadedRef.current) return;
-
-    hasLoadedRef.current = true;
-
-    const timer = setTimeout(() => {
-      loadActivityTemplate(initialTemplate, activityData);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [initialTemplate, activityData]);
-
-  // UPDATE: handleWorkspaceChange to respect manual editing
   const handleWorkspaceChange = async (json, pythonCode) => {
-    if (!isEditingCode) setGeneratedPython(pythonCode);
+    if (!isEditingCode) {
+      setGeneratedPython(pythonCode);
+    }
 
-    // Existing analysis logic follows...
     try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: pythonCode })
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: pythonCode }),
       });
+
       const data = await response.json();
+
       if (data.status === "success") {
         setAnalysisResult({
           total: data.total,
           space_total: data.space_total || "O(1)",
           lines: data.lines || [],
-          is_recursive: data.is_recursive || false
+          is_recursive: data.is_recursive || false,
         });
-        setSyntaxError(null); // Reset syntax error on block change
+
+        setSyntaxError(null);
       }
     } catch (error) {
       console.error("Analysis Error:", error);
     }
   };
 
+  const handleSyncToBlocks = async () => {
+    if (workspaceRef.current && generatedPython) {
+      try {
+        await workspaceRef.current.loadFromPython(generatedPython);
+
+        setIsEditingCode(false);
+        setViewMode("workspace");
+      } catch (e) {
+        setModalConfig({
+          isOpen: true,
+          title: "Sync Error",
+          message: "Cannot sync to blocks until syntax errors are fixed.",
+          confirmText: "Close",
+          isDanger: true,
+          onConfirmAction: closeModal,
+        });
+      }
+    }
+  };
 
   const runCode = () => {
     setConsoleOutput("> Initializing session...\n");
     setBottomPanel("console");
     setIsWaitingForInput(false);
 
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const host = window.location.host;
-    const socket = new WebSocket(`${protocol}://${host}/api/ws/run`);
+    const protocol =
+      window.location.protocol === "https:" ? "wss" : "ws";
+
+    const socket = new WebSocket(
+      `${protocol}://${window.location.host}/api/ws/run`
+    );
 
     socketRef.current = socket;
 
     socket.onopen = () => {
-      socket.send(JSON.stringify({ type: "run", code: generatedPython }));
+      socket.send(
+        JSON.stringify({ type: "run", code: generatedPython })
+      );
       setConsoleOutput("");
     };
 
@@ -540,32 +645,38 @@ const ActivityApp = () => {
       const msg = JSON.parse(event.data);
 
       if (msg.type === "output") {
-        setConsoleOutput((prev) => prev + msg.data);
-      } else if (msg.type === "input_request") {
-        setConsoleOutput((prev) => prev + msg.prompt);
+        setConsoleOutput((p) => p + msg.data);
+      }
+
+      if (msg.type === "input_request") {
+        setConsoleOutput((p) => p + msg.prompt);
         setIsWaitingForInput(true);
-      } else if (msg.type === "error") {
-        setConsoleOutput((prev) => prev + "\nRuntime Error: " + msg.data);
-      } else if (msg.type === "done") {
-        setConsoleOutput((prev) => prev + "\n> Program finished.");
+      }
+
+      if (msg.type === "error") {
+        setConsoleOutput((p) => p + "\nRuntime Error: " + msg.data);
+      }
+
+      if (msg.type === "done") {
+        setConsoleOutput((p) => p + "\n> Program finished.");
         setIsWaitingForInput(false);
         socket.close();
       }
     };
+  };
 
-    socket.onerror = (e) => {
-      console.error("WebSocket error:", e);
-      setConsoleOutput("❌ Failed to connect to backend for execution.");
-    };
-
-    socket.onclose = () => {
-      console.log("Execution session closed.");
-    };
+  const toggleTest = (index) => {
+    setExpandedTests((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
   };
 
   const runTestCases = async () => {
-    // Use currentTask instead of activityData
-    const testCases = currentTask?.testCasesList || activityData?.testCasesList;
+    const testCases =
+      currentTask?.testCasesList ||
+      activityData?.testCasesList;
+
     if (!testCases) return;
 
     setBottomPanel("console");
@@ -577,26 +688,25 @@ const ActivityApp = () => {
     let fullOutput = "> --- Running Test Cases ---\n";
     let newExpanded = { ...expandedTests };
 
-    // Send isolated requests for each test case to cleanly evaluate raw output vs functions
     for (let i = 0; i < total; i++) {
-      const tc = activityData.testCasesList[i];
-      let codeToRun = "";
+      const tc = testCases[i];
 
-      const isFunctionCall = tc.call && String(tc.call).includes('(') && String(tc.call).includes(')');
-      // Detect if this is a Level 1 task (which uses console output instead of return values)
-      const isIntroLevel = currentTask?.id?.startsWith("l1");
+      let codeToRun = "";
+      const isFunctionCall =
+        tc.call?.includes("(") && tc.call?.includes(")");
+
+      const taskId =
+        currentTask?.id || activityData?.id || "";
+
+      const isIntroLevel =
+        taskId === "l1-t1" || taskId === "l1-t3";
 
       if (isFunctionCall && !isIntroLevel) {
-        // Mode 1: Function Testing (Return-based, Level 2+)
-        codeToRun = generatedPython + `\n\ntry:\n    assert ${tc.call} == ${tc.expected}\n    print("TEST_PASSED_FLAG")\nexcept AssertionError:\n    print("TEST_FAILED_FLAG")\nexcept Exception as e:\n    print(f"TEST_ERROR_FLAG: {e}")`;
+        codeToRun =
+          generatedPython +
+          `\n\ntry:\n    assert ${tc.call} == ${tc.expected}\n    print("TEST_PASSED_FLAG")\nexcept:\n    print("TEST_ERROR_FLAG")`;
       } else {
-        // Mode 2: Output Testing (Print-based, Level 1)
-        // Append function calls to the end; prepend variable setups
-        if (isFunctionCall) {
-          codeToRun = generatedPython + "\n\n" + tc.call;
-        } else {
-          codeToRun = tc.call ? (tc.call + "\n" + generatedPython) : generatedPython;
-        }
+        codeToRun = `${generatedPython}\n${tc.call || ""}`;
       }
 
       try {
@@ -607,116 +717,42 @@ const ActivityApp = () => {
         });
 
         const data = await response.json();
-        let actualOutput = data.output.replace("> Code ran successfully.", "").trim();
+        const actualOutput = (data.output || "")
+          .replace("> Code ran successfully.", "")
+          .trim();
 
-        if (isFunctionCall) {
+        if (isFunctionCall && !isIntroLevel) {
           if (actualOutput.includes("TEST_PASSED_FLAG")) {
-            fullOutput += `Test ${i + 1} Passed: ${tc.call} == ${tc.expected}\n`;
             passed++;
-          } else if (actualOutput.includes("TEST_ERROR_FLAG")) {
-            const errMsg = actualOutput.split("TEST_ERROR_FLAG: ")[1] || "Execution error";
-            fullOutput += `Test ${i + 1} Error: ${errMsg}\n`;
-            newExpanded[i] = true;
-          } else {
-            fullOutput += `Test ${i + 1} Failed: ${tc.call} did not equal ${tc.expected}\n`;
-            newExpanded[i] = true;
           }
-          // Inside the for-loop of runTestCases in ActivityApp.jsx
         } else {
-          // Normalize both outputs: remove quotes, handle newlines, and lowercase for comparison
-          let expectedOutput = String(tc.expected).replace(/^['"]|['"]$/g, '').trim().toLowerCase();
-          expectedOutput = expectedOutput.replace(/\\n/g, '\n');
+          const expected = String(tc.expected)
+            .replace(/^['"]|['"]$/g, "")
+            .replace(/\\n/g, "\n")
+            .trim();
 
-          // Clean actual output
-          let cleanActual = actualOutput.trim().toLowerCase();
-
-          if (cleanActual === expectedOutput || cleanActual.includes(expectedOutput)) {
-            fullOutput += `Test ${i + 1} Passed: Output matched\n`;
+          if (actualOutput.trim() === expected) {
             passed++;
-          } else {
-            fullOutput += `Test ${i + 1} Failed: Expected '${expectedOutput}', got '${cleanActual}'\n`;
-            newExpanded[i] = true;
           }
+        }
+
+        fullOutput += `Test ${i + 1}\n`;
+        setConsoleOutput(fullOutput);
+        setPassedTests(passed);
+
+        const lessonId =
+          initialTemplate?.split("/").pop() || "unknown";
+
+        saveLessonProgress(lessonId, passed);
+
+        if (passed === total && total > 0) {
+          handleSuccess(passed, total);
         }
       } catch (err) {
-        fullOutput += `Test ${i + 1} Error: Connection failed\n`;
-        newExpanded[i] = true;
-      }
-    }
-
-    fullOutput += `\nResult: ${passed}/${total} Tests Passed\n`;
-    setConsoleOutput(fullOutput);
-    setPassedTests(passed);
-    setExpandedTests(newExpanded);
-
-    const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act";
-    saveLessonProgress(currentLessonId, passed);
-
-    if (passed === total && total > 0) {
-      handleSuccess(passed, total);
-    }
-  };
-
-  const toggleTest = (index) => {
-    setExpandedTests(prev => ({ ...prev, [index]: !prev[index] }));
-  };
-
-  const totalTests = activityData?.testCasesList?.length || 0;
-
-  if (!activityData) return null;
-
-  const [isEditingCode, setIsEditingCode] = useState(false);
-  const [syntaxError, setSyntaxError] = useState(null);
-
-  const handleSyncToBlocks = async () => {
-    if (workspaceRef.current && generatedPython) {
-      try {
-        await workspaceRef.current.loadFromPython(generatedPython);
-        setIsEditingCode(false);
-        setViewMode("workspace");
-        // Optional: show success modal or log
-        console.log("Code successfully synced to Blocks");
-      } catch (e) {
-        setModalConfig({
-          isOpen: true,
-          title: "Sync Error",
-          message: "Cannot sync to blocks until syntax errors are fixed.",
-          confirmText: "Close",
-          isDanger: true,
-          onConfirmAction: closeModal
-        });
+        fullOutput += `Test ${i + 1} Error\n`;
       }
     }
   };
-
-  useEffect(() => {
-    if (!isEditingCode) return;
-    const timeoutId = setTimeout(async () => {
-      try {
-        const response = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: generatedPython })
-        });
-        const data = await response.json();
-        if (data.status === "success") {
-          setAnalysisResult({
-            total: data.total,
-            space_total: data.space_total || "O(1)",
-            lines: data.lines || [],
-            is_recursive: data.is_recursive || false
-          });
-          setSyntaxError(null);
-        } else if (data.status === "error" && data.error_type === "SyntaxError") {
-          setSyntaxError({ line: data.line, message: data.message });
-          setAnalysisResult({ lines: [], total: "Syntax Error", space_total: "-", is_recursive: false });
-        }
-      } catch (error) {
-        console.error("Analysis Error:", error);
-      }
-    }, 500);
-    return () => clearTimeout(timeoutId);
-  }, [generatedPython, isEditingCode]);
 
   return (
     <div className="activity-app-container">

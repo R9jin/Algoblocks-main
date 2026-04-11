@@ -132,7 +132,7 @@ const LESSONS = [
           { text: "GeeksforGeeks: Analysis of Algorithms | Big-O analysis", url: "https://www.geeksforgeeks.org/analysis-of-algorithms-set-3asymptotic-notations/" }
         ],
         task: `Build a simple algorithm with O(n) time complexity.\n\nGiven a number 'n', construct a loop that outputs the string "Step" exactly 'n' times.`,
-        testCount: 3,
+        testCount: 4,
         templatePath: "activities/big_o_act"
       }
     ]
