@@ -26,8 +26,11 @@ const SIDEBAR_TEMPLATES = [
 ];
 
 export default function MainApp() {
-  const VERCEL_URL = import.meta.env.VITE_BACKEND_URL || ""; 
-  const RENDER_URL = import.meta.env.VITE_RENDER_URL || ""; // New variable for Render
+  // At the top of the file, define these constants
+  const VERCEL_URL = import.meta.env.VITE_BACKEND_URL || "";
+  const RENDER_URL = import.meta.env.VITE_RENDER_URL || "";
+  const API_URL = VERCEL_URL; // Declare this to fix the ReferenceError!
+
   const location = useLocation();
   const workspaceRef = useRef(null);
 
@@ -277,6 +280,24 @@ export default function MainApp() {
   const [userInput, setUserInput] = useState("");
   const socketRef = useRef(null);
 
+  const runStandardCode = async () => {
+    setConsoleOutput("> Running code...\n");
+    setBottomPanel("console");
+
+    try {
+      // Hits RENDER_URL as requested for execution tasks
+      const response = await fetch(`${RENDER_URL}/api/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: generatedPython }),
+      });
+
+      const data = await response.json();
+      setConsoleOutput(data.output || "> No output.");
+    } catch (error) {
+      setConsoleOutput("❌ Connection to Render runner failed.");
+    }
+  };
   const runCode = () => {
     // =========================
     // UI RESET (RUN START)

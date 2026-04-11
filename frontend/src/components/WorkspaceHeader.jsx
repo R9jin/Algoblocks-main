@@ -19,11 +19,11 @@ export default function WorkspaceHeader({
   setViewMode,
   runCode,
   handleSaveToDB,
-  currentProjectId,
-  currentProjectTitle,
-  handleUpdateDB,
-  codingMode  // NEW: expects 'blocks' | 'manual'
+  currentProjectId,       // NEW
+  currentProjectTitle,    // NEW
+  handleUpdateDB          // NEW
 }) {
+
   const navigate = useNavigate();
 
   return (
@@ -33,33 +33,35 @@ export default function WorkspaceHeader({
           <img src="/assets/back-icon.png" alt="Back" className="btn-icon" />
           Back to Dashboard
         </button>
+        {/* Update this span to use the dynamic title */}
         <span className="project-name">{currentProjectTitle}</span>
       </div>
 
       <div className="header-center">
         <div className="view-toggle">
-          {codingMode === 'blocks' && (
-            <div className="workspace-toggle-group">
-              <button
-                className={`workspace-toggle-btn ${viewMode === 'workspace' ? 'active' : ''}`}
-                onClick={() => setViewMode('workspace')}
-              >
-                Workspace
-              </button>
-              <button
-                className={`workspace-toggle-btn ${viewMode === 'python' ? 'active' : ''}`}
-                onClick={() => setViewMode('python')}
-              >
-                Python Code
-              </button>
-            </div>
-          )}
 
-          {codingMode === 'manual' && (
-            <div className="workspace-toggle-group" style={{ color: '#EBE4FF', fontWeight: 'bold' }}>
-              Python IDE Mode
-            </div>
-          )}
+          {/*
+            Workspace view toggle button.
+            Highlights as active when the current viewMode matches.
+          */}
+          <button
+            className={`toggle-btn ${viewMode === 'workspace' ? 'active' : ''}`}
+            onClick={() => setViewMode("workspace")}
+          >
+            Workspace
+          </button>
+
+          {/*
+            Python Code view toggle button.
+            Highlights as active when the current viewMode matches.
+          */}
+          <button
+            className={`toggle-btn ${viewMode === 'python' ? 'active' : ''}`}
+            onClick={() => setViewMode("python")}
+          >
+            Python Code
+          </button>
+
         </div>
       </div>
 
