@@ -89,16 +89,16 @@ export default function MainApp() {
   const handleDragStart = (e) => { e.preventDefault(); isDragging.current = true; document.body.style.cursor = "ns-resize"; document.body.style.userSelect = "none"; };
 
   // --- Fetch Combined Templates: System First, then User's Custom Templates ---
-const fetchTemplates = async () => {
+  const fetchTemplates = async () => {
     try {
       const baseTemplates = SIDEBAR_TEMPLATES.map(t => ({ ...t, title: t.name, description: t.desc, isSystem: true }));
       const storedUser = localStorage.getItem("user");
-      
+
       if (!storedUser) {
         setAllTemplates(baseTemplates);
         return;
       }
-      
+
       const user = JSON.parse(storedUser);
       const res = await fetch('/api/projects');
       const data = await res.json();
@@ -517,10 +517,25 @@ const fetchTemplates = async () => {
                       </div>
                       <div className="total-badge-group">
                         <span className="total-badge">
-                          <span className="total-label">Total Time:</span> {formatComplexity(analysisResult.total)}
+                          <span className="total-label">Total Time:</span>{" "}
+                          <span style={{ fontSize: "1.3rem", fontWeight: "bold" }}>
+                            {formatComplexity(analysisResult.total)}
+                          </span>
                         </span>
-                        <span className="total-badge space">
-                          <span className="total-label space">Total Space:</span> {formatComplexity(analysisResult.space_total)}
+                        <span
+                          className="total-badge"
+                          style={{
+                            backgroundColor: 'rgba(0, 184, 163, 0.15)',
+                            color: '#00b8a3',
+                            border: '1px solid rgba(0, 184, 163, 0.3)'
+                          }}
+                        >
+                          <span className="total-label" style={{ color: '#00b8a3' }}>
+                            Total Space:
+                          </span>{" "}
+                          <span style={{ fontSize: "20px", fontWeight: "bold" }}>
+                            {formatComplexity(analysisResult.space_total)}
+                          </span>
                         </span>
                       </div>
                     </div>

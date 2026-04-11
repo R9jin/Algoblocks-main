@@ -985,10 +985,25 @@ const ActivityApp = () => {
                       </div>
                       <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                         <span className="total-badge">
-                          <span className="total-label">Total Time:</span> {formatComplexity(analysisResult.total)}
+                          <span className="total-label">Total Time:</span>{" "}
+                          <span style={{ fontSize: "1.3rem", fontWeight: "bold" }}>
+                            {formatComplexity(analysisResult.total)}
+                          </span>
                         </span>
-                        <span className="total-badge" style={{ backgroundColor: 'rgba(0, 184, 163, 0.15)', color: '#00b8a3', border: '1px solid rgba(0, 184, 163, 0.3)' }}>
-                          <span className="total-label" style={{ color: '#00b8a3' }}>Total Space:</span> {formatComplexity(analysisResult.space_total)}
+                        <span
+                          className="total-badge"
+                          style={{
+                            backgroundColor: 'rgba(0, 184, 163, 0.15)',
+                            color: '#00b8a3',
+                            border: '1px solid rgba(0, 184, 163, 0.3)'
+                          }}
+                        >
+                          <span className="total-label" style={{ color: '#00b8a3' }}>
+                            Total Space:
+                          </span>{" "}
+                          <span style={{ fontSize: "20px", fontWeight: "bold" }}>
+                            {formatComplexity(analysisResult.space_total)}
+                          </span>
                         </span>
                       </div>
                     </div>
