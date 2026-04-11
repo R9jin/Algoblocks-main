@@ -3,17 +3,17 @@
     "languageVersion": 0,
     "blocks": [
       {
-        "type": "procedures_defreturn",
-        "id": ":Y4O}qUUt|X+~#ZCO?xK",
-        "x": 38,
-        "y": -87,
+        "type": "procedures_defnoreturn",
+        "id": "TN(3VM[_odyuD@7%mjk=",
+        "x": 13,
+        "y": -112,
         "deletable": false,
         "editable": false,
         "extraState": {
           "params": [
             {
-              "name": "n",
-              "id": "tyO.pA9F`9/^|V^HlXAR"
+              "name": "condition",
+              "id": "$L!%sGDV9_/`aC?YYQdf"
             }
           ]
         },
@@ -26,24 +26,15 @@
           }
         },
         "fields": {
-          "NAME": "factorial"
+          "NAME": "condition_checker"
         },
         "inputs": {
           "STACK": {
             "block": {
               "type": "comment_block",
-              "id": ")wx!U(]gWv|{:lTZB;3X",
+              "id": "[YkaIXxpB1k3:4!wP8lE",
               "fields": {
-                "TEXT": "n: integer to calculate factorial"
-              },
-              "next": {
-                "block": {
-                  "type": "comment_block",
-                  "id": "f!K9@vZxQp3^Lr8mWcT1",
-                  "fields": {
-                    "TEXT": "Compute factorial using recursion: n * factorial(n - 1), base case n = 0"
-                  }
-                }
+                "TEXT": "print 'true' or 'false' based on the condition"
               }
             }
           }
@@ -53,11 +44,7 @@
   },
   "variables": [
     {
-      "name": "arr",
-      "id": "$L!%sGDV9_/`aC?YYQdf"
-    },
-    {
-      "name": "n",
+      "name": "condition",
       "id": "tyO.pA9F`9/^|V^HlXAR"
     }
   ],

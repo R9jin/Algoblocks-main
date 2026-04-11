@@ -548,16 +548,7 @@ const ActivityApp = () => {
     };
   };
 
-  const handleSendInput = (e) => {
-    if (e.key === "Enter" && isWaitingForInput && socketRef.current) {
-      setConsoleOutput((prev) => prev + userInput + "\n");
-      socketRef.current.send(JSON.stringify({ type: "input_response", data: userInput }));
-      setUserInput("");
-      setIsWaitingForInput(false);
-    }
-  };
-
-  const runTestCases = async () => {
+const runTestCases = async () => {
     if (!activityData.testCasesList) return;
 
     setBottomPanel("console");
@@ -566,62 +557,86 @@ const ActivityApp = () => {
     setExpandedLines({});
     setIsWaitingForInput(false);
 
-    let testHarness = `\n\n# --- System Test Cases ---\nprint("\\n--- Running Test Cases ---")\n`;
-    testHarness += `passed = 0\ntotal = ${activityData.testCasesList.length}\n`;
+    let passed = 0;
+    const total = activityData.testCasesList.length;
+    let fullOutput = "> --- Running Test Cases ---\n";
+    let newExpanded = { ...expandedTests };
 
-    activityData.testCasesList.forEach((tc, index) => {
-      testHarness += `
-try:
-    assert ${tc.call} == ${tc.expected}
-    print("Test ${index + 1} Passed: ${tc.call} == ${tc.expected}")
-    passed += 1
-except AssertionError:
-    print("Test ${index + 1} Failed: ${tc.call} did not equal ${tc.expected}")
-except Exception as e:
-    print("Test ${index + 1} Error:", e)
-`;
-    });
-    testHarness += `print(f"\\nResult: {passed}/{total} Tests Passed")\n`;
+    // Send isolated requests for each test case to cleanly evaluate raw output vs functions
+    for (let i = 0; i < total; i++) {
+      const tc = activityData.testCasesList[i];
+      let codeToRun = "";
 
-    const codeToRun = generatedPython + testHarness;
+      // Detect if the test case is a function call (has parentheses) or raw variables/output
+      const isFunctionCall = tc.call && String(tc.call).includes('(') && String(tc.call).includes(')');
 
-    try {
-      const response = await fetch("/api/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: codeToRun }),
-      });
-      const data = await response.json();
-
-      const outputText = data.status === "success" ? data.output : "> Error: " + data.output;
-      setConsoleOutput(outputText);
-
-      const match = outputText.match(/Result: (\d+)\//);
-      if (match) {
-        const passed = parseInt(match[1]);
-        const total = activityData.testCasesList.length;
-
-        setPassedTests(passed);
-
-        // FIX: Always save the exact amount of correct test cases (no 100/100 score)
-        const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act";
-        saveLessonProgress(currentLessonId, passed);
-
-        if (passed === total && total > 0) {
-          handleSuccess(passed, total);
+      if (isFunctionCall) {
+        // Mode 1: Function Testing (AlgoBlocks Level 2+)
+        codeToRun = generatedPython + `\n\ntry:\n    assert ${tc.call} == ${tc.expected}\n    print("TEST_PASSED_FLAG")\nexcept AssertionError:\n    print("TEST_FAILED_FLAG")\nexcept Exception as e:\n    print(f"TEST_ERROR_FLAG: {e}")`;
+      } else {
+        // Mode 2: Raw Output Testing (Intro Levels 1-3)
+        if (tc.call) {
+           // Prepend variable setups (e.g., "condition = True") before running the workspace code
+           codeToRun = tc.call + "\n" + generatedPython;
+        } else {
+           // Empty call, just run the raw workspace code (e.g., "Hello World")
+           codeToRun = generatedPython;
         }
       }
 
-      const newExpanded = { ...expandedTests };
-      activityData.testCasesList.forEach((tc, i) => {
-        if (outputText.includes(`Test ${i + 1} Failed`) || outputText.includes(`Test ${i + 1} Error`)) {
-          newExpanded[i] = true;
-        }
-      });
-      setExpandedTests(newExpanded);
+      try {
+        const response = await fetch("/api/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: codeToRun }),
+        });
+        
+        const data = await response.json();
+        let actualOutput = data.output.replace("> Code ran successfully.", "").trim();
 
-    } catch {
-      setConsoleOutput("> Connection Error while running tests.");
+        if (isFunctionCall) {
+            if (actualOutput.includes("TEST_PASSED_FLAG")) {
+                fullOutput += `Test ${i + 1} Passed: ${tc.call} == ${tc.expected}\n`;
+                passed++;
+            } else if (actualOutput.includes("TEST_ERROR_FLAG")) {
+                const errMsg = actualOutput.split("TEST_ERROR_FLAG: ")[1] || "Execution error";
+                fullOutput += `Test ${i + 1} Error: ${errMsg}\n`;
+                newExpanded[i] = true;
+            } else {
+                fullOutput += `Test ${i + 1} Failed: ${tc.call} did not equal ${tc.expected}\n`;
+                newExpanded[i] = true;
+            }
+        } else {
+            // Mode 2 Evaluation: Compare the raw console output
+            // Strip surrounding quotes from the expected JSON string to match console output
+            let expectedOutput = String(tc.expected).replace(/^['"]|['"]$/g, '').trim(); 
+            // Ensure visual newlines match literal newlines
+            expectedOutput = expectedOutput.replace(/\\n/g, '\n').trim();
+
+            if (actualOutput === expectedOutput || actualOutput.includes(expectedOutput)) {
+                fullOutput += `Test ${i + 1} Passed: Output matched\n`;
+                passed++;
+            } else {
+                fullOutput += `Test ${i + 1} Failed: Expected '${expectedOutput}', got '${actualOutput}'\n`;
+                newExpanded[i] = true;
+            }
+        }
+      } catch (err) {
+        fullOutput += `Test ${i + 1} Error: Connection failed\n`;
+        newExpanded[i] = true;
+      }
+    }
+
+    fullOutput += `\nResult: ${passed}/${total} Tests Passed\n`;
+    setConsoleOutput(fullOutput);
+    setPassedTests(passed);
+    setExpandedTests(newExpanded);
+
+    const currentLessonId = initialTemplate ? initialTemplate.split("/").pop() : "unknown_act";
+    saveLessonProgress(currentLessonId, passed);
+
+    if (passed === total && total > 0) {
+      handleSuccess(passed, total);
     }
   };
 
