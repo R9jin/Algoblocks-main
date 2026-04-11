@@ -461,7 +461,9 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
         workspace.current.setTheme(themeName === 'dark' ? DarkTheme : pastelTheme);
       }
     },
+
     // Inside BlocklyWorkspace.jsx - replace loadFromPython
+    // ... existing imports
     loadFromPython: async (pythonCode) => {
       if (!workspace.current) return;
 
@@ -471,12 +473,11 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code: pythonCode })
         });
-
         const data = await response.json();
 
         if (data.status === "error") {
-          // FIX: Throw the actual message from the backend, not a generic string
-          throw new Error(data.message || "Syntax Error in Python code");
+          // Use the actual error message from the backend
+          throw new Error(data.message || "Failed to parse Python code.");
         }
 
         Blockly.Events.disable();
@@ -489,8 +490,8 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
           Blockly.Events.enable();
         }
       } catch (error) {
-        console.error("Sync failed:", error.message);
-        throw error; // Pass to MainApp.jsx
+        console.error("AST Parsing failed:", error.message);
+        throw error; // Re-throw so MainApp.jsx can display it
       }
     }
   }));
