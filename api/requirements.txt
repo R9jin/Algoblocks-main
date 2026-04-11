@@ -5,3 +5,5 @@ pydantic
 pymongo[srv]
 python-dotenv
 requests
+uvicorn[standard]
+websockets

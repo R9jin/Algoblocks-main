@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # 2. THEN do your imports\
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 
 from io import StringIO
 from fastapi.middleware.cors import CORSMiddleware
@@ -192,6 +192,8 @@ def login_user(req: LoginRequest):
     
     raise HTTPException(status_code=401, detail="Invalid email or password")
 
+# api/index.py (Update the signup_user function)
+
 @app.post("/api/signup")
 @app.post("/signup")
 def signup_user(req: SignUpRequest):
@@ -200,13 +202,22 @@ def signup_user(req: SignUpRequest):
     existing_user = users_collection.find_one({"email": req.email})
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+    
     new_user = {
         "name": req.name,
         "email": req.email,
-        "password": req.password
+        "password": req.password,
+        "progress": {} # Initialize empty progress
     }
     users_collection.insert_one(new_user)
-    return {"status": "success", "message": "User created successfully"}
+    
+    # FIX: Return the email and name so the frontend can store them
+    return {
+        "status": "success", 
+        "message": "User created successfully",
+        "email": req.email,
+        "name": req.name
+    }
 
 @app.post("/api/update-progress")
 def update_progress(req: ProgressRequest):
