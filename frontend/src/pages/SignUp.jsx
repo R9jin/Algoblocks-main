@@ -8,13 +8,15 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  // ADD THIS LINE
+  const API_BASE = import.meta.env.VITE_API_URL || "";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      // Send a POST request to your FastAPI backend
-      const response = await fetch("api/signup", {
+      // FIX THE FETCH URL
+      const response = await fetch(`${API_BASE}/api/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

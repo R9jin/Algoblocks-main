@@ -1,15 +1,16 @@
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 
+// frontend/vite.config.js
 export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': {
-        target: 'http://localhost:8000', // Your local Python FastAPI server
+      "/api": {
+        target: "http://localhost:8000",
         changeOrigin: true,
-        ws: true, // IMPORTANT: Enables WebSocket proxying for real-time input
-      }
-    }
-  }
-})
+        ws: true,
+      },
+    },
+  },
+});

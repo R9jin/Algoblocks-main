@@ -4,16 +4,16 @@
     "blocks": [
       {
         "type": "procedures_defreturn",
-        "id": "logic_flow_check",
+        "id": "TN(3VM[_odyuD@7%mjk=",
         "x": 13,
-        "y": -87,
+        "y": -112,
         "deletable": false,
         "editable": false,
         "extraState": {
           "params": [
             {
               "name": "condition",
-              "id": "var_condition_id_001"
+              "id": "$L!%sGDV9_/`aC?YYQdf"
             }
           ]
         },
@@ -26,24 +26,15 @@
           }
         },
         "fields": {
-          "NAME": "check_logic"
+          "NAME": "condition_checker"
         },
         "inputs": {
           "STACK": {
             "block": {
               "type": "comment_block",
-              "id": "comment_logic_1",
+              "id": "[YkaIXxpB1k3:4!wP8lE",
               "fields": {
-                "TEXT": "condition: boolean input (true or false)"
-              },
-              "next": {
-                "block": {
-                  "type": "comment_block",
-                  "id": "comment_logic_2",
-                  "fields": {
-                    "TEXT": "Use an If-Else block: if condition is true return 'Yes', otherwise return 'No'"
-                  }
-                }
+                "TEXT": "return 'Yes' or 'No' based on the condition"
               }
             }
           }
@@ -54,7 +45,7 @@
   "variables": [
     {
       "name": "condition",
-      "id": "var_condition_id_001"
+      "id": "tyO.pA9F`9/^|V^HlXAR"
     }
   ],
   "backpack": []

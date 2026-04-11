@@ -8,33 +8,42 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  // Standard Email/Password Login
+  const API_BASE = import.meta.env.VITE_API_URL || "";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      const response = await fetch("/api/login", {
+      const response = await fetch(`${API_BASE}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("user", JSON.stringify({
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.detail || "Invalid email or password");
+        return;
+      }
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
           email: data.email,
           name: data.name,
-          progress: data.progress || {} 
-        }));
-        navigate("/dashboard"); 
-      } else {
-        alert("Invalid email or password. Please try again.");
-      }
+          progress: data.progress || {},
+        })
+      );
+
+      navigate("/dashboard");
     } catch (error) {
-      console.error("Error connecting to server:", error);
-      alert("Failed to connect to the server.");
+      console.error(error);
+      alert("Server not reachable. Check backend connection.");
     }
   };
 
+  
   return (
     <div className="auth-container">
       <div className="auth-card">

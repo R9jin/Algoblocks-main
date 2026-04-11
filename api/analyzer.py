@@ -28,20 +28,47 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.has_slicing = False            
         self.has_division = False           
 
+        # Massively expanded for manual coding/competitive programming scripts
         self.builtin_complexities = {
-            'sort': {'time': 'O(n log n)', 'space': 'O(n)'},   
-            'join': {'time': 'O(n)', 'space': 'O(n)'},         
-            'list': {'time': 'O(n)', 'space': 'O(n)'},         
-            'index': {'time': 'O(n)', 'space': 'O(1)'},        
-            'append': {'time': 'O(1)', 'space': 'O(1)'},       
-            'copy': {'time': 'O(n)', 'space': 'O(n)'},         
-            'str': {'time': 'O(n)', 'space': 'O(n)'},          
-            'max': {'time': 'O(n)', 'space': 'O(1)'},          
-            'min': {'time': 'O(n)', 'space': 'O(1)'},          
-            'sum': {'time': 'O(n)', 'space': 'O(1)'}           
+            'sort': {'time': 'O(n log n)', 'space': 'O(n)'},
+            'sorted': {'time': 'O(n log n)', 'space': 'O(n)'},
+            'join': {'time': 'O(n)', 'space': 'O(n)'},
+            'split': {'time': 'O(n)', 'space': 'O(n)'},
+            'list': {'time': 'O(n)', 'space': 'O(n)'},
+            'set': {'time': 'O(n)', 'space': 'O(n)'},
+            'dict': {'time': 'O(n)', 'space': 'O(n)'},
+            'tuple': {'time': 'O(n)', 'space': 'O(n)'},
+            'map': {'time': 'O(1)', 'space': 'O(1)'}, # Iterators generate in O(1)
+            'filter': {'time': 'O(1)', 'space': 'O(1)'},
+            'index': {'time': 'O(n)', 'space': 'O(1)'},
+            'append': {'time': 'O(1)', 'space': 'O(1)'},
+            'pop': {'time': 'O(1)', 'space': 'O(1)'},
+            'insert': {'time': 'O(n)', 'space': 'O(n)'},
+            'remove': {'time': 'O(n)', 'space': 'O(1)'},
+            'count': {'time': 'O(n)', 'space': 'O(1)'},
+            'copy': {'time': 'O(n)', 'space': 'O(n)'},
+            'str': {'time': 'O(n)', 'space': 'O(n)'},
+            'max': {'time': 'O(n)', 'space': 'O(1)'},
+            'min': {'time': 'O(n)', 'space': 'O(1)'},
+            'sum': {'time': 'O(n)', 'space': 'O(1)'},
+            # I/O operations inherently scale with the length (n) of the string read/written
+            'input': {'time': 'O(n)', 'space': 'O(n)'},
+            'print': {'time': 'O(n)', 'space': 'O(1)'},
+            'readline': {'time': 'O(n)', 'space': 'O(n)'},
+            'read': {'time': 'O(n)', 'space': 'O(n)'},
+            'len': {'time': 'O(1)', 'space': 'O(1)'},
+            'range': {'time': 'O(1)', 'space': 'O(1)'},
+            'int': {'time': 'O(1)', 'space': 'O(1)'},
+            'float': {'time': 'O(1)', 'space': 'O(1)'},
+            'abs': {'time': 'O(1)', 'space': 'O(1)'},
+            'enumerate': {'time': 'O(1)', 'space': 'O(1)'},
+            'zip': {'time': 'O(1)', 'space': 'O(1)'},
+            'reversed': {'time': 'O(1)', 'space': 'O(1)'},
+            'sqrt': {'time': 'O(1)', 'space': 'O(1)'}
         }
         self.aliases = {}
 
+    # ... [Keep bfs_first_pass, detect_indirect_recursion, _has_cycle, get_code_snippet, get_color, _build_time_str, _is_log_loop, _is_sqrt_loop exact same] ...
     def bfs_first_pass(self, tree):
         queue = deque([(tree, None)])
         self.call_graph = {'__main__': set()}
@@ -121,7 +148,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if "log" in complexity_str: return "#2980b9"  
         if "√n" in complexity_str: return "#16a085"  
         if "O(n)" in complexity_str or "T(n" in complexity_str: return "#e67e22"  
-        return "#27ae60"  
+        return "#27ae60"
 
     def _build_time_str(self, poly, log, sqrt=0):
         if poly == 0 and log == 0 and sqrt == 0: return "O(1)"  
@@ -331,13 +358,24 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
             elif isinstance(node, ast.Call):
                 func_name = "The invoked algorithm"
+                is_builtin = False
                 if getattr(node, 'func', None):
-                    if isinstance(node.func, ast.Name): func_name = f"The native function '{node.func.id}'"
-                    elif isinstance(node.func, ast.Attribute): func_name = f"The object method '{node.func.attr}'"
+                    if isinstance(node.func, ast.Name): 
+                        func_name = f"The native function '{node.func.id}'"
+                        is_builtin = node.func.id in self.builtin_complexities
+                    elif isinstance(node.func, ast.Attribute): 
+                        func_name = f"The object method '{node.func.attr}'"
+                        is_builtin = node.func.attr in self.builtin_complexities
 
                 if is_recurrence:
                     local_explanation = f"By triggering itself recursively, {func_name} sets up an expanding tree of execution bounds locally defined by {local_time_str}. Creating the next scope frame allocates new memory limits on the stack equal to {local_space_str}."
                     global_explanation = f"The deep recursive calls map the system to an asymptotic recurrence relation of {global_time_str}. Because each frame remains open until the base case is hit, the global stack memory balloons dramatically to a complexity limit of {global_space_str}."
+                elif is_builtin and "input" in func_name:
+                    local_explanation = f"Reading stream input linearly scans the data character-by-character, evaluating locally in {local_time_str} time. Storing the newly built string takes {local_space_str} memory space proportionally."
+                    global_explanation = f"Within its current scope layer, establishing I/O bridges limits the total runtime potential to {global_time_str}. Processing massive strings natively holds the global peak allocation envelope at {global_space_str}."
+                elif is_builtin and ("split" in func_name or "map" in func_name):
+                    local_explanation = f"Mapping or separating string elements forces the native engine to traverse the iterable entirely, scaling locally in {local_time_str} time and depositing the new structures in {local_space_str} space."
+                    global_explanation = f"Because this data partition sits inside {outer_str if has_outer else 'top-level execution'}, traversing to process this logic drives the global sequence time to {global_time_str} with {global_space_str} bounds."
                 elif local_time_str != "O(1)":
                     local_explanation = f"Activating {func_name} outsources logic to an intense subroutine that locally requires {local_time_str} time to resolve, reserving {local_space_str} structural space inside its local scope."
                     global_explanation = f"Because this high-cost call occurs inside a larger cascading boundary ({outer_str if has_outer else 'top-level execution'}), the multiplied global impact forces the overall program timeline to {global_time_str}. Its peak spatial demands scale to {global_space_str}."
@@ -389,6 +427,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             if s_weight > self.max_space_weight:
                 self.max_space_weight = s_weight
 
+    # ... [Keep visit_FunctionDef, visit_If, visit_For, visit_While, visit_Subscript, visit_BinOp exactly as they were] ...
     def generic_visit(self, node):
         for field, value in ast.iter_fields(node):
             if isinstance(value, list):

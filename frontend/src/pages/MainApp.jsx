@@ -89,14 +89,16 @@ export default function MainApp() {
   const handleDragStart = (e) => { e.preventDefault(); isDragging.current = true; document.body.style.cursor = "ns-resize"; document.body.style.userSelect = "none"; };
 
   // --- Fetch Combined Templates: System First, then User's Custom Templates ---
-  const fetchTemplates = async () => {
+const fetchTemplates = async () => {
     try {
       const baseTemplates = SIDEBAR_TEMPLATES.map(t => ({ ...t, title: t.name, description: t.desc, isSystem: true }));
       const storedUser = localStorage.getItem("user");
+      
       if (!storedUser) {
         setAllTemplates(baseTemplates);
         return;
       }
+      
       const user = JSON.parse(storedUser);
       const res = await fetch('/api/projects');
       const data = await res.json();
@@ -113,6 +115,7 @@ export default function MainApp() {
       }
     } catch (e) {
       console.error("Failed to load templates", e);
+      // Fallback: If DB fails, at least show the system templates
       setAllTemplates(SIDEBAR_TEMPLATES.map(t => ({ ...t, title: t.name, description: t.desc, isSystem: true })));
     }
   };
@@ -513,8 +516,12 @@ export default function MainApp() {
                         <button onClick={() => { setActiveTab("global"); setExpandedLines({}); }} className={`tab-btn ${activeTab === 'global' ? 'active' : ''}`}>Global Complexity</button>
                       </div>
                       <div className="total-badge-group">
-                        <span className="total-badge"><span className="total-label">Total Time:</span> {analysisResult.total}</span>
-                        <span className="total-badge space"><span className="total-label space">Total Space:</span> {analysisResult.space_total}</span>
+                        <span className="total-badge">
+                          <span className="total-label">Total Time:</span> {formatComplexity(analysisResult.total)}
+                        </span>
+                        <span className="total-badge space">
+                          <span className="total-label space">Total Space:</span> {formatComplexity(analysisResult.space_total)}
+                        </span>
                       </div>
                     </div>
                     <div className="complexity-table-wrapper">
