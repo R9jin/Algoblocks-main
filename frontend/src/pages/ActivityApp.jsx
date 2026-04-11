@@ -25,7 +25,11 @@ Output: "Hello World"
 **Constraints:**
 • You must familiarize yourself with the visual block interface.
 • Connect a simple sequence of Output blocks to print exactly "Hello" and "World".
-• Pay attention to capitalization and spacing.`
+• Pay attention to capitalization and spacing.`,
+    // ADD THIS TEST CASE ARRAY:
+    testCasesList: [
+      { call: "", expected: "Hello World" }
+    ]
   },
   {
     id: "l1-t2",
