@@ -35,7 +35,7 @@ class BlocklyASTConverter:
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
             if node.func.id in ["len"]: return "Number"
             if node.func.id in ["abs", "round", "int", "float"]: return "Number"
-            if node.func.id in ["str"]: return "String"
+            if node.func.id in ["str", "input"]: return "String"  # Added "input" here
             if node.func.id in ["list"]: return "Array"
         return "Any"
 
@@ -477,6 +477,14 @@ class BlocklyASTConverter:
             # =========================
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
                 name = node.func.id
+
+                # NEW: Support for the custom human-readable Input block
+                if name == "input" and len(node.args) <= 1:
+                    block = {"type": "python_input", "id": gen_uid()}
+                    if node.args:
+                        # Map the first argument of input() to the PROMPT input of the block
+                        self.add_input(block, "PROMPT", self.serialize_expr(node.args[0]))
+                    return block
 
                 if name == "len" and len(node.args) == 1:
                     block = {"type": "lists_length", "id": gen_uid()}
