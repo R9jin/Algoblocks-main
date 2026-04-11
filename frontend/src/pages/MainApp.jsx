@@ -440,16 +440,16 @@ export default function MainApp() {
         </div>
       )}
 
-      <WorkspaceHeader 
-        viewMode={viewMode} 
-        setViewMode={setViewMode} 
+      <WorkspaceHeader
+        viewMode={viewMode}
+        setViewMode={setViewMode}
         runCode={handleRunAction}
-        handleExport={openSaveModal} 
-        handleSaveToDB={openSaveModal} 
-        currentProjectId={currentLoadedId} 
-        currentProjectTitle={currentProjectTitle} 
+        handleExport={openSaveModal}
+        handleSaveToDB={openSaveModal}
+        currentProjectId={currentLoadedId}
+        currentProjectTitle={currentProjectTitle}
         handleUpdateDB={submitSave}
-        />
+      />
 
       <Split className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} sizes={[20, 80]} minSize={[250, 400]} gutterSize={8}>
 
@@ -460,13 +460,25 @@ export default function MainApp() {
           </div>
           <div className="sidebar-list">
             {filteredTemplates.map((item) => (
-              <div key={item._id || item.title} className="sidebar-card" onClick={() => loadConfirm(item)}>
+              <div key={item._id || item.title} className={`sidebar-card ${item.isSystem ? 'system-card' : 'custom-card'}`} onClick={() => loadConfirm(item)}>
                 <div className="sidebar-card-header">
-                  <h4>{item.title}</h4>
-                  {item.isSystem ? (<span className="badge-system">System</span>) : (
-                    <div className="badge-custom-group">
-                      <span className="badge-custom">Custom</span>
-                      <button onClick={(e) => handleDeleteItem(e, item._id)} className="sidebar-delete-btn" title="Delete">✕</button>
+                  <div className="title-wrapper">
+                    <img
+                      src={item.isSystem ? "/assets/algoblocks_logo.png" : "/assets/user-icon.png"}
+                      alt="icon"
+                      className="card-type-icon"
+                    />
+                    <h4>{item.title}</h4>
+                  </div>
+
+                  {item.isSystem ? (
+                    <span className="badge-system-polished">
+                      <span className="dot"></span> Pre-Made
+                    </span>
+                  ) : (
+                    <div className="badge-custom-group-polished">
+                      <span className="badge-custom-polished">Project</span>
+                      <button onClick={(e) => handleDeleteItem(e, item._id)} className="sidebar-delete-btn-polished" title="Delete">✕</button>
                     </div>
                   )}
                 </div>

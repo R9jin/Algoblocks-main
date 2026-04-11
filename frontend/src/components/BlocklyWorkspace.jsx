@@ -851,8 +851,8 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
           position: 'absolute',
           top: '20px',
           right: '20px',
-          backgroundColor: '#1C1236',
-          borderLeft: '4px solid #E74C3C',
+          backgroundColor: '#3A2A6B',
+          borderLeft: '4px solid #bc11ff',
           color: '#EBE4FF',
           padding: '12px 16px',
           borderRadius: '0 8px 8px 0',
@@ -865,7 +865,7 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
         }}>
           <div style={{ fontSize: '1.5rem' }}>❌</div>
           <div>
-            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#E74C3C' }}>Syntax Error (Line {syntaxError.line})</div>
+            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#bc11ff' }}>Syntax Error (Line {syntaxError.line})</div>
             <div style={{ fontSize: '0.8rem', marginTop: '4px', opacity: 0.9 }}>{syntaxError.message}</div>
           </div>
         </div>

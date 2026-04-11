@@ -1057,3 +1057,87 @@
   background: #333;
   border-radius: 4px;
 }
+
+/* Sidebar Card Polishing */
+.sidebar-card {
+  transition: transform 0.2s, border-color 0.2s;
+  border-left: 4px solid transparent;
+}
+
+.system-card {
+  border-left-color: #6c5ce7; /* Indigo for Official */
+  background: rgba(108, 92, 231, 0.03);
+}
+
+.custom-card {
+  border-left-color: #00b8a3; /* Teal for Personal */
+  background: rgba(0, 184, 163, 0.03);
+}
+
+.title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-type-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+/* Polished System Badge */
+.badge-system-polished {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(108, 92, 231, 0.15);
+  color: #a29bfe;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(108, 92, 231, 0.3);
+}
+
+.badge-system-polished .dot {
+  width: 6px;
+  height: 6px;
+  background: #6c5ce7;
+  border-radius: 50%;
+  box-shadow: 0 0 5px #6c5ce7;
+}
+
+/* Polished Custom Badge */
+.badge-custom-polished {
+  background: rgba(0, 184, 163, 0.15);
+  color: #00b8a3;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 184, 163, 0.3);
+}
+
+.badge-custom-group-polished {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-delete-btn-polished {
+  background: none;
+  border: none;
+  color: #ff375f;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0 4px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.sidebar-delete-btn-polished:hover {
+  opacity: 1;
+}
