@@ -258,21 +258,25 @@ class BlocklyASTConverter:
 
     def serialize_node(self, node):
         try:
-            if isinstance(node, ast.Assign):
-                target = node.targets[0]
-                if isinstance(target, ast.Name):
-                    self.variables.add(target.id) 
-                    block = {"type": "variables_set", "id": gen_uid(), "fields": {"VAR": {"id": target.id, "name": target.id}}}
-                    self.add_input(block, "VALUE", self.serialize_expr(node.value))
-                    return block
-                    
-                elif isinstance(target, ast.Subscript):
-                    slice_val = target.slice.value if type(target.slice).__name__ == 'Index' else target.slice
-                    block = {"type": "dict_set", "id": gen_uid()}
-                    self.add_input(block, "DICT", self.serialize_expr(target.value))
-                    self.add_input(block, "KEY", self.serialize_expr(slice_val))
-                    self.add_input(block, "VALUE", self.serialize_expr(node.value))
-                    return block
+            if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name):
+                self.variables.add(node.targets[0].id) 
+                block = {"type": "variables_set", "id": gen_uid(), "fields": {"VAR": {"id": node.targets[0].id, "name": node.targets[0].id}}}
+                self.add_input(block, "VALUE", self.serialize_expr(node.value))
+                return block
+
+            if isinstance(node, ast.FunctionDef):
+                has_ret = any(isinstance(n, ast.Return) for n in ast.walk(node))
+                block = {"type": "procedures_defreturn" if has_ret else "procedures_defnoreturn", "id": gen_uid(), "fields": {"NAME": node.name}}
+                params = [{"name": a.arg, "id": a.arg} for a in node.args.args]
+                for p in params: self.variables.add(p['id'])
+                if params: block["extraState"] = {"params": params}
+                self.add_input(block, "STACK", self.serialize_body(node.body))
+                return block
+
+            if isinstance(node, ast.Return):
+                block = {"type": "procedure_return_value", "id": gen_uid()}
+                if node.value: self.add_input(block, "VALUE", self.serialize_expr(node.value))
+                return block
 
             elif isinstance(node, ast.AugAssign):
                 op_map = {ast.Add: "ADD", ast.Sub: "MINUS", ast.Mult: "MULTIPLY", ast.Div: "DIVIDE"}
@@ -314,12 +318,6 @@ class BlocklyASTConverter:
                     self.add_input(block, "DO", self.serialize_body(node.body))
                     return block
                 return self.make_raw_statement(node)
-
-            elif isinstance(node, ast.Return):
-                block = {"type": "procedure_return_value", "id": gen_uid()}
-                if node.value:
-                    self.add_input(block, "VALUE", self.serialize_expr(node.value))
-                return block
 
             elif isinstance(node, ast.FunctionDef):
                 # Detect if the function has a return statement to use the correct Blockly block type

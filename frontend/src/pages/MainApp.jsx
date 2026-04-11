@@ -197,13 +197,13 @@ export default function MainApp() {
   const handleSyncToBlocks = async () => {
     if (workspaceRef.current && generatedPython) {
       try {
-        // Will throw an error if the backend ast parsing fails
         await workspaceRef.current.loadFromPython(generatedPython);
         setIsEditingCode(false);
         setViewMode("workspace");
         showToast("Code successfully synced to Blocks");
       } catch (e) {
-        showToast("Syntax Error: Cannot sync to blocks until fixed.", "error");
+        // FIX: Use the actual error message from the exception
+        showToast(`Cannot Sync: ${e.message}`, "error");
       }
     }
   };

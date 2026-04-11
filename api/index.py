@@ -3,21 +3,15 @@ import threading
 import queue
 import sys
 import os
-
-# 1. Update the path FIRST so Vercel can find your local files
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-# 2. THEN do your imports\
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
-
 from io import StringIO
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import ast
 import requests 
 
-# 3. Now local imports will work
+# Local imports
 from blockly_ast import BlocklyASTConverter
 from database import projects_collection, users_collection, templates_collection
 from models import ProjectModel, ProjectUpdate, TemplateModel, TemplateUpdate
@@ -25,8 +19,6 @@ from bson import ObjectId
 from analyzer import ComplexityAnalyzer
 
 app = FastAPI()
-
-# ... rest of your code ...
 
 app.add_middleware(
     CORSMiddleware,
@@ -59,22 +51,28 @@ class GoogleAuthRequest(BaseModel):
 class AstRequest(BaseModel):
     code: str
 
+# Helper to ensure consistent code cleaning across all endpoints
+def clean_python_code(code: str) -> str:
+    return code.replace('\xa0', ' ').replace('\u200b', '').replace('\t', '    ')
+
 @app.post("/api/ast-to-blocks")
 async def ast_to_blocks(request: AstRequest):
     try:
+        cleaned = clean_python_code(request.code)
         converter = BlocklyASTConverter()
-        return converter.convert(request.code)
+        return converter.convert(cleaned)
     except SyntaxError as e:
         return {"status": "error", "error_type": "SyntaxError", "line": e.lineno, "message": e.msg}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 @app.post("/api/analyze")
-@app.post("/analyze")
 def analyze_complexity(payload: CodePayload):
     try:
-        tree = ast.parse(payload.code)
-        analyzer = ComplexityAnalyzer(payload.code)
+        # Use the same cleaning logic here
+        cleaned_code = clean_python_code(payload.code)
+        tree = ast.parse(cleaned_code)
+        analyzer = ComplexityAnalyzer(cleaned_code)
 
         analyzer.bfs_first_pass(tree)
         for name, node in analyzer.symbol_table.items():
@@ -82,26 +80,26 @@ def analyze_complexity(payload: CodePayload):
 
         analyzer.details = []
         analyzer.max_complexity, analyzer.max_space_weight = 0, 0
-        analyzer.max_poly, analyzer.max_log, analyzer.max_sqrt = 0, 0, 0
-        analyzer.current_depth, analyzer.loop_depth, analyzer.log_loop_depth, analyzer.sqrt_loop_depth = 0, 0, 0, 0
         analyzer.visit(tree)
 
         is_recursive = any("T(n) =" in line.get('global_time', '') for line in analyzer.details)
-
         asymptotic_lines = []
         
         def to_asymp(comp):
-            asymp = comp
             if not comp: return "-"
-            if "T(n) = n * T(n-1)" in comp: asymp = "O(n!)"
-            elif "2T(n/2)" in comp: asymp = "O(n log n)"
-            elif "T(n-1) + T(n-2)" in comp: asymp = "O(2^n)"
-            elif "T(n/2) + O(1)" in comp: asymp = "O(log n)"
-            elif "T(n-1) + O(n)" in comp: asymp = "O(n^2)"
-            elif "T(n) = T(n/2) + O(n)" in comp: asymp = "O(n)"
-            elif "T(n) = 2T(n/2) + O(1)" in comp: asymp = "O(n)"
-            elif "T(n-1)" in comp: asymp = "O(n)"
-            return asymp
+            mapping = {
+                "T(n) = n * T(n-1)": "O(n!)",
+                "2T(n/2)": "O(n log n)",
+                "T(n-1) + T(n-2)": "O(2^n)",
+                "T(n/2) + O(1)": "O(log n)",
+                "T(n-1) + O(n)": "O(n^2)",
+                "T(n) = T(n/2) + O(n)": "O(n)",
+                "T(n) = 2T(n/2) + O(1)": "O(n)",
+                "T(n-1)": "O(n)"
+            }
+            for key, val in mapping.items():
+                if key in comp: return val
+            return comp
 
         for line in analyzer.details:
             asymptotic_lines.append({
@@ -113,7 +111,6 @@ def analyze_complexity(payload: CodePayload):
                 "global_space": to_asymp(line.get("global_space", "-")),
                 "indent": line.get("indent", 0),
                 "color": line.get("color", analyzer.get_color(to_asymp(line.get("global_time", "-")))),
-                "weight": line.get("weight", 0),
                 "local_explanation": line.get("local_explanation", ""),
                 "global_explanation": line.get("global_explanation", "")
             })
@@ -121,24 +118,17 @@ def analyze_complexity(payload: CodePayload):
         return {
             "status": "success",
             "total": analyzer.get_final_asymptotic_badge(),
-            "total_recurrence": analyzer.get_final_badge(),
             "lines": asymptotic_lines,
             "space_total": "O(n)" if analyzer.max_space_weight > 0 else "O(1)",
             "is_recursive": is_recursive
         }
     except SyntaxError as e:
         return {
-            "status": "error",
-            "error_type": "SyntaxError",
-            "line": e.lineno,
-            "message": e.msg,
-            "total": "Syntax Error",
-            "space_total": "-",
-            "lines": [],
-            "is_recursive": False
+            "status": "error", "error_type": "SyntaxError", "line": e.lineno, "message": e.msg,
+            "total": "Syntax Error", "space_total": "-", "lines": [], "is_recursive": False
         }
     except Exception as e:
-        return {"status": "error", "total": "Error", "total_recurrence": "Error", "lines": [], "is_recursive": False}
+        return {"status": "error", "total": "Error", "lines": [], "is_recursive": False}
 
 @app.post("/api/run")
 @app.post("/run")
