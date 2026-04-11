@@ -298,7 +298,8 @@ const renderFormattedTask = (text) => {
 };
 
 const ActivityApp = () => {
-  const API_URL = import.meta.env.VITE_BACKEND_URL || ""; // <-- ADDED
+  const VERCEL_URL = import.meta.env.VITE_BACKEND_URL || "";
+  const RENDER_URL = import.meta.env.VITE_RENDER_URL || "";
   // =========================================================
   // 1. ROUTING + REFS
   // =========================================================
@@ -636,7 +637,7 @@ const ActivityApp = () => {
     // =========================
     // SOCKET SETUP
     // =========================
-    const wsUrl = import.meta.env.VITE_BACKEND_WS_URL || `ws://${window.location.host}/api/ws/run`;
+    const wsUrl = import.meta.env.VITE_BACKEND_WS_URL || `wss://algoblocks-main.onrender.com/api/ws/run`;
     const socket = new WebSocket(wsUrl);
 
     socketRef.current = socket;

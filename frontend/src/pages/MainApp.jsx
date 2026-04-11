@@ -26,7 +26,8 @@ const SIDEBAR_TEMPLATES = [
 ];
 
 export default function MainApp() {
-  const API_URL = import.meta.env.VITE_BACKEND_URL || ""; // <-- ADDED
+  const VERCEL_URL = import.meta.env.VITE_BACKEND_URL || ""; 
+  const RENDER_URL = import.meta.env.VITE_RENDER_URL || ""; // New variable for Render
   const location = useLocation();
   const workspaceRef = useRef(null);
 
@@ -288,7 +289,7 @@ export default function MainApp() {
     // SOCKET SETUP
     // =========================
     // BEFORE
-    const wsUrl = import.meta.env.VITE_BACKEND_WS_URL || "ws://localhost:8000/api/ws/run";
+    const wsUrl = import.meta.env.VITE_BACKEND_WS_URL || `wss://algoblocks-main.onrender.com/api/ws/run`;
     const socket = new WebSocket(wsUrl); // <-- ADD THIS LINE
     socketRef.current = socket;
 
