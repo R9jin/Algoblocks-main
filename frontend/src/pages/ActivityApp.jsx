@@ -298,6 +298,7 @@ const renderFormattedTask = (text) => {
 };
 
 const ActivityApp = () => {
+  const API_URL = import.meta.env.VITE_BACKEND_URL || ""; // <-- ADDED
   // =========================================================
   // 1. ROUTING + REFS
   // =========================================================
@@ -443,7 +444,7 @@ const ActivityApp = () => {
 
     const timeoutId = setTimeout(async () => {
       try {
-        const response = await fetch("/api/analyze", {
+        const response = await fetch(`${API_URL}/api/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: generatedPython }),
@@ -509,7 +510,7 @@ const ActivityApp = () => {
     const user = JSON.parse(storedUser);
 
     try {
-      const response = await fetch("/api/update-progress", {
+      const response = await fetch(`${API_URL}/api/update-progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -581,7 +582,7 @@ const ActivityApp = () => {
     }
 
     try {
-      const response = await fetch("/api/analyze", {
+      const response = await fetch(`${API_URL}/api/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: pythonCode }),
@@ -635,11 +636,7 @@ const ActivityApp = () => {
     // =========================
     // SOCKET SETUP
     // =========================
-    const wsUrl = import.meta.env.VITE_BACKEND_WS_URL ||
-      (window.location.protocol === "https:" ? "wss" : "ws") +
-      `://${window.location.host}/api/ws/run`;
-
-    const socket = new WebSocket(wsUrl);
+    const wsUrl = import.meta.env.VITE_BACKEND_WS_URL || "ws://localhost:8000/api/ws/run";
 
     socketRef.current = socket;
 
@@ -748,7 +745,7 @@ const ActivityApp = () => {
       }
 
       try {
-        const response = await fetch("/api/run", {
+        const response = await fetch(`${API_URL}/api/run`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: codeToRun }),

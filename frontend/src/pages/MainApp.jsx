@@ -9,8 +9,6 @@ import WorkspaceHeader from "../components/WorkspaceHeader.jsx";
 import "../styles/MainApp.css";
 import { formatComplexity } from "../utils/formatters";
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || ""; // <-- ADDED
-
 // --- Base System Templates (Hardcoded paths for local JSON files) ---
 const SIDEBAR_TEMPLATES = [
   { name: "Linear Search", path: "search/linear_search", desc: "Sequentially checks each element until the target is found or the list is exhausted." },
@@ -28,6 +26,7 @@ const SIDEBAR_TEMPLATES = [
 ];
 
 export default function MainApp() {
+  const API_URL = import.meta.env.VITE_BACKEND_URL || ""; // <-- ADDED
   const location = useLocation();
   const workspaceRef = useRef(null);
 
@@ -288,9 +287,7 @@ export default function MainApp() {
     // =========================
     // SOCKET SETUP
     // =========================
-    const wsUrl = import.meta.env.VITE_BACKEND_WS_URL || 
-             (window.location.protocol === "https:" ? "wss" : "ws") + 
-             `://${window.location.host}/api/ws/run`;
+    const wsUrl = import.meta.env.VITE_BACKEND_WS_URL || "ws://localhost:8000/api/ws/run";
 
     const socket = new WebSocket(wsUrl);
 

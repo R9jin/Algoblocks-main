@@ -468,7 +468,7 @@ const BlocklyWorkspace = forwardRef(({ onChange, syntaxError }, ref) => {
       if (!workspace.current) return;
 
       try {
-        const response = await fetch('/api/ast-to-blocks', {
+        const response = await fetch(`${API_URL}/api/ast-to-blocks`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code: pythonCode })
