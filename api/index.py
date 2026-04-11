@@ -312,7 +312,6 @@ def get_templates():
     for t in templates:
         t["_id"] = str(t["_id"])
     return {"status": "success", "templates": templates}
-
 # =========================
 # WEBSOCKET RUNNER
 # =========================
@@ -320,6 +319,9 @@ def get_templates():
 async def websocket_run(websocket: WebSocket):
     await websocket.accept()
     input_queue = queue.Queue()
+    
+    # 1. CAPTURE THE MAIN EVENT LOOP HERE
+    main_loop = asyncio.get_running_loop()
 
     try:
         while True:
@@ -334,7 +336,7 @@ async def websocket_run(websocket: WebSocket):
                 def custom_input(prompt=""):
                     asyncio.run_coroutine_threadsafe(
                         send({"type": "input_request", "prompt": str(prompt)}),
-                        asyncio.get_event_loop()
+                        main_loop  # 2. USE THE CAPTURED LOOP HERE
                     )
                     return input_queue.get()
 
@@ -343,7 +345,7 @@ async def websocket_run(websocket: WebSocket):
                         if text:
                             asyncio.run_coroutine_threadsafe(
                                 send({"type": "output", "data": text}),
-                                asyncio.get_event_loop()
+                                main_loop  # 3. USE THE CAPTURED LOOP HERE
                             )
                     def flush(self): pass
 
@@ -352,11 +354,14 @@ async def websocket_run(websocket: WebSocket):
                     sys.stdout = WSWriter()
                     try:
                         safe_exec(code, {"input": custom_input})
-                        asyncio.run_coroutine_threadsafe(send({"type": "done"}), asyncio.get_event_loop())
+                        asyncio.run_coroutine_threadsafe(
+                            send({"type": "done"}), 
+                            main_loop  # 4. USE THE CAPTURED LOOP HERE
+                        )
                     except Exception as e:
                         asyncio.run_coroutine_threadsafe(
                             send({"type": "error", "data": str(e)}),
-                            asyncio.get_event_loop()
+                            main_loop  # 5. USE THE CAPTURED LOOP HERE
                         )
                     finally:
                         sys.stdout = old_stdout

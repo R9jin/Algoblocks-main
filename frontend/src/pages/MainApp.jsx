@@ -276,43 +276,70 @@ export default function MainApp() {
   const socketRef = useRef(null);
 
   const runCode = () => {
+    // =========================
+    // UI RESET (RUN START)
+    // =========================
     setConsoleOutput("> Initializing session...\n");
     setBottomPanel("console");
+    setIsWaitingForInput(false); // reset input state immediately
 
-    // Use window.location.host to automatically handle localhost:5173
+    // =========================
+    // SOCKET SETUP
+    // =========================
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     const socket = new WebSocket(`${protocol}://${window.location.host}/api/ws/run`);
 
     socketRef.current = socket;
 
-    setIsWaitingForInput(false);
-
+    // =========================
+    // CONNECTION OPEN
+    // =========================
     socket.onopen = () => {
       console.log("✅ Connected");
-      socket.send(JSON.stringify({ type: "run", code: generatedPython }));
-      setConsoleOutput("");
+
+      // FIX: DO NOT clear console here anymore (prevents race condition)
+      socket.send(
+        JSON.stringify({
+          type: "run",
+          code: generatedPython
+        })
+      );
     };
 
+    // =========================
+    // MESSAGE HANDLER
+    // =========================
     socket.onmessage = (event) => {
       const msg = JSON.parse(event.data);
 
       if (msg.type === "output") {
         setConsoleOutput((prev) => prev + msg.data);
-      } else if (msg.type === "input_request") {
+      }
+
+      else if (msg.type === "input_request") {
         setConsoleOutput((prev) => prev + msg.prompt);
         setIsWaitingForInput(true);
-      } else if (msg.type === "error") {
+      }
+
+      else if (msg.type === "error") {
         setConsoleOutput((prev) => prev + "\nRuntime Error: " + msg.data);
-      } else if (msg.type === "done") {
+        setIsWaitingForInput(false);
+      }
+
+      else if (msg.type === "done") {
         setConsoleOutput((prev) => prev + "\n> Program finished.");
         setIsWaitingForInput(false);
         socket.close();
       }
     };
 
+    // =========================
+    // ERROR HANDLING
+    // =========================
     socket.onerror = (e) => {
       console.error("❌ WebSocket error:", e);
       setConsoleOutput("❌ Failed to connect to backend.");
+      setIsWaitingForInput(false);
     };
 
     socket.onclose = () => {

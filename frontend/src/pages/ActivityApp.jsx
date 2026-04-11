@@ -625,47 +625,74 @@ const ActivityApp = () => {
   };
 
   const runCode = () => {
+    // =========================
+    // UI RESET (RUN START)
+    // =========================
     setConsoleOutput("> Initializing session...\n");
     setBottomPanel("console");
-    setIsWaitingForInput(false);
+    setIsWaitingForInput(false); // reset input state immediately
 
-    const protocol =
-      window.location.protocol === "https:" ? "wss" : "ws";
-
-    const socket = new WebSocket(
-      `${protocol}://${window.location.host}/api/ws/run`
-    );
+    // =========================
+    // SOCKET SETUP
+    // =========================
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${protocol}://${window.location.host}/api/ws/run`);
 
     socketRef.current = socket;
 
+    // =========================
+    // CONNECTION OPEN
+    // =========================
     socket.onopen = () => {
+      console.log("✅ Connected");
+
+      // FIX: DO NOT clear console here anymore (prevents race condition)
       socket.send(
-        JSON.stringify({ type: "run", code: generatedPython })
+        JSON.stringify({
+          type: "run",
+          code: generatedPython
+        })
       );
-      setConsoleOutput("");
     };
 
+    // =========================
+    // MESSAGE HANDLER
+    // =========================
     socket.onmessage = (event) => {
       const msg = JSON.parse(event.data);
 
       if (msg.type === "output") {
-        setConsoleOutput((p) => p + msg.data);
+        setConsoleOutput((prev) => prev + msg.data);
       }
 
-      if (msg.type === "input_request") {
-        setConsoleOutput((p) => p + msg.prompt);
+      else if (msg.type === "input_request") {
+        setConsoleOutput((prev) => prev + msg.prompt);
         setIsWaitingForInput(true);
       }
 
-      if (msg.type === "error") {
-        setConsoleOutput((p) => p + "\nRuntime Error: " + msg.data);
+      else if (msg.type === "error") {
+        setConsoleOutput((prev) => prev + "\nRuntime Error: " + msg.data);
+        setIsWaitingForInput(false);
       }
 
-      if (msg.type === "done") {
-        setConsoleOutput((p) => p + "\n> Program finished.");
+      else if (msg.type === "done") {
+        setConsoleOutput((prev) => prev + "\n> Program finished.");
         setIsWaitingForInput(false);
         socket.close();
       }
+    };
+
+    // =========================
+    // ERROR HANDLING
+    // =========================
+    socket.onerror = (e) => {
+      console.error("❌ WebSocket error:", e);
+      setConsoleOutput("❌ Failed to connect to backend.");
+      setIsWaitingForInput(false);
+    };
+
+    socket.onclose = () => {
+      console.log("⚠️ Socket closed");
     };
   };
 
@@ -689,6 +716,7 @@ const ActivityApp = () => {
 
     let passed = 0;
     const total = testCases.length;
+
     let fullOutput = "> --- Running Test Cases ---\n";
     let newExpanded = { ...expandedTests };
 
@@ -705,6 +733,9 @@ const ActivityApp = () => {
       const isIntroLevel =
         taskId === "l1-t1" || taskId === "l1-t3";
 
+      // =========================
+      // CODE GENERATION LOGIC
+      // =========================
       if (isFunctionCall && !isIntroLevel) {
         codeToRun =
           generatedPython +
@@ -721,39 +752,73 @@ const ActivityApp = () => {
         });
 
         const data = await response.json();
-        const actualOutput = (data.output || "")
+
+        const rawOutput = (data.output || "")
           .replace("> Code ran successfully.", "")
           .trim();
 
+        const actualOutput = rawOutput;
+
+        // =========================
+        // EXPECTED VALUE HANDLING
+        // =========================
+        const expected = String(tc.expected)
+          .replace(/^['"]|['"]$/g, "")
+          .replace(/\\n/g, "\n")
+          .trim();
+
+        let testPassed = false;
+
+        // =========================
+        // EVALUATION LOGIC
+        // =========================
         if (isFunctionCall && !isIntroLevel) {
           if (actualOutput.includes("TEST_PASSED_FLAG")) {
             passed++;
+            testPassed = true;
           }
         } else {
-          const expected = String(tc.expected)
-            .replace(/^['"]|['"]$/g, "")
-            .replace(/\\n/g, "\n")
-            .trim();
-
           if (actualOutput.trim() === expected) {
             passed++;
+            testPassed = true;
           }
         }
 
-        fullOutput += `Test ${i + 1}\n`;
+        // =========================
+        // OUTPUT LOGGING (NEW FIX)
+        // =========================
+        fullOutput += `Test ${i + 1}: ${testPassed ? "PASSED" : "FAILED"}\n`;
+
+        if (!testPassed) {
+          fullOutput += `   Expected: ${expected}\n`;
+          fullOutput += `   Actual: ${actualOutput}\n`;
+        }
+
+        fullOutput += `\n`;
+
         setConsoleOutput(fullOutput);
         setPassedTests(passed);
 
+        // =========================
+        // PROGRESS SAVE
+        // =========================
         const lessonId =
           initialTemplate?.split("/").pop() || "unknown";
 
         saveLessonProgress(lessonId, passed);
 
+        // =========================
+        // SUCCESS CHECK
+        // =========================
         if (passed === total && total > 0) {
           handleSuccess(passed, total);
         }
+
       } catch (err) {
-        fullOutput += `Test ${i + 1} Error\n`;
+        fullOutput += `Test ${i + 1}: ERROR\n`;
+        fullOutput += `   Message: ${err.message}\n\n`;
+
+        setConsoleOutput(fullOutput);
       }
     }
   };
