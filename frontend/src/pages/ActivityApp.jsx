@@ -626,6 +626,17 @@ const ActivityApp = () => {
     }
   };
 
+  const handleActivityRun = () => {
+    const hasInput = generatedPython.includes("input(") || generatedPython.includes("input()");
+    if (hasInput) {
+      runCode(); // Hits Render WebSocket
+    } else {
+      // Existing runCode logic can be modified to accept a 'standard' mode 
+      // or just use a fetch to VERCEL_URL/api/run
+      executeStandardRunOnVercel();
+    }
+  };
+
   const runCode = () => {
     // =========================
     // UI RESET (RUN START)

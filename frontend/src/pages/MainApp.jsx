@@ -280,24 +280,37 @@ export default function MainApp() {
   const [userInput, setUserInput] = useState("");
   const socketRef = useRef(null);
 
+  // 1. Update this function to hit Vercel for non-interactive runs
   const runStandardCode = async () => {
-    setConsoleOutput("> Running code...\n");
+    setConsoleOutput("> Running on Vercel (Non-interactive mode)...\n");
     setBottomPanel("console");
 
     try {
-      // Hits RENDER_URL as requested for execution tasks
-      const response = await fetch(`${RENDER_URL}/api/run`, {
+      const response = await fetch(`${VERCEL_URL}/api/run`, { // Changed to VERCEL_URL
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: generatedPython }),
       });
 
       const data = await response.json();
-      setConsoleOutput(data.output || "> No output.");
+      setConsoleOutput(data.output || "> Program finished with no output.");
     } catch (error) {
-      setConsoleOutput("❌ Connection to Render runner failed.");
+      setConsoleOutput("❌ Vercel execution failed. Fallback to local if running locally.");
     }
   };
+
+  // 2. Add the Smart Routing logic
+  const handleRunAction = () => {
+    // Check if the code needs interactive inputs
+    const hasInput = generatedPython.includes("input(") || generatedPython.includes("input()");
+
+    if (hasInput) {
+      runCode(); // Call your existing WebSocket logic (Render)
+    } else {
+      runStandardCode(); // Call the POST logic (Vercel)
+    }
+  };
+
   const runCode = () => {
     // =========================
     // UI RESET (RUN START)
@@ -427,7 +440,16 @@ export default function MainApp() {
         </div>
       )}
 
-      <WorkspaceHeader viewMode={viewMode} setViewMode={setViewMode} runCode={runCode} handleExport={openSaveModal} handleSaveToDB={openSaveModal} currentProjectId={currentLoadedId} currentProjectTitle={currentProjectTitle} handleUpdateDB={submitSave} />
+      <WorkspaceHeader 
+        viewMode={viewMode} 
+        setViewMode={setViewMode} 
+        runCode={handleRunAction}
+        handleExport={openSaveModal} 
+        handleSaveToDB={openSaveModal} 
+        currentProjectId={currentLoadedId} 
+        currentProjectTitle={currentProjectTitle} 
+        handleUpdateDB={submitSave}
+        />
 
       <Split className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} sizes={[20, 80]} minSize={[250, 400]} gutterSize={8}>
 
