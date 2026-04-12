@@ -67,7 +67,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         }
         self.aliases = {}
 
-    # ... [Keep bfs_first_pass, detect_indirect_recursion, _has_cycle, get_code_snippet, get_color, _build_time_str, _is_log_loop, _is_sqrt_loop exact same] ...
     def bfs_first_pass(self, tree):
         queue = deque([(tree, None)])
         self.call_graph = {'__main__': set()}
@@ -160,6 +159,29 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         elif log > 1: parts.append(f"log^{log} n")  
         if not parts: return "O(1)"
         return f"O({' '.join(parts)})"  
+    
+    def _is_constant_loop(self, node):
+        if isinstance(node, ast.While):
+            if isinstance(node.test, ast.Compare):
+                left_is_const = isinstance(node.test.left, ast.Constant)
+                comps_are_const = all(isinstance(c, ast.Constant) for c in node.test.comparators)
+                
+                left_is_name = isinstance(node.test.left, ast.Name)
+                comps_are_name = all(isinstance(c, ast.Name) for c in node.test.comparators)
+                
+                # Check for bound like `while i <= 3:` or `while 3 >= i:`
+                if (left_is_name and comps_are_const) or (left_is_const and comps_are_name) or (left_is_const and comps_are_const):
+                    return True
+        elif isinstance(node, ast.For):
+            if isinstance(node.iter, ast.Call) and getattr(node.iter.func, 'id', '') == 'range':
+                if node.iter.args and all(isinstance(arg, ast.Constant) for arg in node.iter.args):
+                    return True
+            elif isinstance(node.iter, ast.Constant):
+                return True
+            elif isinstance(node.iter, (ast.List, ast.Tuple, ast.Set)):
+                if all(isinstance(el, ast.Constant) for el in node.iter.elts):
+                    return True
+        return False
 
     def _is_log_loop(self, node):
         if not isinstance(node, ast.While): return False
@@ -315,18 +337,24 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 if isinstance(node.iter, ast.Name): iter_name = f"the data structure '{node.iter.id}'"
                 elif isinstance(node.iter, ast.Call) and getattr(node.iter.func, 'id', '') == 'range': iter_name = "a dynamically generated numerical sequence"
                 
-                local_explanation = f"Locally, setting up the loop header and tracking the iterator over {iter_name} operates in an isolated complexity of {local_time_str}. Managing the loop pointer and current index requires exactly {local_space_str} auxiliary space during iteration."
+                if self._is_constant_loop(node):
+                    local_explanation = f"This loop iterates over a predetermined constant range or collection. Running a fixed number of times yields an isolated local complexity of {local_time_str}. Auxiliary space is {local_space_str}."
+                else:
+                    local_explanation = f"Locally, setting up the loop header and tracking the iterator over {iter_name} operates in an isolated complexity of {local_time_str}. Managing the loop pointer and current index requires exactly {local_space_str} auxiliary space during iteration."
+                    
                 if has_outer:
                     global_explanation = f"Because this loop iterates within an outer enclosing environment ({outer_str}), its local {local_time_str} duration compounds across every parent cycle. This structural nesting exponentially scales the system's execution to a global time complexity of {global_time_str}. Peak concurrent memory scales dynamically to {global_space_str}."
                 else:
                     global_explanation = f"As the highest level execution block, this loop establishes the baseline algorithm rhythm. Its local duration dictates the overall global time limit of {global_time_str}. The overarching system memory requirements peak at {global_space_str}."
 
             elif isinstance(node, ast.While):
-                if display_log > 0 or "log" in local_time_str:
+                if self._is_constant_loop(node):
+                    local_explanation = f"This 'while' loop is bounded by a constant comparison. Because it doesn't scale with dynamic input limits, it evaluates locally in exactly {local_time_str} time utilizing {local_space_str} space."
+                elif display_log > 0 or "log" in local_time_str:
                     local_explanation = f"This 'while' loop divides or shifts its target state, systematically pruning the search space to yield an optimized local evaluation time of {local_time_str}. It utilizes {local_space_str} space to manage its state variables."
                 else:
                     local_explanation = f"Evaluating the condition of this 'while' loop governs execution dynamically. Locally, each check limits execution bounds to {local_time_str} time while caching the evaluation state in {local_space_str} space."
-                
+                    
                 if has_outer:
                     global_explanation = f"Nesting this loop inside a parent cycle of {outer_str} transforms its local {local_time_str} evaluations into a compounded cascading effect. Consequently, the global algorithm slows to a runtime factor of {global_time_str}, demanding a peak active memory footprint of {global_space_str}."
                 else:
@@ -426,7 +454,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             if s_weight > self.max_space_weight:
                 self.max_space_weight = s_weight
 
-    # ... [Keep visit_FunctionDef, visit_If, visit_For, visit_While, visit_Subscript, visit_BinOp exactly as they were] ...
     def generic_visit(self, node):
         for field, value in ast.iter_fields(node):
             if isinstance(value, list):
@@ -558,28 +585,46 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             self.max_sqrt = max(prev_max_sqrt, else_sqrt)
 
     def visit_For(self, node):
-        self.loop_depth += 1
+        is_const = self._is_constant_loop(node)
+        
+        if not is_const:
+            self.loop_depth += 1
+            
         self.record_line(node)
         self.current_depth += 1
         self.generic_visit(node)  
         self.current_depth -= 1  
-        self.loop_depth -= 1
+        
+        if not is_const:
+            self.loop_depth -= 1
 
     def visit_While(self, node):
         is_log = self._is_log_loop(node)
         is_sqrt = self._is_sqrt_loop(node)
-        if is_log: self.log_loop_depth += 1  
-        elif is_sqrt: self.sqrt_loop_depth += 1  
-        else: self.loop_depth += 1  
+        is_const = self._is_constant_loop(node)
+        
+        if is_const: 
+            pass # Constant bound while loops do NOT scale with input depth
+        elif is_log: 
+            self.log_loop_depth += 1  
+        elif is_sqrt: 
+            self.sqrt_loop_depth += 1  
+        else: 
+            self.loop_depth += 1  
         
         self.record_line(node)
         self.current_depth += 1
         self.generic_visit(node)  
         self.current_depth -= 1  
         
-        if is_log: self.log_loop_depth -= 1
-        elif is_sqrt: self.sqrt_loop_depth -= 1
-        else: self.loop_depth -= 1
+        if is_const: 
+            pass
+        elif is_log: 
+            self.log_loop_depth -= 1
+        elif is_sqrt: 
+            self.sqrt_loop_depth -= 1
+        else: 
+            self.loop_depth -= 1
         
     def _is_collection_expr(self, node):
         """Heuristic to check if an expression represents a collection that scales with n."""
@@ -595,101 +640,104 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 return True
         return False
 
-    def visit_Call(self, node):
-        chain_time, chain_space = None, None
-        chain_poly = 0  
+def visit_Call(self, node):
+    chain_time, chain_space = None, None
+    chain_poly = 0  
 
-        for child in ast.walk(node):
-            if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
-                attr = child.func.attr
-                if attr in self.builtin_complexities:
-                    b = self.builtin_complexities[attr]
-                    if "n log n" in b['time']:
-                        chain_poly = max(chain_poly, 2)
-                    elif "n" in b['time']:
-                        chain_poly = max(chain_poly, 1)
-                    if "O(n)" in b['space']:
-                        chain_space = "O(n)"
+    # Detect chained attribute calls (kept from your original logic)
+    for child in ast.walk(node):
+        if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
+            attr = child.func.attr
+            if attr in self.builtin_complexities:
+                b = self.builtin_complexities[attr]
+                if "n log n" in b['time']:
+                    chain_poly = max(chain_poly, 2)
+                elif "n" in b['time']:
+                    chain_poly = max(chain_poly, 1)
+                if "O(n)" in b['space']:
+                    chain_space = "O(n)"
 
-        if chain_poly == 2:
-            chain_time = "O(n log n)"
-        elif chain_poly == 1:
-            chain_time = "O(n)"
+    if chain_poly == 2:
+        chain_time = "O(n log n)"
+    elif chain_poly == 1:
+        chain_time = "O(n)"
 
-        has_scaling_arg = any(self._is_collection_expr(arg) for arg in node.args)
+    # NEW: detect whether arguments scale with input size
+    has_scaling_arg = any(self._is_collection_expr(arg) for arg in node.args)
 
-        if isinstance(node.func, ast.Name):
-            f_id = self.aliases.get(node.func.id, node.func.id)
+    if isinstance(node.func, ast.Name):
+        f_id = self.aliases.get(node.func.id, node.func.id)
 
-            if f_id == self.current_function_name:
-                self.recursive_calls_count += 1
-                if self.loop_depth > 0 or self.log_loop_depth > 0:
-                    self.has_recursion_in_loop = True  
+        if f_id == self.current_function_name:
+            self.recursive_calls_count += 1
+            if self.loop_depth > 0 or self.log_loop_depth > 0:
+                self.has_recursion_in_loop = True  
 
-                rel = self.custom_functions.get(f_id, "T(n-1)")
-                self.record_line(node, time_override=rel, space_override="O(n)")
+            rel = self.custom_functions.get(f_id, "T(n-1)")
+            self.record_line(node, time_override=rel, space_override="O(n)")
 
-            elif f_id in self.builtin_complexities:
-                b = self.builtin_complexities[f_id]
-                t, s = b['time'], b['space']
+        elif f_id in self.builtin_complexities:
+            b = self.builtin_complexities[f_id]
+            t, s = b['time'], b['space']
 
-                if f_id == 'print':
-                    if has_scaling_arg:
-                        t = 'O(n)'   # printing list/string/etc
-                    else:
-                        # constant print stays O(1)
-                        if len(node.args) == 1 and isinstance(node.args[0], ast.Constant):
-                            t = 'O(1)'
-                        else:
-                            t = 'O(1)'
-
-                if f_id == 'pop' and node.args:
+            if f_id == 'print':
+                # If printing a collection → linear cost
+                if has_scaling_arg:
                     t = 'O(n)'
+                else:
+                    # scalar values / constants → constant time
+                    t = 'O(1)'
 
-                self.record_line(node, time_override=t, space_override=s)
+            # pop rule (kept but simplified behavior unchanged)
+            if f_id == 'pop' and node.args:
+                t = 'O(n)'
 
-            elif f_id in self.custom_functions:
-                call_comp = self.custom_functions[f_id]
+            self.record_line(node, time_override=t, space_override=s)
 
-                # normalize recurrence → big-O
-                if "T(n) = n * T(n-1)" in call_comp:
-                    call_comp = "O(n!)"
-                elif "2T(n/2)" in call_comp:
-                    call_comp = "O(n log n)"
-                elif "T(n-1) + T(n-2)" in call_comp:
-                    call_comp = "O(2^n)"
-                elif "T(n/2) + O(1)" in call_comp:
-                    call_comp = "O(log n)"             
-                elif "T(n-1) + O(n)" in call_comp:
-                    call_comp = "O(n^2)"               
-                elif "T(n/2) + O(n)" in call_comp:
-                    call_comp = "O(n)"
-                elif "2T(n/2) + O(1)" in call_comp:
-                    call_comp = "O(n)"
-                elif "T(n-1)" in call_comp:
-                    call_comp = "O(n)"
+        elif f_id in self.custom_functions:
+            call_comp = self.custom_functions[f_id]
 
-                self.record_line(
-                    node,
-                    time_override=call_comp,
-                    space_override=self.custom_space.get(f_id, "O(1)")
-                )
+            # normalize recurrence → big-O
+            if "T(n) = n * T(n-1)" in call_comp:
+                call_comp = "O(n!)"
+            elif "2T(n/2)" in call_comp:
+                call_comp = "O(n log n)"
+            elif "T(n-1) + T(n-2)" in call_comp:
+                call_comp = "O(2^n)"
+            elif "T(n/2) + O(1)" in call_comp:
+                call_comp = "O(log n)"             
+            elif "T(n-1) + O(n)" in call_comp:
+                call_comp = "O(n^2)"               
+            elif "T(n/2) + O(n)" in call_comp:
+                call_comp = "O(n)"
+            elif "2T(n/2) + O(1)" in call_comp:
+                call_comp = "O(n)"
+            elif "T(n-1)" in call_comp:
+                call_comp = "O(n)"
 
-            else:
-                self.record_line(node)
+            self.record_line(
+                node,
+                time_override=call_comp,
+                space_override=self.custom_space.get(f_id, "O(1)")
+            )
 
-        elif isinstance(node.func, ast.Attribute):
-            if node.func.attr in self.builtin_complexities:
-                t = chain_time if chain_time else self.builtin_complexities[node.func.attr]['time']
-                s = chain_space if chain_space else self.builtin_complexities[node.func.attr]['space']
+        else:
+            self.record_line(node)
+            
+    elif isinstance(node.func, ast.Attribute):
+        if node.func.attr in self.builtin_complexities:
+            t = chain_time if chain_time else self.builtin_complexities[node.func.attr]['time']
+            s = chain_space if chain_space else self.builtin_complexities[node.func.attr]['space']
 
-                if node.func.attr == 'pop' and node.args:
-                    t = 'O(n)'
+            # pop fix (kept consistent)
+            if node.func.attr == 'pop' and node.args:
+                t = 'O(n)'
 
-                self.record_line(node, time_override=t, space_override=s)
-            else:
-                self.record_line(node, time_override=chain_time, space_override=chain_space)
-        self.generic_visit(node)
+            self.record_line(node, time_override=t, space_override=s)
+        else:
+            self.record_line(node, time_override=chain_time, space_override=chain_space)
+
+    self.generic_visit(node)
 
     def visit_Subscript(self, node):
         if isinstance(node.slice, ast.Slice): self.has_slicing = True  
