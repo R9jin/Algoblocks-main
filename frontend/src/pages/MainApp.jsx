@@ -49,14 +49,14 @@ export default function MainApp() {
 
   // --- Modals & Notifications ---
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
-  const [saveModal, setSaveModal] = useState({ 
-    isOpen: false, 
-    title: "", 
-    description: "", 
-    category: "Custom Templates", 
-    saveType: "project" 
+  const [saveModal, setSaveModal] = useState({
+    isOpen: false,
+    title: "",
+    description: "",
+    category: "Custom Templates",
+    saveType: "project"
   });
-  
+
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: "", message: "", confirmText: "Confirm", isDanger: false, onConfirmAction: null });
   const [isBigOModalOpen, setIsBigOModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("local");
@@ -95,11 +95,11 @@ export default function MainApp() {
       setCurrentLoadedId(proj._id);
       setCurrentProjectTitle(proj.title);
       setCurrentSaveType("project");
-      
+
       setTimeout(() => {
         workspaceRef.current.loadTemplate(proj.data);
       }, 500);
-      
+
       window.history.replaceState({}, document.title)
     }
   }, [location.state]);
@@ -112,13 +112,13 @@ export default function MainApp() {
       if (!storedUser) { setAllTemplates(baseTemplates); return; }
 
       const user = JSON.parse(storedUser);
-      
+
       // Fetch from both collections simultaneously
       const [projRes, tempRes] = await Promise.all([
         fetch(`${VERCEL_URL}/api/projects`),
         fetch(`${VERCEL_URL}/api/templates`)
       ]);
-      
+
       const projData = await projRes.json();
       const tempData = await tempRes.json();
 
@@ -129,11 +129,11 @@ export default function MainApp() {
         const userProjects = projData.projects
           .filter(p => p.owner_id === user.email)
           .map(p => ({
-            _id: p._id, 
-            title: p.title, 
-            description: p.description || "Saved Project", 
+            _id: p._id,
+            title: p.title,
+            description: p.description || "Saved Project",
             category: "My Projects", // Group them under My Projects
-            isSystem: false, 
+            isSystem: false,
             saveType: "project", // Tag as a project for deleting/updating
             data: p.data
           }));
@@ -145,11 +145,11 @@ export default function MainApp() {
         const userTemplates = tempData.templates
           .filter(t => t.owner_id === user.email)
           .map(t => ({
-            _id: t._id, 
-            title: t.title, 
-            description: t.description || "Custom template", 
-            category: t.category || "Custom Templates", 
-            isSystem: false, 
+            _id: t._id,
+            title: t.title,
+            description: t.description || "Custom template",
+            category: t.category || "Custom Templates",
+            isSystem: false,
             saveType: "template", // Tag as a template for deleting/updating
             data: t.data
           }));
@@ -228,7 +228,7 @@ export default function MainApp() {
           setSyntaxError({ line: data.line, message: data.message });
         }
       } catch (error) { console.error("Analysis Error:", error); }
-    }, 500); 
+    }, 500);
     return () => clearTimeout(timeoutId);
   }, [generatedPython, isEditingCode]);
 
@@ -261,12 +261,12 @@ export default function MainApp() {
   // --- Dual Save Logic ---
   const openSaveModal = () => {
     if (!blocklyJson) { showToast("The workspace is empty. Nothing to save!", "error"); return; }
-    setSaveModal({ 
-      isOpen: true, 
-      title: currentProjectTitle !== "Untitled Project" ? currentProjectTitle : "", 
+    setSaveModal({
+      isOpen: true,
+      title: currentProjectTitle !== "Untitled Project" ? currentProjectTitle : "",
       description: "",
       category: "Custom Templates",
-      saveType: currentSaveType 
+      saveType: currentSaveType
     });
   };
 
@@ -276,12 +276,12 @@ export default function MainApp() {
 
     const user = JSON.parse(storedUser);
     const endpoint = saveModal.saveType === 'template' ? '/api/templates' : '/api/projects';
-    
-    const payload = { 
-      title: saveModal.title || "Untitled", 
-      description: saveModal.description || "", 
-      data: blocklyJson, 
-      owner_id: user.email 
+
+    const payload = {
+      title: saveModal.title || "Untitled",
+      description: saveModal.description || "",
+      data: blocklyJson,
+      owner_id: user.email
     };
 
     if (saveModal.saveType === 'template') {
@@ -304,31 +304,55 @@ export default function MainApp() {
         }
         setCurrentProjectTitle(payload.title);
         setCurrentSaveType(saveModal.saveType);
-        
+
         // Always fetch to update the sidebar with any new projects or templates
-        fetchTemplates(); 
+        fetchTemplates();
       } else {
         showToast("Failed to save", "error");
       }
     } catch (e) { showToast("Error saving.", "error"); }
-    
+
     setSaveModal({ ...saveModal, isOpen: false });
   };
 
-  // Automatically targets the correct API endpoint (projects vs templates)
+  // Optimized Delete Handler with Optimistic UI
   const handleDeleteItem = async (e, item) => {
-    e.stopPropagation();
-    if (!window.confirm(`Are you sure you want to delete this ${item.saveType}?`)) return;
+    e.stopPropagation(); // Prevents loading the template when clicking delete
+
+    const itemLabel = item.saveType === 'template' ? 'Template' : 'Project';
+    if (!window.confirm(`Are you sure you want to delete this ${itemLabel}?`)) return;
+
+    // 1. Snapshot the current state in case we need to roll back
+    const previousTemplates = [...allTemplates];
+
+    // 2. Optimistically update UI immediately
+    setAllTemplates(prev => prev.filter(t => t._id !== item._id));
+
     try {
       const endpoint = item.saveType === 'template' ? '/api/templates' : '/api/projects';
-      const res = await fetch(`${VERCEL_URL}${endpoint}/${item._id}`, { method: "DELETE" });
-      
+      const res = await fetch(`${VERCEL_URL}${endpoint}/${item._id}`, {
+        method: "DELETE"
+      });
+
       if (res.ok) {
-        showToast(`${item.saveType === 'template' ? 'Template' : 'Project'} deleted!`, "success");
-        fetchTemplates();
-        if (currentLoadedId === item._id) handleClear();
-      } else { showToast("Failed to delete", "error"); }
-    } catch (e) { showToast("Connection error", "error"); }
+        showToast(`${itemLabel} deleted!`, "success");
+        // If the deleted item was the one currently loaded, clear the workspace
+        if (currentLoadedId === item._id) {
+          workspaceRef.current?.clear();
+          setCurrentLoadedId(null);
+          setCurrentProjectTitle("Untitled Project");
+        }
+      } else {
+        // 3. Roll back if server fails
+        setAllTemplates(previousTemplates);
+        const errorData = await res.json();
+        showToast(errorData.detail || `Failed to delete ${itemLabel}`, "error");
+      }
+    } catch (err) {
+      // 3. Roll back on network error
+      setAllTemplates(previousTemplates);
+      showToast("Connection error. Please try again.", "error");
+    }
   };
 
   // --- Execution ---
@@ -348,8 +372,8 @@ export default function MainApp() {
 
   const handleRunAction = () => {
     const hasInput = generatedPython.includes("input(") || generatedPython.includes("input()");
-    if (hasInput) runCode(); 
-    else runStandardCode(); 
+    if (hasInput) runCode();
+    else runStandardCode();
   };
 
   const runCode = () => {
@@ -378,7 +402,7 @@ export default function MainApp() {
 
   // --- Search and Group Templates by Category ---
   const filteredTemplates = allTemplates.filter(t => t.title.toLowerCase().includes(searchTerm.toLowerCase()));
-  
+
   const groupedTemplates = filteredTemplates.reduce((acc, template) => {
     const category = template.category || "Uncategorized";
     if (!acc[category]) acc[category] = [];
@@ -391,13 +415,13 @@ export default function MainApp() {
 
   return (
     <div className="workspace-app-container">
-      {toast.show && ( <div className={`toast-notification ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`}>{toast.message}</div> )}
+      {toast.show && (<div className={`toast-notification ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`}>{toast.message}</div>)}
 
       {saveModal.isOpen && (
         <div className="modal-overlay">
           <div className="save-modal-content">
             <h2 className="save-modal-title">Save to Cloud</h2>
-            
+
             <div className="save-type-toggle" style={{ display: 'flex', gap: '20px', marginBottom: '20px', background: '#f1f5f9', padding: '10px', borderRadius: '8px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'black' }}>
                 <input type="radio" name="saveType" checked={saveModal.saveType === 'project'} onChange={() => setSaveModal({ ...saveModal, saveType: 'project' })} />
@@ -414,7 +438,7 @@ export default function MainApp() {
                 <label className="save-modal-label">Name</label>
                 <input type="text" value={saveModal.title} onChange={e => setSaveModal({ ...saveModal, title: e.target.value })} placeholder="e.g. Optimized Merge Sort" className="save-modal-input" />
               </div>
-              
+
               {saveModal.saveType === 'template' && (
                 <div>
                   <label className="save-modal-label">Category</label>
@@ -443,7 +467,7 @@ export default function MainApp() {
         handleSaveToDB={openSaveModal}
         currentProjectId={currentLoadedId}
         currentProjectTitle={currentProjectTitle}
-        handleUpdateDB={submitSave} 
+        handleUpdateDB={submitSave}
       />
 
       <Split className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} sizes={[20, 80]} minSize={[250, 400]} gutterSize={8}>
@@ -454,11 +478,11 @@ export default function MainApp() {
             <input type="text" placeholder="Search templates..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
           <div className="sidebar-list">
-            
+
             {Object.keys(groupedTemplates).map(category => (
               <div key={category} className="sidebar-category-group">
                 <h3 className="sidebar-category-header">{category}</h3>
-                
+
                 {groupedTemplates[category].map((item) => (
                   <div key={item._id || item.title} className={`sidebar-card ${item.isSystem ? 'system-card' : 'custom-card'}`} onClick={() => loadConfirm(item)}>
                     <div className="sidebar-card-header">
@@ -482,7 +506,7 @@ export default function MainApp() {
                 ))}
               </div>
             ))}
-            
+
             {filteredTemplates.length === 0 && <p className="no-results">No templates found.</p>}
           </div>
         </aside>

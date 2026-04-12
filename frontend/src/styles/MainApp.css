@@ -1127,32 +1127,54 @@
   gap: 6px;
 }
 
+/* --- Enhanced Sidebar Delete Button --- */
 .sidebar-delete-btn-polished {
-  background: none;
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
   border: none;
-  color: #ff375f;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  font-size: 1rem;
-  padding: 0 4px;
-  opacity: 0.5;
-  transition: opacity 0.2s;
+  font-size: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.6; /* Subtle until card hover */
 }
 
-.sidebar-delete-btn-polished:hover {
+/* Make delete button more visible when the card is hovered */
+.sidebar-card:hover .sidebar-delete-btn-polished {
   opacity: 1;
 }
 
-.sidebar-category-group {
-  margin-bottom: 24px;
+/* Tactile Feedback on Hover */
+.sidebar-delete-btn-polished:hover {
+  background: #e74c3c;
+  color: white;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
 }
 
-.sidebar-category-header {
-  font-size: 0.8rem;
+/* "Pressed" effect for immediate responsiveness */
+.sidebar-delete-btn-polished:active {
+  transform: scale(0.9);
+  background: #c0392b;
+}
+
+/* Smooth fade-out for removed items */
+.sidebar-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
+}
+
+/* Visual cues for different item types */
+.badge-custom-polished {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #64748b;
-  margin: 0 0 10px 0;
-  padding-left: 5px;
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 5px;
 }

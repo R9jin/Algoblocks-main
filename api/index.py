@@ -306,7 +306,6 @@ def google_auth(req: GoogleAuthRequest):
 # =========================
 @app.post("/api/templates")
 def save_template(template: TemplateModel):
-    # FIX: safe check added for consistency
     if templates_collection is None:
         raise HTTPException(500, "Database not connected")
 
@@ -315,7 +314,6 @@ def save_template(template: TemplateModel):
 
 @app.get("/api/templates")
 def get_templates():
-    # FIX: safe check added for consistency
     if templates_collection is None:
         raise HTTPException(500, "Database not connected")
 
@@ -323,6 +321,36 @@ def get_templates():
     for t in templates:
         t["_id"] = str(t["_id"])
     return {"status": "success", "templates": templates}
+
+# --- ADD THESE TWO NEW ENDPOINTS BELOW ---
+
+@app.delete("/api/templates/{template_id}")
+def delete_template(template_id: str):
+    if templates_collection is None:
+        raise HTTPException(500, "Database not connected")
+
+    result = templates_collection.delete_one({"_id": ObjectId(template_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Template not found")
+    return {"status": "success"}
+
+@app.put("/api/templates/{template_id}")
+def update_template(template_id: str, payload: TemplateUpdate):
+    if templates_collection is None:
+        raise HTTPException(500, "Database not connected")
+
+    update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
+
+    result = templates_collection.update_one(
+        {"_id": ObjectId(template_id)},
+        {"$set": update_data}
+    )
+
+    if result.matched_count == 0:
+        raise HTTPException(404, "Template not found")
+
+    return {"status": "success"}
+
 # =========================
 # WEBSOCKET RUNNER
 # =========================
