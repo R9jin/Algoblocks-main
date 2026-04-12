@@ -26,6 +26,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         # Global maximum trackers to determine the final program complexity badge
         self.max_complexity = 0          # Combined numeric weight of the bottleneck
         self.max_poly = 0                # Peak polynomial degree
+        self.max_exp = 0          # NEW: Peak exponential tracker
         self.max_log = 0                 # Peak logarithmic degree
         self.max_sqrt = 0                # Peak square root degree
         self.max_space_weight = 0        # Peak auxiliary space complexity
@@ -177,6 +178,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def _build_time_str(self, poly, log, sqrt=0):
         """Constructs a standard Big O string based on current math degrees."""
+        if exp > 0: return "O(2^n)"  # NEW: Exponential takes precedence
         if poly <= 0 and log <= 0 and sqrt <= 0: return "O(1)"  
         parts = []
         if poly == 1: parts.append("n")
@@ -297,6 +299,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             if is_exponential:
                 time_override = "O(2^n)"
                 is_recurrence = True
+                self.max_exp = 1
             elif isinstance(node, ast.For): display_poly = 0 if self._is_constant_loop(node) else 1
             elif isinstance(node, ast.While):
                 if self._is_constant_loop(node): display_poly = 0
@@ -342,7 +345,9 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if not is_dead and time_override != "Definition":
             if t_w > self.max_complexity:
                 self.max_complexity = t_w
-                if t_w < 998: self.max_poly, self.max_log, self.max_sqrt = total_poly, total_log, total_sqrt
+                if t_w < 998: 
+                    # NEW: pass max_exp to the builder
+                    self.max_poly, self.max_log, self.max_sqrt = total_poly, total_log, total_sqrt
 
     def generic_visit(self, node):
         """
@@ -367,6 +372,10 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     # -------------------------------------------------------------------------
     def visit_FunctionDef(self, node):
         """Handles function entry, body analysis, and recurrence relation synthesis."""
+        
+        prev_data = (self.max_complexity, self.max_space_weight, self.max_poly, self.max_log, self.max_sqrt, self.max_exp)
+        self.max_complexity = self.max_space_weight = self.max_poly = self.max_log = self.max_sqrt = self.max_exp = 0
+        
         self.current_function_name = node.name
         self.recursive_calls_count = 0
         self.has_recursion_in_loop = self.has_slicing = self.has_division = False
@@ -390,13 +399,16 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 relation = "T(n) = T(n/2) + O(n)" if self.max_poly > 0 else "T(n) = T(n/2) + O(1)"
             else:
                 relation = "T(n) = T(n-1) + O(n)" if (self.max_poly > 0 or self.has_slicing) else "T(n) = T(n-1) + O(1)"
-        else: relation = self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
+        else: 
+            if self.max_exp > 0: relation = "O(2^n)"
+            else: relation = self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
             
         self.custom_functions[node.name] = relation
         self.custom_space[node.name] = "O(log n)" if (self.recursive_calls_count == 1 and self.has_division) else ("O(n)" if (self.recursive_calls_count > 0 or self.max_space_weight > 0) else "O(1)")
         
         # Merge function bottleneck back into global maximums
         if not is_dead:
+            self.max_exp = max(prev_data[5], self.max_exp)
             self.max_complexity = max(prev_data[0], self.max_complexity)
             self.max_space_weight = max(prev_data[1], self.max_space_weight)
             self.max_poly, self.max_log, self.max_sqrt = max(prev_data[2], self.max_poly), max(prev_data[3], self.max_log), max(prev_data[4], self.max_sqrt)
@@ -492,7 +504,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             self.variable_complexities = {}  # NEW: safeguard initialization
         for child in ast.walk(node.value):
             if isinstance(child, ast.BinOp):
-
                 # Detect bit shift exponential growth (1 << n)
                 if isinstance(child.op, ast.LShift):
                     for target in node.targets:
@@ -505,6 +516,12 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         for target in node.targets:
                             if isinstance(target, ast.Name):
                                 self.variable_complexities[target.id] = "exponential"
+                                
+                    # NEW: Detect pow(2, n) function calls
+            if isinstance(child, ast.Call) and isinstance(child.func, ast.Name) and child.func.id == 'pow':
+                if len(child.args) >= 2 and isinstance(child.args[0], ast.Constant) and child.args[0].value == 2:
+                    for target in node.targets:
+                        if isinstance(target, ast.Name): self.variable_complexities[target.id] = "exponential"
         if isinstance(node.value, ast.Name) and node.value.id in self.custom_functions:
             for target in node.targets:
                 if isinstance(target, ast.Name):
@@ -541,11 +558,11 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     # FINAL BADGE GENERATION
     # -------------------------------------------------------------------------
     def get_final_badge(self):
-        """Resolves total complexity, preserving recurrence formats if necessary."""
         for line in reversed(self.details):   
             comp = line.get('global_time', '')  
             if "T(n) =" in comp or comp in ["O(n!)", "O(2^n)", "O(n log n)"]: return comp
-        return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
+        # NEW: Pass max_exp to final builder
+        return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt, self.max_exp)
 
     def get_final_asymptotic_badge(self):
         """Forces all recurrence relations into their pure asymptotic (Big O) badge form."""
