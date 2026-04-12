@@ -6,8 +6,8 @@ from collections import deque
 class ComplexityAnalyzer(ast.NodeVisitor):
     """
     A Context-Aware Rule-Based Traversal Algorithm.
-    Evaluates time and space complexity line-by-line with dynamic, 
-    comprehensive explanations for educational feedback.
+    Evaluates time and space complexity line-by-line with deep-dive 
+    asymptotic reasoning for educational feedback.
     """
 
     def __init__(self, source_code):
@@ -25,7 +25,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.max_poly = 0                
         self.max_log = 0                 
         self.max_sqrt = 0                
-        self.max_exp = 0                 # Tracks iterative exponential bottlenecks
+        self.max_exp = 0                 
         self.max_space_weight = 0        
         
         self.variable_complexities = {}  
@@ -42,16 +42,15 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.has_division = False           
 
         self.builtin_complexities = {
-            'sort': {'time': 'O(n log n)', 'space': 'O(n)', 'desc': 'Timsort algorithm'},
-            'sorted': {'time': 'O(n log n)', 'space': 'O(n)', 'desc': 'creates a sorted copy'},
-            'join': {'time': 'O(n)', 'space': 'O(n)', 'desc': 'concatenates n elements'},
-            'split': {'time': 'O(n)', 'space': 'O(n)', 'desc': 'scans string to create list'},
-            'list': {'time': 'O(n)', 'space': 'O(n)', 'desc': 'iterates to build collection'},
-            'append': {'time': 'O(1)', 'space': 'O(1)', 'desc': 'amortized constant time'},
-            'pop': {'time': 'O(1)', 'space': 'O(1)', 'desc': 'removes last element'},
-            'insert': {'time': 'O(n)', 'space': 'O(1)', 'desc': 'shifts subsequent elements'},
-            'len': {'time': 'O(1)', 'space': 'O(1)', 'desc': 'constant time lookup'},
-            'print': {'time': 'O(1)', 'space': 'O(1)', 'desc': 'standard output'}
+            'sort': {'time': 'O(n log n)', 'space': 'O(n)', 'desc': 'uses the Timsort algorithm which involves multiple passes and auxiliary storage'},
+            'sorted': {'time': 'O(n log n)', 'space': 'O(n)', 'desc': 'creates a completely new sorted list while iterating through the original input'},
+            'join': {'time': 'O(n)', 'space': 'O(n)', 'desc': 'iterates through every element in the collection to concatenate them into a single string'},
+            'split': {'time': 'O(n)', 'space': 'O(n)', 'desc': 'scans the entire string to identify delimiters and allocate new substrings'},
+            'list': {'time': 'O(n)', 'space': 'O(n)', 'desc': 'iterates through the iterable to copy elements into a new list structure'},
+            'append': {'time': 'O(1)', 'space': 'O(1)', 'desc': 'performs a constant-time operation by adding an element to the end of a pre-allocated array'},
+            'insert': {'time': 'O(n)', 'space': 'O(1)', 'desc': 'must shift all subsequent elements in the array to make room for the new entry'},
+            'max': {'time': 'O(n)', 'space': 'O(1)', 'desc': 'must perform a linear scan across every element to identify the largest value'},
+            'len': {'time': 'O(1)', 'space': 'O(1)', 'desc': 'accesses a pre-stored attribute of the object, requiring no iteration'}
         }
         self.aliases = {} 
 
@@ -71,10 +70,8 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     self.call_graph[current_func] = set()  
             elif isinstance(current_node, ast.Call) and isinstance(current_node.func, ast.Name):
                 called_func = current_node.func.id  
-                if current_func:
-                    self.call_graph[current_func].add(called_func)  
-                else:
-                    self.call_graph['__main__'].add(called_func)  
+                if current_func: self.call_graph[current_func].add(called_func)  
+                else: self.call_graph['__main__'].add(called_func)  
             
             for child in ast.iter_child_nodes(current_node):
                 queue.append((child, current_func))
@@ -92,15 +89,12 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     reach_queue.append(neighbor)
         
         for func_name, called_funcs in self.call_graph.items():
-            if func_name in called_funcs:
-                self.custom_functions[func_name] = "T(n)"  
-        
+            if func_name in called_funcs: self.custom_functions[func_name] = "T(n)"  
         self.detect_indirect_recursion()
 
     def detect_indirect_recursion(self):
         for func in self.call_graph:
-            visited = set()
-            rec_stack = set()
+            visited, rec_stack = set(), set()
             if self._has_cycle(func, visited, rec_stack):
                 self.custom_functions[func] = "O(2^n)"
 
@@ -112,61 +106,99 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             if self._has_cycle(neighbor, visited, rec_stack): return True
         rec_stack.remove(node); return False
 
-    # --- DYNAMIC EXPLANATION GENERATOR ---
+    # --- COMPREHENSIVE REASONING ENGINE ---
     def _generate_explanation(self, node, local_t, global_t, is_dead):
-        """Creates detailed context-aware reasoning for each line."""
+        """Generates in-depth, multi-sentence explanations for the complexity assignment."""
         if is_dead:
-            return "This line is unreachable and will never execute (Dead Code)."
-        
-        # Looping logic
-        if isinstance(node, ast.For):
-            if "O(1)" in local_t:
-                return "This loop runs for a fixed number of iterations, regardless of input size."
-            if "O(2^n)" in local_t:
-                return "Iterative exponential growth: The loop limit scales by 2^n (e.g., bit-shifting or power function)."
-            return f"This loop iterates over a collection or range, contributing O(n) relative to its nesting level."
-        
-        if isinstance(node, ast.While):
-            if "log n" in local_t:
-                return "Logarithmic behavior: The loop state is divided or doubled in each step, reducing the work exponentially."
-            if "√n" in local_t:
-                return "Square root behavior: The loop condition is bound by i*i <= n."
-            return "This loop continues until a dynamic condition is met."
+            return ("This line is categorized as unreachable 'Dead Code' because it follows a terminal "
+                    "statement like a return or break. Since this code will never be executed by the "
+                    "interpreter, it does not contribute to the runtime or memory usage of the program.")
 
-        # Assignment and operations
+        # 1. Exponential Detection
+        if "2^n" in local_t or self._is_exponential_loop(node):
+            return ("This operation exhibits exponential O(2^n) growth, meaning the number of steps doubles "
+                    "with every single increment of the input size. This is typically caused by iterative patterns "
+                    "like bit-shifting to a dynamic power or recursive branching without memoization. "
+                    "Such complexity is generally considered inefficient for large-scale data processing.")
+
+        # 2. Loops (For/While)
+        if isinstance(node, (ast.For, ast.While)):
+            if "O(1)" in local_t:
+                return ("This loop is assigned constant O(1) complexity because it iterates a fixed number of "
+                        "times that does not scale with the input. Regardless of how large the data grows, "
+                        "this specific block will always perform the same amount of work. This provides "
+                        "excellent performance stability within the algorithm.")
+            
+            if "log n" in local_t:
+                return ("This loop demonstrates logarithmic O(log n) behavior because the problem space is "
+                        "divided or reduced by a constant factor in each iteration. This 'divide and conquer' "
+                        "approach allows the program to handle massive inputs by performing only a few steps. "
+                        "It is the hallmark of highly efficient search and tree-traversal algorithms.")
+            
+            if "√n" in local_t:
+                return ("The runtime of this loop scales with the square root of the input, known as O(√n). "
+                        "This occurs because the loop condition (such as i*i < n) limits the iterations to "
+                        "the square root of the boundary. This is significantly faster than a standard linear "
+                        "loop but slower than logarithmic processing.")
+
+            if self.loop_depth > 1:
+                return (f"This line represents a nested loop contributing to a polynomial complexity of {local_t}. "
+                        "Because it is placed inside another loop, its work is multiplied by the iterations "
+                        "of its parent scopes. This often leads to quadratic or cubic growth depending on the "
+                        "depth of the nesting.")
+            
+            return ("This loop performs a linear O(n) scan, visiting each element in the sequence exactly once. "
+                    "The time required for this block will increase in direct proportion to the size of the input. "
+                    "This is the most common complexity for basic data iteration and aggregation tasks.")
+
+        # 3. Assignments and Slicing
         if isinstance(node, ast.Assign):
             if self.has_slicing:
-                return "Slicing an array creates a copy, requiring O(n) time and space."
+                return ("This assignment involves array slicing, which requires O(n) time and space to create "
+                        "a physical copy of the elements. Unlike a simple reference, slicing allocates new "
+                        "memory and iterates through the range to populate it. This can become a bottleneck "
+                        "if used frequently inside recursive calls or loops.")
+            
             if "O(n)" in local_t:
-                return "This assignment involves a list comprehension or collection copy that scales with n."
-            return "A simple assignment operation typically takes constant O(1) time."
+                return ("This line is assigned linear complexity because it involves an operation that "
+                        "scales with the input size, such as a list comprehension or collection copy. "
+                        "The system must iterate through the entire source structure to complete the "
+                        "assignment, leading to a direct correlation between data size and execution time.")
 
-        # Function Calls
+        # 4. Function Calls
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
             f_id = node.func.id
             if f_id == self.current_function_name:
-                return f"Recursive call: {f_id} invokes itself, creating a new stack frame."
+                return (f"This is a recursive call where the function '{f_id}' invokes itself. "
+                        "This triggers the creation of a new stack frame and contributes to the overall "
+                        "recurrence relation of the algorithm. The depth of these calls will determine the "
+                        "final space complexity on the call stack.")
+            
             if f_id in self.builtin_complexities:
-                return f"Built-in function '{f_id}': {self.builtin_complexities[f_id]['desc']}."
+                desc = self.builtin_complexities[f_id]['desc']
+                return (f"The built-in function '{f_id}' is called here, which {desc}. "
+                        f"Based on Python's implementation, this operation is recognized as {local_t}. "
+                        "Understanding these built-in costs is vital for accurate algorithmic analysis.")
 
-        return f"Standard operation contributing to {global_t} global complexity."
+        return (f"This line performs a standard operation that contributes to the {global_t} global complexity. "
+                "It is executed within the current scope and nesting level, meaning its cost is factored "
+                "into the total cumulative workload of the surrounding function or loop.")
 
     # --- UTILITIES ---
     def get_code_snippet(self, node):
         if hasattr(node, 'lineno'):
-            line = self.source_lines[node.lineno - 1]  
-            return line.strip()  
+            return self.source_lines[node.lineno - 1].strip()  
         return "Code Block"  
 
     def get_color(self, complexity_str):
         if complexity_str == "-": return "#7f8c8d"  
         if "Dead Code" in complexity_str: return "#7f8c8d"  
-        if "T(n) =" in complexity_str or "n!" in complexity_str or "T(n-1) + T" in complexity_str: return "#8e44ad"  
+        if "T(n) =" in complexity_str or "n!" in complexity_str: return "#8e44ad"  
         if "2^n" in complexity_str or "2T(" in complexity_str: return "#9b59b6"  
         if "n^2" in complexity_str or "n^3" in complexity_str: return "#e74c3c"  
         if "log" in complexity_str: return "#2980b9"  
         if "√n" in complexity_str: return "#16a085"  
-        if "O(n)" in complexity_str or "T(n" in complexity_str: return "#e67e22"  
+        if "O(n)" in complexity_str: return "#e67e22"  
         return "#27ae60"
 
     def _build_time_str(self, poly, log, sqrt=0, exp=0):
@@ -190,8 +222,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         elif isinstance(node, ast.For):
             if isinstance(node.iter, ast.Call) and getattr(node.iter.func, 'id', '') == 'range':
                 if all(isinstance(arg, ast.Constant) for arg in node.iter.args): return True
-            elif isinstance(node.iter, (ast.List, ast.Tuple, ast.Set, ast.Constant)):
-                return True
+            elif isinstance(node.iter, (ast.List, ast.Tuple, ast.Set, ast.Constant)): return True
         return False
 
     def _is_log_loop(self, node):
@@ -200,8 +231,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             if isinstance(child, (ast.BinOp, ast.AugAssign)):
                 op = child.op
                 val = child.right if isinstance(child, ast.BinOp) else child.value
-                if isinstance(op, (ast.Div, ast.FloorDiv, ast.RShift)) and isinstance(val, ast.Constant) and val.value in [1, 2]: return True
-                if isinstance(op, (ast.Mult, ast.LShift)) and isinstance(val, ast.Constant) and val.value in [1, 2]: return True
+                if isinstance(op, (ast.Div, ast.FloorDiv, ast.RShift, ast.Mult, ast.LShift)) and isinstance(val, ast.Constant) and val.value in [1, 2]: return True
         return False  
         
     def _is_sqrt_loop(self, node):
@@ -228,7 +258,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     # --- RECORDING ENGINE ---
     def record_line(self, node, time_override=None, space_override=None):
         line_text = self.get_code_snippet(node)
-        
         current_poly, current_log, current_sqrt = self.loop_depth, self.log_loop_depth, getattr(self, 'sqrt_loop_depth', 0)
         override_poly = override_log = override_sqrt = 0
         is_recurrence = False
@@ -247,9 +276,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         
         if not time_override:
             if self._is_exponential_loop(node):
-                time_override = "O(2^n)"
-                is_recurrence = True
-                self.max_exp = 1
+                time_override, is_recurrence, self.max_exp = "O(2^n)", True, 1
             elif isinstance(node, ast.For): display_poly = 0 if self._is_constant_loop(node) else 1
             elif isinstance(node, ast.While):
                 if self._is_constant_loop(node): display_poly = 0
@@ -283,7 +310,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             "local_space": local_s, "global_space": global_s, "indent": self.current_depth,
             "color": self.get_color(global_t), "weight": t_w, 
             "local_explanation": explanation, 
-            "global_explanation": f"In the current context, this line executes within a scope of {global_t}."
+            "global_explanation": f"In the current execution context, this operation scales to a cumulative complexity of {global_t}."
         }
         
         if self.details and self.details[-1]["lineOfCode"] == line_text:
@@ -326,8 +353,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         elif self.recursive_calls_count == 1:
             if self.has_division: relation = "T(n) = T(n/2) + O(n)" if self.max_poly > 0 else "T(n) = T(n/2) + O(1)"
             else: relation = "T(n) = T(n-1) + O(n)" if (self.max_poly > 0 or self.has_slicing) else "T(n) = T(n-1) + O(1)"
-        else: 
-            relation = "O(2^n)" if self.max_exp > 0 else self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
+        else: relation = "O(2^n)" if self.max_exp > 0 else self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
             
         self.custom_functions[node.name] = relation
         self.custom_space[node.name] = "O(log n)" if (self.recursive_calls_count == 1 and self.has_division) else ("O(n)" if (self.recursive_calls_count > 0 or self.max_space_weight > 0) else "O(1)")
