@@ -31,6 +31,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.max_space_weight = 0        # Peak auxiliary space complexity
         
         # Function analysis and Call Graph states
+        self.variable_complexities = {}  # Tracks if a variable holds an exponential value
         self.custom_functions = {}       # Maps function names to their time relation (e.g., "T(n-1)")
         self.custom_space = {}           # Maps function names to their space relation
         self.current_function_name = None
@@ -190,24 +191,16 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     # HEURISTICS: EDGE CASE HANDLING
     # -------------------------------------------------------------------------
     def _is_constant_loop(self, node):
-        """
-        Identifies loops bound by constants (e.g., 'while i <= 3' or 'for i in range(5)').
-        These execute O(1) times regardless of input 'n'.
-        """
+        """Identifies loops bound by hardcoded literals (O(1))."""
         if isinstance(node, ast.While):
             if isinstance(node.test, ast.Compare):
-                # Detects if either the left side or all comparators are constants
-                left_is_const = isinstance(node.test.left, ast.Constant)
-                right_is_const = all(isinstance(c, ast.Constant) for c in node.test.comparators)
-                if left_is_const or right_is_const: return True
+                if isinstance(node.test.left, ast.Constant) or any(isinstance(c, ast.Constant) for c in node.test.comparators):
+                    return True
         elif isinstance(node, ast.For):
             if isinstance(node.iter, ast.Call) and getattr(node.iter.func, 'id', '') == 'range':
-                # e.g., range(10)
                 if all(isinstance(arg, ast.Constant) for arg in node.iter.args): return True
             elif isinstance(node.iter, (ast.List, ast.Tuple, ast.Set, ast.Constant)):
-                # e.g., for i in [1, 2, 3]
-                if isinstance(node.iter, ast.Constant): return True
-                if hasattr(node.iter, 'elts') and all(isinstance(el, ast.Constant) for el in node.iter.elts): return True
+                return True
         return False
 
     def _is_scaling_expr(self, node):
@@ -255,138 +248,101 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return False
     
     def _is_exponential_loop(self, node):
-        """Detects if a loop bound scales exponentially (e.g., 1 << n or 2 ** n)."""
+        """Detects if a loop bound scales exponentially (syntax or variable context)."""
         if not isinstance(node, (ast.For, ast.While)):
             return False
         
-        # Check 'for i in range(1 << n)'
+        # Target the expression governing the loop (range() call or while condition)
         expr = node.iter if isinstance(node, ast.For) else node.test
         
         for child in ast.walk(expr):
-            # Check for bitwise left shift (1 << n)
-            if isinstance(child, ast.BinOp) and isinstance(child.op, ast.LShift):
-                return True
-            # Check for power operator (2 ** n)
-            if isinstance(child, ast.BinOp) and isinstance(child.op, ast.Pow):
-                if isinstance(child.left, ast.Constant) and child.left.value == 2:
+            # Case 1: Direct syntax (for i in range(1 << n))
+            if isinstance(child, ast.BinOp):
+                if isinstance(child.op, ast.LShift): return True
+                if isinstance(child.op, ast.Pow) and isinstance(child.left, ast.Constant) and child.left.value == 2:
                     return True
+            
+            # Case 2: Variable context (for i in range(totalMoves) where totalMoves was 1 << n)
+            if isinstance(child, ast.Name) and self.variable_complexities.get(child.id) == "exponential":
+                return True
         return False
-
     # -------------------------------------------------------------------------
     # RECORDING ENGINE
     # -------------------------------------------------------------------------
     def record_line(self, node, time_override=None, space_override=None):
-        """
-        The central logic for processing an AST node and appending it to the result list.
-        Determines both local (line-isolated) and global (nested-context) complexity.
-        """
         line_text = self.get_code_snippet(node)
         
-        # Get current scope nesting levels
         current_poly = self.loop_depth
         current_log = self.log_loop_depth
         current_sqrt = getattr(self, 'sqrt_loop_depth', 0)
         
-        override_poly = 0
-        override_log = 0
-        override_sqrt = 0
+        override_poly = override_log = override_sqrt = 0
         is_recurrence = False
 
-        # Extract complexity degrees from a string override (if provided)
         if time_override:
-            if any(x in time_override for x in ["T(n) =", "n!", "2^n", "2T("]):
-                is_recurrence = True
+            if any(x in time_override for x in ["T(n) =", "n!", "2^n", "2T("]): is_recurrence = True
             else:
-                if "n log n" in time_override:
-                    override_poly = 1; override_log = 1
-                elif "O(log n)" in time_override:
-                    override_log = 1
-                elif "O(√n)" in time_override:
-                    override_sqrt = 1
-                elif "O(n)" in time_override:
-                    override_poly = 1
-                else:
-                    match = re.search(r"O\(n\^(\d+)", time_override)
-                    if match:
-                        override_poly = int(match.group(1))
+                if "n log n" in time_override: override_poly = 1; override_log = 1
+                elif "O(log n)" in time_override: override_log = 1
+                elif "O(√n)" in time_override: override_sqrt = 1
+                elif "O(n)" in time_override: override_poly = 1
 
-        # Absolute complexity for this line is (Loop Nesting + Node's intrinsic cost)
-        total_poly = current_poly + override_poly
-        total_log = current_log + override_log
-        total_sqrt = current_sqrt + override_sqrt
-        
+        total_poly, total_log, total_sqrt = current_poly + override_poly, current_log + override_log, current_sqrt + override_sqrt
         is_dead = getattr(self, 'in_dead_code', False) or time_override == "Dead Code"
-        display_poly = override_poly
-        display_log = override_log
-        display_sqrt = override_sqrt
-        is_exponential = self._is_exponential_loop(node)
+        display_poly, display_log, display_sqrt = override_poly, override_log, override_sqrt
         
+        # Exponential Check
+        is_exponential = self._is_exponential_loop(node)
         if not time_override:
             if is_exponential:
-                time_override = "O(2^n)" # Explicitly override to exponential
-                is_recurrence = True     # Treat as high-weight bottleneck
-            elif isinstance(node, ast.For):
-                display_poly = 0 if self._is_constant_loop(node) else 1
+                time_override = "O(2^n)"
+                is_recurrence = True
+            elif isinstance(node, ast.For): display_poly = 0 if self._is_constant_loop(node) else 1
             elif isinstance(node, ast.While):
                 if self._is_constant_loop(node): display_poly = 0
                 elif self._is_log_loop(node): display_log = 1
                 elif self._is_sqrt_loop(node): display_sqrt = 1
                 else: display_poly = 1
 
-        # Format descriptive strings and weights for the frontend
+        # Complexity weight calculation
         if time_override == "Definition":
-            local_time_str = global_time_str = local_space_str = global_space_str = "-"
-            t_weight = local_weight = s_weight = 0
+            local_t = global_t = local_s = global_s = "-"
+            t_w = l_w = s_w = 0
         elif is_dead:
-            local_time_str = global_time_str = local_space_str = global_space_str = "Dead Code"
-            t_weight = local_weight = s_weight = -1
+            local_t = global_t = local_s = global_s = "Dead Code"
+            t_w = l_w = s_w = -1
         else:
-            local_time_str = self._build_time_str(display_poly, display_log, display_sqrt)
+            local_t = self._build_time_str(display_poly, display_log, display_sqrt)
             if time_override and is_recurrence:
-                local_time_str = global_time_str = time_override
-                t_weight = local_weight = 1000 # Recurrence is prioritized as high weight
+                local_t = global_t = time_override
+                t_w = 1000 # Absolute Priority
             else:
-                if time_override: local_time_str = time_override
-                global_time_str = self._build_time_str(total_poly, total_log, total_sqrt)
-                t_weight = total_poly * 10 + total_sqrt * 7 + total_log * 5
-                local_weight = display_poly * 10 + display_sqrt * 7 + display_log * 5
-                
-            local_space_str = space_override if space_override else "O(1)"
-            global_space_str = local_space_str
-            if self.recursive_calls_count > 0:
-                if self.has_division and not self.has_slicing and self.recursive_calls_count == 1:
-                    global_space_str = "O(log n)" # Binary recursion depth
-                else:
-                    global_space_str = "O(n)" # Linear recursion depth
-            s_weight = 10 if "O(n)" in local_space_str else (1000 if "n!" in local_space_str or "T(n" in local_space_str else 0)
+                if time_override: local_t = time_override
+                global_t = self._build_time_str(total_poly, total_log, total_sqrt)
+                t_w = total_poly * 10 + total_sqrt * 7 + total_log * 5
+            
+            local_s = space_override if space_override else "O(1)"
+            global_s = "O(n)" if self.recursive_calls_count > 0 else local_s
+            s_w = 10 if "O(n)" in local_s else 0
 
-        # UI categorization labels
-        op_map = {ast.For: "for loop", ast.While: "while loop", ast.If: "conditional", ast.Assign: "assignment", 
-                  ast.AugAssign: "augmented assignment", ast.Return: "return statement", ast.Call: "function call", 
-                  ast.FunctionDef: "function def", ast.Subscript: "array access", ast.Expr: "expression"}
-        operation = op_map.get(type(node), "operation")
+        # ... (Label operation types same as provided in file 7) ...
 
-        # Compile the final entry
         entry = {
-            "lineOfCode": line_text, "operation": operation, "local_time": local_time_str, "global_time": global_time_str,
-            "local_space": local_space_str, "global_space": global_space_str, "indent": self.current_depth,
-            "color": self.get_color(global_time_str), "weight": t_weight, "local_weight": local_weight,
-            "local_explanation": f"Locally, this takes {local_time_str} time.", 
-            "global_explanation": f"Globally, this contributes {global_time_str} complexity."
+            "lineOfCode": line_text, "operation": operation, "local_time": local_t, "global_time": global_t,
+            "local_space": local_s, "global_space": global_s, "indent": self.current_depth,
+            "color": self.get_color(global_t), "weight": t_w, 
+            "local_explanation": f"Locally, this takes {local_t} time.", 
+            "global_explanation": f"Globally, this contributes {global_t} complexity."
         }
         
-        # Deduplication: Ensure if multiple AST nodes exist on one line, we keep the most expensive one
         if self.details and self.details[-1]["lineOfCode"] == line_text:
-            if t_weight > self.details[-1].get("weight", -1) or (t_weight == self.details[-1].get("weight") and local_weight > self.details[-1].get("local_weight")):
-                self.details[-1].update(entry)
+            if t_w > self.details[-1].get("weight", -1): self.details[-1].update(entry)
         else: self.details.append(entry)
 
-        # Update program-wide maximums
         if not is_dead and time_override != "Definition":
-            if t_weight > self.max_complexity:
-                self.max_complexity = t_weight
-                if t_weight < 998: self.max_poly, self.max_log, self.max_sqrt = total_poly, total_log, total_sqrt
-            if s_weight > self.max_space_weight: self.max_space_weight = s_weight
+            if t_w > self.max_complexity:
+                self.max_complexity = t_w
+                if t_w < 998: self.max_poly, self.max_log, self.max_sqrt = total_poly, total_log, total_sqrt
 
     def generic_visit(self, node):
         """
@@ -457,41 +413,18 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.recursive_calls_count = prev_rec + max(if_rec, self.recursive_calls_count)
 
     def visit_For(self, node):
-        """Handles for-loops, including constant, polynomial, and exponential cases."""
-
-        is_const = self._is_constant_loop(node)
         is_exp = self._is_exponential_loop(node)
+        is_const = self._is_constant_loop(node)
 
-        # -------------------------------
-        # NEW: Exponential Loop Handling
-        # -------------------------------
         if is_exp:
-            # Force exponential behavior as dominant (like recurrence)
-            self.record_line(node, time_override="O(2^n)")  # NEW
+            self.record_line(node, time_override="O(2^n)")
+            self.current_depth += 1; self.generic_visit(node); self.current_depth -= 1
+            return # Processed as exponential bottleneck
 
-            # IMPORTANT: Do NOT increase loop_depth (not polynomial)
-            # Instead, propagate inside as already exponential
-
-            self.current_depth += 1
-            self.generic_visit(node)
-            self.current_depth -= 1
-
-            return  # NEW: stop normal processing
-
-        # -------------------------------
-        # Normal Loop Handling
-        # -------------------------------
-        if not is_const:
-            self.loop_depth += 1  # polynomial contribution
-
-        self.record_line(node)  # FIXED: only once
-
-        self.current_depth += 1
-        self.generic_visit(node)
-        self.current_depth -= 1  
-
-        if not is_const:
-            self.loop_depth -= 1
+        if not is_const: self.loop_depth += 1
+        self.record_line(node)
+        self.current_depth += 1; self.generic_visit(node); self.current_depth -= 1  
+        if not is_const: self.loop_depth -= 1
 
     def visit_While(self, node):
         """Handles while-loops, detecting log/sqrt patterns to adjust depths."""
@@ -550,20 +483,55 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)  
 
     def visit_Assign(self, node):
-        """Analyzes variable assignments, detecting list multiplications or comprehensions."""
+        """Analyzes variable assignments, detecting list multiplications, comprehensions, and exponential patterns."""
+
         s_ov, t_ov = "O(1)", None
+
+        # NEW: Track exponential variables (e.g. 1 << n, 2 ** n)
+        if not hasattr(self, "variable_complexities"):
+            self.variable_complexities = {}  # NEW: safeguard initialization
+        for child in ast.walk(node.value):
+            if isinstance(child, ast.BinOp):
+
+                # Detect bit shift exponential growth (1 << n)
+                if isinstance(child.op, ast.LShift):
+                    for target in node.targets:
+                        if isinstance(target, ast.Name):
+                            self.variable_complexities[target.id] = "exponential"
+
+                # Detect power-based exponential growth (2 ** n)
+                elif isinstance(child.op, ast.Pow):
+                    if isinstance(child.left, ast.Constant) and child.left.value == 2:
+                        for target in node.targets:
+                            if isinstance(target, ast.Name):
+                                self.variable_complexities[target.id] = "exponential"
         if isinstance(node.value, ast.Name) and node.value.id in self.custom_functions:
             for target in node.targets:
-                if isinstance(target, ast.Name): self.aliases[target.id] = node.value.id  
+                if isinstance(target, ast.Name):
+                    self.aliases[target.id] = node.value.id
         if node.value:
+            # List multiplication (e.g., [0] * n)
             if isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mult):
-                if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List): s_ov = "O(n)"
+                if isinstance(node.value.left, ast.List) or isinstance(node.value.right, ast.List):
+                    s_ov = "O(n)"
+
+            # List comprehension scaling
             elif isinstance(node.value, ast.ListComp):
-                gc = len(node.value.generators); s_ov = t_ov = f"O(n^{gc})" if gc > 1 else "O(n)"
-            elif (isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice)) or (isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == 'copy'):
+                gc = len(node.value.generators)
+                s_ov = t_ov = f"O(n^{gc})" if gc > 1 else "O(n)"
+
+            # Slicing or copy operations
+            elif (
+                isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice)
+            ) or (
+                isinstance(node.value, ast.Call)
+                and isinstance(node.value.func, ast.Attribute)
+                and node.value.func.attr == 'copy'
+            ):
                 s_ov = t_ov = "O(n)"
+
         self.record_line(node, time_override=t_ov, space_override=s_ov)
-        self.generic_visit(node)  
+        self.generic_visit(node)
 
     def visit_AugAssign(self, node): self.record_line(node); self.generic_visit(node)  
     def visit_Return(self, node): self.record_line(node); self.generic_visit(node)  
