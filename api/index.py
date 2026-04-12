@@ -99,8 +99,9 @@ async def ast_to_blocks(request: AstRequest):
 @app.post("/analyze")
 def analyze_complexity(payload: CodePayload):
     try:
-        tree = ast.parse(payload.code)
-        analyzer = ComplexityAnalyzer(payload.code)
+        sanitized_code = clean_python_code(payload.code)
+        tree = ast.parse(sanitized_code)
+        analyzer = ComplexityAnalyzer(sanitized_code)
 
         analyzer.bfs_first_pass(tree)
         for _, node in analyzer.symbol_table.items():
