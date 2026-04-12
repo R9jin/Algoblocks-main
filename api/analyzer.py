@@ -646,105 +646,105 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 return True
         return False
 
-def visit_Call(self, node):
-    chain_time, chain_space = None, None
-    chain_poly = 0  
+    def visit_Call(self, node):
+        chain_time, chain_space = None, None
+        chain_poly = 0  
 
-    # Detect chained attribute calls
-    for child in ast.walk(node):
-        if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
-            attr = child.func.attr
-            if attr in self.builtin_complexities:
-                b = self.builtin_complexities[attr]
-                if "n log n" in b['time']:
-                    chain_poly = max(chain_poly, 2)
-                elif "n" in b['time']:
-                    chain_poly = max(chain_poly, 1)
-                if "O(n)" in b['space']:
-                    chain_space = "O(n)"
+        # Detect chained attribute calls
+        for child in ast.walk(node):
+            if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
+                attr = child.func.attr
+                if attr in self.builtin_complexities:
+                    b = self.builtin_complexities[attr]
+                    if "n log n" in b['time']:
+                        chain_poly = max(chain_poly, 2)
+                    elif "n" in b['time']:
+                        chain_poly = max(chain_poly, 1)
+                    if "O(n)" in b['space']:
+                        chain_space = "O(n)"
 
-    if chain_poly == 2:
-        chain_time = "O(n log n)"
-    elif chain_poly == 1:
-        chain_time = "O(n)"
+        if chain_poly == 2:
+            chain_time = "O(n log n)"
+        elif chain_poly == 1:
+            chain_time = "O(n)"
 
-    # NEW: detect scaling arguments (lists, slices, etc.)
-    has_scaling_arg = any(self._is_collection_expr(arg) for arg in node.args)
+        # NEW: detect scaling arguments (lists, slices, etc.)
+        has_scaling_arg = any(self._is_collection_expr(arg) for arg in node.args)
 
-    if isinstance(node.func, ast.Name):
-        f_id = self.aliases.get(node.func.id, node.func.id)
+        if isinstance(node.func, ast.Name):
+            f_id = self.aliases.get(node.func.id, node.func.id)
 
-        # recursion handling (unchanged)
-        if f_id == self.current_function_name:
-            self.recursive_calls_count += 1
-            if self.loop_depth > 0 or self.log_loop_depth > 0:
-                self.has_recursion_in_loop = True  
+            # recursion handling (unchanged)
+            if f_id == self.current_function_name:
+                self.recursive_calls_count += 1
+                if self.loop_depth > 0 or self.log_loop_depth > 0:
+                    self.has_recursion_in_loop = True  
 
-            rel = self.custom_functions.get(f_id, "T(n-1)")
-            self.record_line(node, time_override=rel, space_override="O(n)")
+                rel = self.custom_functions.get(f_id, "T(n-1)")
+                self.record_line(node, time_override=rel, space_override="O(n)")
 
-        # builtin functions
-        elif f_id in self.builtin_complexities:
-            b = self.builtin_complexities[f_id]
-            t, s = b['time'], b['space']
+            # builtin functions
+            elif f_id in self.builtin_complexities:
+                b = self.builtin_complexities[f_id]
+                t, s = b['time'], b['space']
 
-            # =========================
-            # UPDATED PRINT LOGIC (YOUR REQUEST)
-            # =========================
-            if f_id == 'print':
-                # O(n) if printing collections/strings/lists/etc.
-                t = 'O(n)' if has_scaling_arg else 'O(1)'
+                # =========================
+                # UPDATED PRINT LOGIC (YOUR REQUEST)
+                # =========================
+                if f_id == 'print':
+                    # O(n) if printing collections/strings/lists/etc.
+                    t = 'O(n)' if has_scaling_arg else 'O(1)'
 
-            # pop behavior
-            if f_id == 'pop' and node.args:
-                t = 'O(n)'
+                # pop behavior
+                if f_id == 'pop' and node.args:
+                    t = 'O(n)'
 
-            self.record_line(node, time_override=t, space_override=s)
+                self.record_line(node, time_override=t, space_override=s)
 
-        # user-defined functions
-        elif f_id in self.custom_functions:
-            call_comp = self.custom_functions[f_id]
+            # user-defined functions
+            elif f_id in self.custom_functions:
+                call_comp = self.custom_functions[f_id]
 
-            if "T(n) = n * T(n-1)" in call_comp:
-                call_comp = "O(n!)"
-            elif "2T(n/2)" in call_comp:
-                call_comp = "O(n log n)"
-            elif "T(n-1) + T(n-2)" in call_comp:
-                call_comp = "O(2^n)"
-            elif "T(n/2) + O(1)" in call_comp:
-                call_comp = "O(log n)"             
-            elif "T(n-1) + O(n)" in call_comp:
-                call_comp = "O(n^2)"               
-            elif "T(n/2) + O(n)" in call_comp:
-                call_comp = "O(n)"
-            elif "2T(n/2) + O(1)" in call_comp:
-                call_comp = "O(n)"
-            elif "T(n-1)" in call_comp:
-                call_comp = "O(n)"
+                if "T(n) = n * T(n-1)" in call_comp:
+                    call_comp = "O(n!)"
+                elif "2T(n/2)" in call_comp:
+                    call_comp = "O(n log n)"
+                elif "T(n-1) + T(n-2)" in call_comp:
+                    call_comp = "O(2^n)"
+                elif "T(n/2) + O(1)" in call_comp:
+                    call_comp = "O(log n)"             
+                elif "T(n-1) + O(n)" in call_comp:
+                    call_comp = "O(n^2)"               
+                elif "T(n/2) + O(n)" in call_comp:
+                    call_comp = "O(n)"
+                elif "2T(n/2) + O(1)" in call_comp:
+                    call_comp = "O(n)"
+                elif "T(n-1)" in call_comp:
+                    call_comp = "O(n)"
 
-            self.record_line(
-                node,
-                time_override=call_comp,
-                space_override=self.custom_space.get(f_id, "O(1)")
-            )
+                self.record_line(
+                    node,
+                    time_override=call_comp,
+                    space_override=self.custom_space.get(f_id, "O(1)")
+                )
 
-        else:
-            self.record_line(node)
+            else:
+                self.record_line(node)
 
-    # attribute calls (e.g. list.pop())
-    elif isinstance(node.func, ast.Attribute):
-        if node.func.attr in self.builtin_complexities:
-            t = chain_time if chain_time else self.builtin_complexities[node.func.attr]['time']
-            s = chain_space if chain_space else self.builtin_complexities[node.func.attr]['space']
+        # attribute calls (e.g. list.pop())
+        elif isinstance(node.func, ast.Attribute):
+            if node.func.attr in self.builtin_complexities:
+                t = chain_time if chain_time else self.builtin_complexities[node.func.attr]['time']
+                s = chain_space if chain_space else self.builtin_complexities[node.func.attr]['space']
 
-            if node.func.attr == 'pop' and node.args:
-                t = 'O(n)'
+                if node.func.attr == 'pop' and node.args:
+                    t = 'O(n)'
 
-            self.record_line(node, time_override=t, space_override=s)
-        else:
-            self.record_line(node, time_override=chain_time, space_override=chain_space)
+                self.record_line(node, time_override=t, space_override=s)
+            else:
+                self.record_line(node, time_override=chain_time, space_override=chain_space)
 
-    self.generic_visit(node)
+        self.generic_visit(node)
 
     def visit_Subscript(self, node):
         if isinstance(node.slice, ast.Slice): self.has_slicing = True  
