@@ -1,13 +1,12 @@
 /* ==========================================================================
-   PAGE LAYOUT & CONTAINERS (LIGHT MODE)
+   PAGE LAYOUT & CONTAINERS
    ========================================================================== */
 
 .page-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #F9FAFB;
-  /* Soft light gray page background */
+  background-color: #f8fafc; /* Crisp, cool light gray */
 }
 
 .page-body {
@@ -19,40 +18,38 @@
 
 .page-main {
   flex: 1;
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
   width: 100%;
-  background: #FFFFFF;
-  /* Crisp white container */
+  background: #ffffff;
   border-radius: 16px;
-  padding: 40px;
-  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05);
-  /* Soft drop shadow */
+  padding: 40px 48px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
   overflow-y: auto;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #e2e8f0;
 }
 
 .page-header-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
+  align-items: flex-end;
+  margin-bottom: 32px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #E5E7EB;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .section-title {
-  color: #3C2D76;
-  /* Dark purple for high contrast text */
+  color: #0f172a; /* Slate 900 */
   margin: 0;
-  font-size: 2rem;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .page-subtitle {
-  color: #6B7280;
-  /* Neutral gray */
-  margin-top: 8px;
-  font-size: 1rem;
+  color: #64748b; /* Slate 500 */
+  margin: 8px 0 0 0;
+  font-size: 1.05rem;
 }
 
 /* ==========================================================================
@@ -60,21 +57,25 @@
    ========================================================================== */
 
 .btn-new-project-large {
-  background: linear-gradient(135deg, #7F57F9, #E058FB);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #7F57F9;
   color: white;
   border: none;
-  padding: 12px 24px;
+  padding: 12px 20px;
   border-radius: 8px;
-  font-weight: bold;
-  font-size: 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 15px rgba(127, 87, 249, 0.25);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(127, 87, 249, 0.2);
 }
 
 .btn-new-project-large:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(127, 87, 249, 0.4);
+  background: #6a48d7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(127, 87, 249, 0.3);
 }
 
 /* ==========================================================================
@@ -83,109 +84,120 @@
 
 .projects-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-  margin-top: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
 }
 
 .project-card {
-  border: 1px solid #E5E7EB;
-  background: #FFFFFF;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 20px;
+  padding: 24px;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .project-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(127, 87, 249, 0.12);
-  border-color: #7F57F9;
+  border-color: #cbd5e1;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+  transform: translateY(-2px);
+}
+
+.project-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
 }
 
 .project-icon-wrapper {
-  background: #F4F0FF;
-  /* Light purple tint */
-  width: 50px;
-  height: 50px;
+  background: #f3e8ff; /* Light purple tint */
+  color: #9333ea;      /* Solid purple icon */
+  width: 48px;
+  height: 48px;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 15px;
-}
-
-.project-folder-icon {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
 }
 
 .project-details h3 {
-  margin: 0 0 5px 0;
-  color: #3C2D76;
-  font-size: 1.1rem;
+  margin: 0 0 6px 0;
+  color: #1e293b;
+  font-size: 1.125rem;
+  font-weight: 600;
 }
 
 .project-details p {
-  margin: 0 0 20px 0;
-  color: #6B7280;
+  margin: 0;
+  color: #64748b;
   font-size: 0.85rem;
 }
 
-.project-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: auto;
-  gap: 10px;
-}
-
-.btn-open {
-  background: #F4F0FF;
-  color: #5A1398;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: 0.2s;
-  flex: 1;
-}
-
-.btn-open:hover {
-  background: #5A1398;
-  color: white;
-}
-
+/* Delete Button */
 .btn-delete {
   background: transparent;
-  border: 1px solid #ff4d4f;
-  color: #ff4d4f;
-  border-radius: 6px;
-  padding: 7px 12px;
+  border: none;
+  color: #cbd5e1;
+  padding: 8px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.project-card:hover .btn-delete {
+  color: #94a3b8; /* Make icon slightly darker on card hover */
+}
+
 .btn-delete:hover {
-  background: #ff4d4f;
-  color: white;
+  background: #fee2e2 !important; /* Light red background */
+  color: #ef4444 !important; /* Red icon */
 }
 
 /* ==========================================================================
-   EMPTY STATE / LOADING TEXT
+   EMPTY STATE & LOADING
    ========================================================================== */
-.page-main>p {
+
+.loading-state {
   text-align: center;
   padding: 40px;
-  color: #6B7280;
-  background: #F9FAFB;
-  border-radius: 12px;
-  border: 1px dashed #D1D5DB;
+  color: #64748b;
   font-size: 1.1rem;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+}
+
+.empty-icon {
+  color: #cbd5e1;
+  margin-bottom: 16px;
+}
+
+.empty-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #334155;
+  margin: 0 0 8px 0;
+}
+
+.empty-desc {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin: 0 0 24px 0;
+  max-width: 450px;
+  line-height: 1.5;
 }
