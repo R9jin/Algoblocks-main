@@ -549,6 +549,7 @@ const ActivityApp = () => {
     try {
       let json = null;
 
+      // 1. Fetch the JSON data
       if (dataFromState && dataFromState.blocks) {
         json = dataFromState;
       } else if (path) {
@@ -561,11 +562,37 @@ const ActivityApp = () => {
         json = await response.json();
       }
 
-      if (json && workspaceRef.current) {
-        // FIX: Use 'clear' instead of 'clearWorkspace'
-        workspaceRef.current.clear();
-        workspaceRef.current.loadTemplate(json);
-      }
+      if (!json) return;
+
+      // 2. Safe Polling: Wait for Blockly to finish mounting before loading
+      const tryLoad = (retries = 15) => {
+        if (!workspaceRef.current) {
+          if (retries > 0) {
+            // Workspace not ready yet, wait 100ms and try again
+            setTimeout(() => tryLoad(retries - 1), 100);
+          } else {
+            console.error("❌ Workspace took too long to initialize.");
+          }
+          return;
+        }
+
+        // 3. Workspace is ready! Load the blocks.
+        try {
+          if (workspaceRef.current.clear) workspaceRef.current.clear();
+
+          // Ensure we pass the correct root object
+          const payload = json.data ? json.data : json;
+          workspaceRef.current.loadTemplate(payload);
+
+          setViewMode("workspace");
+          setIsEditingCode(false);
+        } catch (err) {
+          console.error("❌ Error applying template:", err);
+        }
+      };
+
+      tryLoad(); // Start the loading loop
+
     } catch (error) {
       console.error("Failed to load template:", error);
     }

@@ -28,7 +28,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.has_slicing = False            
         self.has_division = False           
 
-        # Massively expanded for manual coding/competitive programming scripts
+        # Refined built-in complexities with better defaults
         self.builtin_complexities = {
             'sort': {'time': 'O(n log n)', 'space': 'O(n)'},
             'sorted': {'time': 'O(n log n)', 'space': 'O(n)'},
@@ -38,22 +38,21 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             'set': {'time': 'O(n)', 'space': 'O(n)'},
             'dict': {'time': 'O(n)', 'space': 'O(n)'},
             'tuple': {'time': 'O(n)', 'space': 'O(n)'},
-            'map': {'time': 'O(1)', 'space': 'O(1)'}, # Iterators generate in O(1)
+            'map': {'time': 'O(1)', 'space': 'O(1)'}, 
             'filter': {'time': 'O(1)', 'space': 'O(1)'},
             'index': {'time': 'O(n)', 'space': 'O(1)'},
             'append': {'time': 'O(1)', 'space': 'O(1)'},
-            'pop': {'time': 'O(1)', 'space': 'O(1)'},
-            'insert': {'time': 'O(n)', 'space': 'O(n)'},
-            'remove': {'time': 'O(n)', 'space': 'O(1)'},
+            'pop': {'time': 'O(1)', 'space': 'O(1)'},     # Default to O(1), overridden in visit_Call
+            'insert': {'time': 'O(n)', 'space': 'O(1)'},  # Fixed Space: O(1) auxiliary
+            'remove': {'time': 'O(n)', 'space': 'O(1)'},  # Fixed Space: O(1) auxiliary
             'count': {'time': 'O(n)', 'space': 'O(1)'},
             'copy': {'time': 'O(n)', 'space': 'O(n)'},
             'str': {'time': 'O(n)', 'space': 'O(n)'},
             'max': {'time': 'O(n)', 'space': 'O(1)'},
             'min': {'time': 'O(n)', 'space': 'O(1)'},
             'sum': {'time': 'O(n)', 'space': 'O(1)'},
-            # I/O operations inherently scale with the length (n) of the string read/written
             'input': {'time': 'O(n)', 'space': 'O(n)'},
-            'print': {'time': 'O(n)', 'space': 'O(1)'},
+            'print': {'time': 'O(1)', 'space': 'O(1)'},   # Default to O(1), overridden in visit_Call
             'readline': {'time': 'O(n)', 'space': 'O(n)'},
             'read': {'time': 'O(n)', 'space': 'O(n)'},
             'len': {'time': 'O(1)', 'space': 'O(1)'},
@@ -581,50 +580,112 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         if is_log: self.log_loop_depth -= 1
         elif is_sqrt: self.sqrt_loop_depth -= 1
         else: self.loop_depth -= 1
+        
+    def _is_collection_expr(self, node):
+        """Heuristic to check if an expression represents a collection that scales with n."""
+        if isinstance(node, (ast.List, ast.Tuple, ast.Set, ast.Dict, ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            # Large literals or comprehensions scale with input size/n
+            if hasattr(node, 'elts') and len(node.elts) > 5: return True
+            if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp)): return True
+            return False
+        if isinstance(node, ast.Subscript) and isinstance(node.slice, ast.Slice):
+            return True
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            if node.func.id in ['list', 'set', 'dict', 'sorted', 'map', 'filter']:
+                return True
+        return False
 
     def visit_Call(self, node):
         chain_time, chain_space = None, None
         chain_poly = 0  
+
         for child in ast.walk(node):
             if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
                 attr = child.func.attr
                 if attr in self.builtin_complexities:
                     b = self.builtin_complexities[attr]
-                    if "n log n" in b['time']: chain_poly = max(chain_poly, 2)
-                    elif "n" in b['time']: chain_poly = max(chain_poly, 1)
-                    if "O(n)" in b['space']: chain_space = "O(n)"
-        
-        if chain_poly == 2: chain_time = "O(n log n)"
-        elif chain_poly == 1: chain_time = "O(n)"
-        
+                    if "n log n" in b['time']:
+                        chain_poly = max(chain_poly, 2)
+                    elif "n" in b['time']:
+                        chain_poly = max(chain_poly, 1)
+                    if "O(n)" in b['space']:
+                        chain_space = "O(n)"
+
+        if chain_poly == 2:
+            chain_time = "O(n log n)"
+        elif chain_poly == 1:
+            chain_time = "O(n)"
+
+        has_scaling_arg = any(self._is_collection_expr(arg) for arg in node.args)
+
         if isinstance(node.func, ast.Name):
             f_id = self.aliases.get(node.func.id, node.func.id)
+
             if f_id == self.current_function_name:
                 self.recursive_calls_count += 1
                 if self.loop_depth > 0 or self.log_loop_depth > 0:
                     self.has_recursion_in_loop = True  
+
                 rel = self.custom_functions.get(f_id, "T(n-1)")
                 self.record_line(node, time_override=rel, space_override="O(n)")
+
             elif f_id in self.builtin_complexities:
                 b = self.builtin_complexities[f_id]
-                self.record_line(node, time_override=b['time'], space_override=b['space'])
+                t, s = b['time'], b['space']
+
+                if f_id == 'print':
+                    if has_scaling_arg:
+                        t = 'O(n)'   # printing list/string/etc
+                    else:
+                        # constant print stays O(1)
+                        if len(node.args) == 1 and isinstance(node.args[0], ast.Constant):
+                            t = 'O(1)'
+                        else:
+                            t = 'O(1)'
+
+                if f_id == 'pop' and node.args:
+                    t = 'O(n)'
+
+                self.record_line(node, time_override=t, space_override=s)
+
             elif f_id in self.custom_functions:
                 call_comp = self.custom_functions[f_id]
-                if "T(n) = n * T(n-1)" in call_comp: call_comp = "O(n!)"
-                elif "2T(n/2)" in call_comp: call_comp = "O(n log n)"
-                elif "T(n-1) + T(n-2)" in call_comp: call_comp = "O(2^n)"
-                elif "T(n/2) + O(1)" in call_comp: call_comp = "O(log n)"             
-                elif "T(n-1) + O(n)" in call_comp: call_comp = "O(n^2)"               
-                elif "T(n/2) + O(n)" in call_comp: call_comp = "O(n)"
-                elif "2T(n/2) + O(1)" in call_comp: call_comp = "O(n)"
-                elif "T(n-1)" in call_comp: call_comp = "O(n)"
-                self.record_line(node, time_override=call_comp, space_override=self.custom_space.get(f_id, "O(1)"))
+
+                # normalize recurrence → big-O
+                if "T(n) = n * T(n-1)" in call_comp:
+                    call_comp = "O(n!)"
+                elif "2T(n/2)" in call_comp:
+                    call_comp = "O(n log n)"
+                elif "T(n-1) + T(n-2)" in call_comp:
+                    call_comp = "O(2^n)"
+                elif "T(n/2) + O(1)" in call_comp:
+                    call_comp = "O(log n)"             
+                elif "T(n-1) + O(n)" in call_comp:
+                    call_comp = "O(n^2)"               
+                elif "T(n/2) + O(n)" in call_comp:
+                    call_comp = "O(n)"
+                elif "2T(n/2) + O(1)" in call_comp:
+                    call_comp = "O(n)"
+                elif "T(n-1)" in call_comp:
+                    call_comp = "O(n)"
+
+                self.record_line(
+                    node,
+                    time_override=call_comp,
+                    space_override=self.custom_space.get(f_id, "O(1)")
+                )
+
             else:
                 self.record_line(node)
+
         elif isinstance(node.func, ast.Attribute):
             if node.func.attr in self.builtin_complexities:
                 t = chain_time if chain_time else self.builtin_complexities[node.func.attr]['time']
                 s = chain_space if chain_space else self.builtin_complexities[node.func.attr]['space']
+
+                if node.func.attr == 'pop' and node.args:
+                    t = 'O(n)'
+
                 self.record_line(node, time_override=t, space_override=s)
             else:
                 self.record_line(node, time_override=chain_time, space_override=chain_space)
