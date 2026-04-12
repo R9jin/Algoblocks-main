@@ -253,9 +253,12 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
         if not time_override:
             if isinstance(node, ast.For):
-                display_poly = 1
+                # Ensure constant for-loops are O(1)
+                display_poly = 0 if self._is_constant_loop(node) else 1
             elif isinstance(node, ast.While):
-                if self._is_log_loop(node): display_log = 1
+                # Ensure constant while-loops are O(1)
+                if self._is_constant_loop(node): display_poly = 0
+                elif self._is_log_loop(node): display_log = 1
                 elif self._is_sqrt_loop(node): display_sqrt = 1
                 else: display_poly = 1
 
@@ -627,9 +630,12 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             self.loop_depth -= 1
         
     def _is_collection_expr(self, node):
-        """Heuristic to check if an expression represents a collection that scales with n."""
+        """Heuristic to check if an expression scales with n."""
+        # Fix for your string edge case: O(1) if len <= 1, O(n) otherwise
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return len(node.value) > 1
+            
         if isinstance(node, (ast.List, ast.Tuple, ast.Set, ast.Dict, ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
-            # Large literals or comprehensions scale with input size/n
             if hasattr(node, 'elts') and len(node.elts) > 5: return True
             if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp)): return True
             return False
@@ -644,7 +650,7 @@ def visit_Call(self, node):
     chain_time, chain_space = None, None
     chain_poly = 0  
 
-    # Detect chained attribute calls (kept from your original logic)
+    # Detect chained attribute calls
     for child in ast.walk(node):
         if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
             attr = child.func.attr
@@ -662,12 +668,13 @@ def visit_Call(self, node):
     elif chain_poly == 1:
         chain_time = "O(n)"
 
-    # NEW: detect whether arguments scale with input size
+    # NEW: detect scaling arguments (lists, slices, etc.)
     has_scaling_arg = any(self._is_collection_expr(arg) for arg in node.args)
 
     if isinstance(node.func, ast.Name):
         f_id = self.aliases.get(node.func.id, node.func.id)
 
+        # recursion handling (unchanged)
         if f_id == self.current_function_name:
             self.recursive_calls_count += 1
             if self.loop_depth > 0 or self.log_loop_depth > 0:
@@ -676,28 +683,28 @@ def visit_Call(self, node):
             rel = self.custom_functions.get(f_id, "T(n-1)")
             self.record_line(node, time_override=rel, space_override="O(n)")
 
+        # builtin functions
         elif f_id in self.builtin_complexities:
             b = self.builtin_complexities[f_id]
             t, s = b['time'], b['space']
 
+            # =========================
+            # UPDATED PRINT LOGIC (YOUR REQUEST)
+            # =========================
             if f_id == 'print':
-                # If printing a collection → linear cost
-                if has_scaling_arg:
-                    t = 'O(n)'
-                else:
-                    # scalar values / constants → constant time
-                    t = 'O(1)'
+                # O(n) if printing collections/strings/lists/etc.
+                t = 'O(n)' if has_scaling_arg else 'O(1)'
 
-            # pop rule (kept but simplified behavior unchanged)
+            # pop behavior
             if f_id == 'pop' and node.args:
                 t = 'O(n)'
 
             self.record_line(node, time_override=t, space_override=s)
 
+        # user-defined functions
         elif f_id in self.custom_functions:
             call_comp = self.custom_functions[f_id]
 
-            # normalize recurrence → big-O
             if "T(n) = n * T(n-1)" in call_comp:
                 call_comp = "O(n!)"
             elif "2T(n/2)" in call_comp:
@@ -723,13 +730,13 @@ def visit_Call(self, node):
 
         else:
             self.record_line(node)
-            
+
+    # attribute calls (e.g. list.pop())
     elif isinstance(node.func, ast.Attribute):
         if node.func.attr in self.builtin_complexities:
             t = chain_time if chain_time else self.builtin_complexities[node.func.attr]['time']
             s = chain_space if chain_space else self.builtin_complexities[node.func.attr]['space']
 
-            # pop fix (kept consistent)
             if node.func.attr == 'pop' and node.args:
                 t = 'O(n)'
 
