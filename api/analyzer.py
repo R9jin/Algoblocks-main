@@ -263,7 +263,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         is_recurrence = False
 
         if time_override:
-            if any(x in time_override for x in ["T(n) =", "n!", "2^n", "2T("]): is_recurrence = True
+            if time_override.startswith("T(") or any(x in time_override for x in ["T(n) =", "n!", "2^n", "2T("]): is_recurrence = True
             else:
                 if "n log n" in time_override: override_poly = 1; override_log = 1
                 elif "O(log n)" in time_override: override_log = 1
@@ -338,6 +338,8 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     # --- NODE HANDLERS ---
     def visit_FunctionDef(self, node):
+        start_idx = len(self.details)
+        
         prev_data = (self.max_complexity, self.max_space_weight, self.max_poly, self.max_log, self.max_sqrt, self.max_exp)
         self.max_complexity = self.max_space_weight = self.max_poly = self.max_log = self.max_sqrt = self.max_exp = 0
         self.current_function_name, self.recursive_calls_count = node.name, 0
@@ -348,14 +350,35 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.current_depth += 1; self.generic_visit(node); self.current_depth -= 1
         self.in_dead_code = prev_dead
         
-        if self.has_recursion_in_loop: relation = "T(n) = n * T(n-1) + O(1)"
-        elif self.recursive_calls_count >= 2: relation = "T(n) = 2T(n/2) + O(n)" if (self.has_slicing or self.has_division or self.max_poly > 0) else "T(n) = T(n-1) + T(n-2) + O(1)"
+        # Determine Recurrence Relation Edge Cases
+        if self.has_recursion_in_loop: 
+            relation = "T(n) = n * T(n-1) + O(1)" # O(n!)
+        elif self.recursive_calls_count >= 2: 
+            if self.has_division:
+                if self.max_poly > 0 or self.has_slicing: relation = "T(n) = 2T(n/2) + O(n)"
+                else: relation = "T(n) = 2T(n/2) + O(1)"
+            else:
+                relation = "T(n) = T(n-1) + T(n-2) + O(1)" # O(2^n)
         elif self.recursive_calls_count == 1:
-            if self.has_division: relation = "T(n) = T(n/2) + O(n)" if self.max_poly > 0 else "T(n) = T(n/2) + O(1)"
-            else: relation = "T(n) = T(n-1) + O(n)" if (self.max_poly > 0 or self.has_slicing) else "T(n) = T(n-1) + O(1)"
-        else: relation = "O(2^n)" if self.max_exp > 0 else self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
+            if self.has_division: 
+                if self.max_poly > 0 or self.has_slicing: relation = "T(n) = T(n/2) + O(n)"
+                else: relation = "T(n) = T(n/2) + O(1)"
+            else: 
+                if self.max_poly > 0 or self.has_slicing: relation = "T(n) = T(n-1) + O(n)"
+                elif self.max_log > 0: relation = "T(n) = T(n-1) + O(log n)"
+                else: relation = "T(n) = T(n-1) + O(1)"
+        else: 
+            relation = "O(2^n)" if self.max_exp > 0 else self._build_time_str(self.max_poly, self.max_log, self.max_sqrt)
             
         self.custom_functions[node.name] = relation
+        
+        # Retroactively update recursive lines in this function with the actual recurrence string
+        for i in range(start_idx, len(self.details)):
+            if str(self.details[i]["local_time"]).startswith("T("):
+                self.details[i]["local_time"] = relation
+            if str(self.details[i]["global_time"]).startswith("T("):
+                self.details[i]["global_time"] = relation
+
         self.custom_space[node.name] = "O(log n)" if (self.recursive_calls_count == 1 and self.has_division) else ("O(n)" if (self.recursive_calls_count > 0 or self.max_space_weight > 0) else "O(1)")
         if not is_dead:
             self.max_exp = max(prev_data[5], self.max_exp)
@@ -407,7 +430,21 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.record_line(node, time_override=b['time'], space_override=b['space'])
             elif f_id in self.custom_functions:
                 call_comp = self.custom_functions[f_id]
-                lookup = {"T(n) = n * T(n-1)": "O(n!)", "2T(n/2)": "O(n log n)", "T(n-1) + T(n-2)": "O(2^n)", "T(n/2) + O(1)": "O(log n)", "T(n-1) + O(n)": "O(n^2)"}
+                lookup = {
+                    "T(n) = n * T(n-1)": "O(n!)", 
+                    "T(n) = 2T(n/2) + O(n)": "O(n log n)",
+                    "T(n) = 2T(n/2) + O(1)": "O(n)",
+                    "T(n) = T(n-1) + T(n-2) + O(1)": "O(2^n)",
+                    "T(n) = T(n/2) + O(n)": "O(n)",
+                    "T(n) = T(n/2) + O(1)": "O(log n)",
+                    "T(n) = T(n-1) + O(n)": "O(n^2)",
+                    "T(n) = T(n-1) + O(log n)": "O(n log n)",
+                    "T(n) = T(n-1) + O(1)": "O(n)",
+                    "2T(n/2)": "O(n log n)", # Legacy fallbacks
+                    "T(n-1) + T(n-2)": "O(2^n)", 
+                    "T(n/2) + O(1)": "O(log n)", 
+                    "T(n-1) + O(n)": "O(n^2)"
+                }
                 for k, v in lookup.items():
                     if k in call_comp: call_comp = v; break
                 self.record_line(node, time_override=call_comp, space_override=self.custom_space.get(f_id, "O(1)"))
@@ -445,13 +482,28 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     def get_final_badge(self):
         for line in reversed(self.details):   
             comp = line.get('global_time', '')  
-            if "T(n) =" in comp or comp in ["O(n!)", "O(2^n)", "O(n log n)"]: return comp
+            if "T(n) =" in comp or comp in ["O(n!)", "O(2^n)", "O(n log n)", "O(n^2)", "O(n)", "O(log n)"]: return comp
         return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt, self.max_exp)
 
     def get_final_asymptotic_badge(self):
         for line in reversed(self.details):  
             comp = line.get('global_time', '')
-            lookup = {"T(n) = n * T(n-1)": "O(n!)", "O(n!)": "O(n!)", "2T(n/2)": "O(n log n)", "T(n-1) + T(n-2)": "O(2^n)", "T(n/2) + O(1)": "O(log n)", "T(n-1) + O(n)": "O(n^2)"}
+            lookup = {
+                "T(n) = n * T(n-1)": "O(n!)",
+                "T(n) = 2T(n/2) + O(n)": "O(n log n)",
+                "T(n) = 2T(n/2) + O(1)": "O(n)",
+                "T(n) = T(n-1) + T(n-2) + O(1)": "O(2^n)",
+                "T(n) = T(n/2) + O(n)": "O(n)",
+                "T(n) = T(n/2) + O(1)": "O(log n)",
+                "T(n) = T(n-1) + O(n)": "O(n^2)",
+                "T(n) = T(n-1) + O(log n)": "O(n log n)",
+                "T(n) = T(n-1) + O(1)": "O(n)",
+                "O(n!)": "O(n!)",
+                "2T(n/2)": "O(n log n)",
+                "T(n-1) + T(n-2)": "O(2^n)", 
+                "T(n/2) + O(1)": "O(log n)", 
+                "T(n-1) + O(n)": "O(n^2)"
+            }
             for k, v in lookup.items():
                 if k in comp: return v
         return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt, self.max_exp)
