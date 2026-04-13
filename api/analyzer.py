@@ -19,6 +19,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.loop_depth = 0              
         self.log_loop_depth = 0          
         self.sqrt_loop_depth = 0         
+        self.in_if_depth = 0
         
         # Peak complexity trackers
         self.max_complexity = 0          
@@ -40,6 +41,9 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.has_recursion_in_loop = False  
         self.has_slicing = False            
         self.has_division = False           
+
+        self.first_rec_line = float('inf')
+        self.conditional_partition_lines = []
 
         self.builtin_complexities = {
             'sort': {'time': 'O(n log n)', 'space': 'O(n)', 'desc': 'uses the Timsort algorithm which involves multiple passes and auxiliary storage'},
@@ -108,20 +112,17 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     # --- COMPREHENSIVE REASONING ENGINE ---
     def _generate_explanation(self, node, local_t, global_t, is_dead):
-        """Generates in-depth, multi-sentence explanations for the complexity assignment."""
         if is_dead:
             return ("This line is categorized as unreachable 'Dead Code' because it follows a terminal "
                     "statement like a return or break. Since this code will never be executed by the "
                     "interpreter, it does not contribute to the runtime or memory usage of the program.")
 
-        # 1. Exponential Detection
         if "2^n" in local_t or self._is_exponential_loop(node):
             return ("This operation exhibits exponential O(2^n) growth, meaning the number of steps doubles "
                     "with every single increment of the input size. This is typically caused by iterative patterns "
                     "like bit-shifting to a dynamic power or recursive branching without memoization. "
                     "Such complexity is generally considered inefficient for large-scale data processing.")
 
-        # 2. Loops (For/While)
         if isinstance(node, (ast.For, ast.While)):
             if "O(1)" in local_t:
                 return ("This loop is assigned constant O(1) complexity because it iterates a fixed number of "
@@ -151,7 +152,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     "The time required for this block will increase in direct proportion to the size of the input. "
                     "This is the most common complexity for basic data iteration and aggregation tasks.")
 
-        # 3. Assignments and Slicing
         if isinstance(node, ast.Assign):
             if self.has_slicing:
                 return ("This assignment involves array slicing, which requires O(n) time and space to create "
@@ -165,7 +165,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                         "The system must iterate through the entire source structure to complete the "
                         "assignment, leading to a direct correlation between data size and execution time.")
 
-        # 4. Function Calls
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
             f_id = node.func.id
             if f_id == self.current_function_name:
@@ -344,21 +343,34 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.max_complexity = self.max_space_weight = self.max_poly = self.max_log = self.max_sqrt = self.max_exp = 0
         self.current_function_name, self.recursive_calls_count = node.name, 0
         self.has_recursion_in_loop = self.has_slicing = self.has_division = False
+        self.first_rec_line = float('inf')
+        self.conditional_partition_lines = []
+        self.in_if_depth = 0
+        
         is_dead = node.name not in self.reachable_funcs
         self.record_line(node, time_override="Dead Code" if is_dead else "Definition")
         prev_dead = self.in_dead_code; self.in_dead_code = is_dead or prev_dead
         self.current_depth += 1; self.generic_visit(node); self.current_depth -= 1
         self.in_dead_code = prev_dead
         
-        # Determine Recurrence Relation Edge Cases
+        # Determine Recurrence Relation Edge Cases (STRUCTURAL FIX)
+        # If conditional filtering/partitioning occurs BEFORE the recursive call, it's Quick Sort behavior.
+        has_pre_recursion_partition = any(line < self.first_rec_line for line in self.conditional_partition_lines)
+        
         if self.has_recursion_in_loop: 
             relation = "T(n) = n * T(n-1) + O(1)" # O(n!)
         elif self.recursive_calls_count >= 2: 
-            if self.has_division:
+            if has_pre_recursion_partition:
+                # Structural representation of Quick Sort worst case (unbalanced data-dependent split)
+                relation = "T(n) = T(n-1) + O(n)"
+            elif self.has_division or self.has_slicing:
+                # Structural representation of Merge Sort worst case (index-based structural halving)
                 if self.max_poly > 0 or self.has_slicing: relation = "T(n) = 2T(n/2) + O(n)"
                 else: relation = "T(n) = 2T(n/2) + O(1)"
             else:
-                relation = "T(n) = T(n-1) + T(n-2) + O(1)" # O(2^n)
+                # Pure Branching
+                if self.max_poly > 0: relation = "T(n) = T(n-1) + O(n)"
+                else: relation = "T(n) = T(n-1) + T(n-2) + O(1)" # O(2^n)
         elif self.recursive_calls_count == 1:
             if self.has_division: 
                 if self.max_poly > 0 or self.has_slicing: relation = "T(n) = T(n/2) + O(n)"
@@ -372,7 +384,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             
         self.custom_functions[node.name] = relation
         
-        # Retroactively update recursive lines in this function with the actual recurrence string
         for i in range(start_idx, len(self.details)):
             if str(self.details[i]["local_time"]).startswith("T("):
                 self.details[i]["local_time"] = relation
@@ -389,11 +400,31 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def visit_If(self, node):
         self.record_line(node)
+        
+        # If an IF statement executes inside a loop, it indicates a data-dependent filter (Partition)
+        if self.loop_depth > 0:
+            self.conditional_partition_lines.append(getattr(node, 'lineno', float('inf')))
+            
+        self.in_if_depth += 1
+        
         prev_rec = self.recursive_calls_count; self.recursive_calls_count = 0
-        self.current_depth += 1; [self.visit(c) for c in node.body]; self.current_depth -= 1
+        self.current_depth += 1; 
+        for c in node.body: self.visit(c)
+        self.current_depth -= 1
+        
         if_rec = self.recursive_calls_count; self.recursive_calls_count = 0
-        self.current_depth += 1; [self.visit(c) for c in node.orelse]; self.current_depth -= 1
+        self.current_depth += 1; 
+        for c in node.orelse: self.visit(c)
+        self.current_depth -= 1
+        
         self.recursive_calls_count = prev_rec + max(if_rec, self.recursive_calls_count)
+        self.in_if_depth -= 1
+
+    def visit_ListComp(self, node):
+        # Catch standard Quick Sort logic relying on array comprehensions with conditional filtering
+        if any(getattr(comp, 'ifs', []) for comp in node.generators):
+            self.conditional_partition_lines.append(getattr(node, 'lineno', float('inf')))
+        self.generic_visit(node)
 
     def visit_For(self, node):
         if self._is_exponential_loop(node):
@@ -423,6 +454,8 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             f_id = self.aliases.get(node.func.id, node.func.id)
             if f_id == self.current_function_name:
                 self.recursive_calls_count += 1
+                self.first_rec_line = min(self.first_rec_line, getattr(node, 'lineno', float('inf')))
+                
                 if self.loop_depth > 0 or self.log_loop_depth > 0: self.has_recursion_in_loop = True  
                 self.record_line(node, time_override=self.custom_functions.get(f_id, "T(n-1)"), space_override="O(n)")
             elif f_id in self.builtin_complexities:
@@ -440,7 +473,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     "T(n) = T(n-1) + O(n)": "O(n^2)",
                     "T(n) = T(n-1) + O(log n)": "O(n log n)",
                     "T(n) = T(n-1) + O(1)": "O(n)",
-                    "2T(n/2)": "O(n log n)", # Legacy fallbacks
+                    "2T(n/2)": "O(n log n)",
                     "T(n-1) + T(n-2)": "O(2^n)", 
                     "T(n/2) + O(1)": "O(log n)", 
                     "T(n-1) + O(n)": "O(n^2)"
@@ -471,7 +504,13 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)  
 
     def visit_BinOp(self, node):
-        if isinstance(node.op, (ast.Div, ast.FloorDiv, ast.RShift)): self.has_division = True  
+        if isinstance(node.op, (ast.Div, ast.FloorDiv, ast.RShift)): 
+            self.has_division = True  
+        elif isinstance(node.op, ast.Mult):
+            if isinstance(node.right, ast.Constant) and isinstance(node.right.value, float) and node.right.value < 1.0:
+                self.has_division = True
+            elif isinstance(node.left, ast.Constant) and isinstance(node.left.value, float) and node.left.value < 1.0:
+                self.has_division = True
         self.generic_visit(node)  
 
     def visit_AugAssign(self, node): self.record_line(node); self.generic_visit(node)  
