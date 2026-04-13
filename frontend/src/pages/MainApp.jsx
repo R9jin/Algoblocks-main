@@ -49,8 +49,13 @@ export default function MainApp() {
 
   // --- Modals & Notifications ---
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
+  
+  // Refined Save Modal State to support metadata editing
   const [saveModal, setSaveModal] = useState({
     isOpen: false,
+    isEditMetadataOnly: false,
+    editingId: null,
+    editingData: null,
     title: "",
     description: "",
     category: "Custom Templates",
@@ -124,7 +129,7 @@ export default function MainApp() {
 
       let customItems = [];
 
-      // 1. Process Projects (The ones from before)
+      // 1. Process Projects
       if (projData.status === 'success') {
         const userProjects = projData.projects
           .filter(p => p.owner_id === user.email)
@@ -132,9 +137,9 @@ export default function MainApp() {
             _id: p._id,
             title: p.title,
             description: p.description || "Saved Project",
-            category: "My Projects", // Group them under My Projects
+            category: "My Projects",
             isSystem: false,
-            saveType: "project", // Tag as a project for deleting/updating
+            saveType: "project",
             data: p.data
           }));
         customItems = [...customItems, ...userProjects];
@@ -150,7 +155,7 @@ export default function MainApp() {
             description: t.description || "Custom template",
             category: t.category || "Custom Templates",
             isSystem: false,
-            saveType: "template", // Tag as a template for deleting/updating
+            saveType: "template",
             data: t.data
           }));
         customItems = [...customItems, ...userTemplates];
@@ -178,7 +183,7 @@ export default function MainApp() {
       } else {
         json = item.data;
         setCurrentLoadedId(item._id);
-        setCurrentSaveType(item.saveType || "project"); // Use the tagged type
+        setCurrentSaveType(item.saveType || "project");
       }
 
       setCurrentProjectTitle(item.title);
@@ -258,15 +263,32 @@ export default function MainApp() {
     });
   };
 
-  // --- Dual Save Logic ---
+  // --- Dual Save & Edit Logic ---
   const openSaveModal = () => {
     if (!blocklyJson) { showToast("The workspace is empty. Nothing to save!", "error"); return; }
     setSaveModal({
       isOpen: true,
+      isEditMetadataOnly: false,
+      editingId: currentLoadedId,
+      editingData: null,
       title: currentProjectTitle !== "Untitled Project" ? currentProjectTitle : "",
       description: "",
       category: "Custom Templates",
       saveType: currentSaveType
+    });
+  };
+
+  const handleEditItem = (e, item) => {
+    e.stopPropagation();
+    setSaveModal({
+      isOpen: true,
+      isEditMetadataOnly: true,
+      editingId: item._id,
+      editingData: item.data,
+      title: item.title,
+      description: item.description || "",
+      category: item.category || "Custom Templates",
+      saveType: item.saveType || "project"
     });
   };
 
@@ -280,7 +302,7 @@ export default function MainApp() {
     const payload = {
       title: saveModal.title || "Untitled",
       description: saveModal.description || "",
-      data: blocklyJson,
+      data: saveModal.isEditMetadataOnly ? saveModal.editingData : blocklyJson,
       owner_id: user.email
     };
 
@@ -290,8 +312,8 @@ export default function MainApp() {
 
     try {
       let res;
-      if (currentLoadedId && currentSaveType === saveModal.saveType) {
-        res = await fetch(`${VERCEL_URL}${endpoint}/${currentLoadedId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (saveModal.editingId) {
+        res = await fetch(`${VERCEL_URL}${endpoint}/${saveModal.editingId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       } else {
         res = await fetch(`${VERCEL_URL}${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       }
@@ -299,11 +321,13 @@ export default function MainApp() {
       if (res.ok) {
         const result = await res.json();
         showToast(`${saveModal.saveType === 'template' ? 'Template' : 'Project'} saved!`, "success");
-        if (!currentLoadedId || currentSaveType !== saveModal.saveType) {
-          setCurrentLoadedId(result.id);
+        
+        // Sync the current workspace tracking only if we modified the active item
+        if (!saveModal.isEditMetadataOnly || saveModal.editingId === currentLoadedId) {
+          if (!saveModal.editingId) setCurrentLoadedId(result.id);
+          setCurrentProjectTitle(payload.title);
+          setCurrentSaveType(saveModal.saveType);
         }
-        setCurrentProjectTitle(payload.title);
-        setCurrentSaveType(saveModal.saveType);
 
         // Always fetch to update the sidebar with any new projects or templates
         fetchTemplates();
@@ -420,15 +444,17 @@ export default function MainApp() {
       {saveModal.isOpen && (
         <div className="modal-overlay">
           <div className="save-modal-content">
-            <h2 className="save-modal-title">Save to Cloud</h2>
+            <h2 className="save-modal-title">
+              {saveModal.isEditMetadataOnly ? "Edit Details" : "Save to Cloud"}
+            </h2>
 
             <div className="save-type-toggle" style={{ display: 'flex', gap: '20px', marginBottom: '20px', background: '#f1f5f9', padding: '10px', borderRadius: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'black' }}>
-                <input type="radio" name="saveType" checked={saveModal.saveType === 'project'} onChange={() => setSaveModal({ ...saveModal, saveType: 'project' })} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: saveModal.editingId ? 'not-allowed' : 'pointer', color: saveModal.editingId ? '#94a3b8' : 'black' }}>
+                <input type="radio" name="saveType" disabled={!!saveModal.editingId} checked={saveModal.saveType === 'project'} onChange={() => setSaveModal({ ...saveModal, saveType: 'project' })} />
                 Save as Project (Dashboard)
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'black' }}>
-                <input type="radio" name="saveType" checked={saveModal.saveType === 'template'} onChange={() => setSaveModal({ ...saveModal, saveType: 'template' })} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: saveModal.editingId ? 'not-allowed' : 'pointer', color: saveModal.editingId ? '#94a3b8' : 'black' }}>
+                <input type="radio" name="saveType" disabled={!!saveModal.editingId} checked={saveModal.saveType === 'template'} onChange={() => setSaveModal({ ...saveModal, saveType: 'template' })} />
                 Save as Template (Sidebar)
               </label>
             </div>
@@ -467,7 +493,7 @@ export default function MainApp() {
         handleSaveToDB={openSaveModal}
         currentProjectId={currentLoadedId}
         currentProjectTitle={currentProjectTitle}
-        handleUpdateDB={submitSave}
+        handleUpdateDB={openSaveModal}
       />
 
       <Split className={`workspace-split ${!isSidebarVisible ? 'sidebar-hidden' : ''}`} sizes={[20, 80]} minSize={[250, 400]} gutterSize={8}>
@@ -496,8 +522,8 @@ export default function MainApp() {
                       ) : (
                         <div className="badge-custom-group-polished">
                           <span className="badge-custom-polished">{item.saveType === 'project' ? 'Project' : 'Custom'}</span>
-                          {/* Pass the entire item object to the delete handler so it knows which endpoint to hit */}
-                          <button onClick={(e) => handleDeleteItem(e, item)} className="sidebar-delete-btn-polished" title="Delete">✕</button>
+                          <button onClick={(e) => handleEditItem(e, item)} className="sidebar-edit-btn-polished" title="Edit Details" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: '14px', marginLeft: '5px' }}>✎</button>
+                          <button onClick={(e) => handleDeleteItem(e, item)} className="sidebar-delete-btn-polished" title="Delete" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '14px', marginLeft: '5px' }}>✕</button>
                         </div>
                       )}
                     </div>
