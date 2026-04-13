@@ -354,29 +354,44 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         self.in_dead_code = prev_dead
         
         # Determine Recurrence Relation Edge Cases (STRUCTURAL FIX)
-        # If conditional filtering/partitioning occurs BEFORE the recursive call, it's Quick Sort behavior.
-        has_pre_recursion_partition = any(line < self.first_rec_line for line in self.conditional_partition_lines)
         
+        # 1. Check if this function or its nested helper functions do linear O(n) work
+        does_linear_work = self.max_poly > 0 or self.has_slicing
+        if not does_linear_work:
+            for called in self.call_graph.get(node.name, set()):
+                if called in self.symbol_table and called != node.name:
+                    for child in ast.walk(self.symbol_table[called]):
+                        if isinstance(child, (ast.For, ast.While)):
+                            if not self._is_constant_loop(child):
+                                does_linear_work = True
+                                break
+                        elif isinstance(child, ast.ListComp):
+                            does_linear_work = True
+                            break
+                        elif isinstance(child, ast.Subscript) and isinstance(getattr(child, 'slice', None), ast.Slice):
+                            does_linear_work = True
+                            break
+                    if does_linear_work:
+                        break
+
+        # 2. Assign Recurrence Matrix
         if self.has_recursion_in_loop: 
             relation = "T(n) = n * T(n-1) + O(1)" # O(n!)
         elif self.recursive_calls_count >= 2: 
-            if has_pre_recursion_partition:
-                # Structural representation of Quick Sort worst case (unbalanced data-dependent split)
-                relation = "T(n) = T(n-1) + O(n)"
-            elif self.has_division or self.has_slicing:
-                # Structural representation of Merge Sort worst case (index-based structural halving)
-                if self.max_poly > 0 or self.has_slicing: relation = "T(n) = 2T(n/2) + O(n)"
+            if self.has_division:
+                # Structural representation of Merge Sort (Halves data structurally)
+                if does_linear_work: relation = "T(n) = 2T(n/2) + O(n)"
                 else: relation = "T(n) = 2T(n/2) + O(1)"
             else:
-                # Pure Branching
-                if self.max_poly > 0: relation = "T(n) = T(n-1) + O(n)"
+                # Structural representation of Quick Sort or Fibonacci 
+                if does_linear_work: relation = "T(n) = T(n-1) + O(n)"
                 else: relation = "T(n) = T(n-1) + T(n-2) + O(1)" # O(2^n)
         elif self.recursive_calls_count == 1:
             if self.has_division: 
-                if self.max_poly > 0 or self.has_slicing: relation = "T(n) = T(n/2) + O(n)"
+                if does_linear_work: relation = "T(n) = T(n/2) + O(n)"
                 else: relation = "T(n) = T(n/2) + O(1)"
             else: 
-                if self.max_poly > 0 or self.has_slicing: relation = "T(n) = T(n-1) + O(n)"
+                if does_linear_work: relation = "T(n) = T(n-1) + O(n)"
                 elif self.max_log > 0: relation = "T(n) = T(n-1) + O(log n)"
                 else: relation = "T(n) = T(n-1) + O(1)"
         else: 
@@ -476,7 +491,14 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                     "2T(n/2)": "O(n log n)",
                     "T(n-1) + T(n-2)": "O(2^n)", 
                     "T(n/2) + O(1)": "O(log n)", 
-                    "T(n-1) + O(n)": "O(n^2)"
+                    "T(n-1) + O(n)": "O(n^2)",
+                    "O(n log n)": "O(n log n)",
+                    "O(n^2)": "O(n^2)",
+                    "O(2^n)": "O(2^n)",
+                    "O(n!)": "O(n!)",
+                    "O(n)": "O(n)",
+                    "O(log n)": "O(log n)",
+                    "O(1)": "O(1)"
                 }
                 for k, v in lookup.items():
                     if k in call_comp: call_comp = v; break
@@ -517,32 +539,92 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     def visit_Return(self, node): self.record_line(node); self.generic_visit(node)  
     def visit_Expr(self, node): self.record_line(node); self.generic_visit(node)      
 
-    # --- BADGES ---
+    # --- MAXIMUM RANK EVALUATION BADGES ---
     def get_final_badge(self):
-        for line in reversed(self.details):   
-            comp = line.get('global_time', '')  
-            if "T(n) =" in comp or comp in ["O(n!)", "O(2^n)", "O(n log n)", "O(n^2)", "O(n)", "O(log n)"]: return comp
-        return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt, self.max_exp)
+        # Scan entire tree for mathematically heaviest operation (Prevents trailing O(1) overrides)
+        best_comp = "O(1)"
+        best_rank = 1
+        
+        rankings = {
+            "O(n!)": 9, "T(n) = n * T(n-1)": 9,
+            "O(2^n)": 8, "T(n) = T(n-1) + T(n-2) + O(1)": 8,
+            "O(n^3)": 7,
+            "O(n^2)": 6, "T(n) = T(n-1) + O(n)": 6,
+            "O(n log n)": 5, "T(n) = 2T(n/2) + O(n)": 5, "T(n) = T(n-1) + O(log n)": 5,
+            "O(n)": 4, "T(n) = 2T(n/2) + O(1)": 4, "T(n) = T(n/2) + O(n)": 4, "T(n) = T(n-1) + O(1)": 4,
+            "O(√n)": 3,
+            "O(log n)": 2, "T(n) = T(n/2) + O(1)": 2,
+            "O(1)": 1
+        }
+        
+        for line in self.details:
+            comp = str(line.get('global_time', ''))
+            for key, rank in rankings.items():
+                if key in comp and rank > best_rank:
+                    best_rank = rank
+                    best_comp = comp 
+                    
+        return best_comp
 
     def get_final_asymptotic_badge(self):
-        for line in reversed(self.details):  
-            comp = line.get('global_time', '')
-            lookup = {
-                "T(n) = n * T(n-1)": "O(n!)",
-                "T(n) = 2T(n/2) + O(n)": "O(n log n)",
-                "T(n) = 2T(n/2) + O(1)": "O(n)",
-                "T(n) = T(n-1) + T(n-2) + O(1)": "O(2^n)",
-                "T(n) = T(n/2) + O(n)": "O(n)",
-                "T(n) = T(n/2) + O(1)": "O(log n)",
-                "T(n) = T(n-1) + O(n)": "O(n^2)",
-                "T(n) = T(n-1) + O(log n)": "O(n log n)",
-                "T(n) = T(n-1) + O(1)": "O(n)",
-                "O(n!)": "O(n!)",
-                "2T(n/2)": "O(n log n)",
-                "T(n-1) + T(n-2)": "O(2^n)", 
-                "T(n/2) + O(1)": "O(log n)", 
-                "T(n-1) + O(n)": "O(n^2)"
-            }
-            for k, v in lookup.items():
-                if k in comp: return v
-        return self._build_time_str(self.max_poly, self.max_log, self.max_sqrt, self.max_exp)
+        lookup = {
+            "T(n) = n * T(n-1)": ("O(n!)", 9),
+            "O(n!)": ("O(n!)", 9),
+            "T(n) = T(n-1) + T(n-2) + O(1)": ("O(2^n)", 8),
+            "O(2^n)": ("O(2^n)", 8),
+            "O(n^3)": ("O(n^3)", 7),
+            "T(n) = T(n-1) + O(n)": ("O(n^2)", 6),
+            "O(n^2)": ("O(n^2)", 6),
+            "T(n) = 2T(n/2) + O(n)": ("O(n log n)", 5),
+            "T(n) = T(n-1) + O(log n)": ("O(n log n)", 5),
+            "O(n log n)": ("O(n log n)", 5),
+            "T(n) = 2T(n/2) + O(1)": ("O(n)", 4),
+            "T(n) = T(n/2) + O(n)": ("O(n)", 4),
+            "T(n) = T(n-1) + O(1)": ("O(n)", 4),
+            "O(n)": ("O(n)", 4),
+            "O(√n)": ("O(√n)", 3),
+            "T(n) = T(n/2) + O(1)": ("O(log n)", 2),
+            "O(log n)": ("O(log n)", 2),
+            "O(1)": ("O(1)", 1)
+        }
+        best_comp = "O(1)"
+        best_rank = 1
+        
+        for line in self.details:
+            for c in [str(line.get('global_time', '')), str(line.get('local_time', ''))]:
+                for key, (mapped, rank) in lookup.items():
+                    if key in c and rank > best_rank:
+                        best_rank = rank
+                        best_comp = mapped
+
+        built_fallback = self._build_time_str(self.max_poly, self.max_log, self.max_sqrt, self.max_exp)
+        for key, (mapped, rank) in lookup.items():
+            if key in built_fallback and rank > best_rank:
+                best_rank = rank
+                best_comp = mapped
+                
+        return best_comp
+
+    def get_final_space_badge(self):
+        # Maximum ranking engine for space complexity
+        rankings = {
+            "O(n!)": 7, 
+            "O(2^n)": 6, 
+            "O(n^2)": 5, 
+            "O(n log n)": 4, 
+            "O(n)": 3, 
+            "O(log n)": 2, 
+            "O(1)": 1
+        }
+        
+        best_space = "O(1)"
+        best_rank = 1
+        
+        for line in self.details:
+            s = str(line.get('global_space', 'O(1)'))
+            for key, rank in rankings.items():
+                if key in s and rank > best_rank:
+                    best_rank = rank
+                    best_space = key
+                    
+        return best_space
