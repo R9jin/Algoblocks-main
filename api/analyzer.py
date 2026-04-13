@@ -138,9 +138,9 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             
             if "√n" in local_t:
                 return ("The runtime of this loop scales with the square root of the input, known as O(√n). "
-                        "This occurs because the loop condition (such as i*i < n) limits the iterations to "
-                        "the square root of the boundary. This is significantly faster than a standard linear "
-                        "loop but slower than logarithmic processing.")
+                        "This occurs because the loop's structure depends on a mathematically bounded block jump "
+                        "or dynamic square root increment, ensuring iterations are limited to the root of the dataset. "
+                        "This allows algorithms like Jump Search to significantly outperform linear processing.")
 
             if self.loop_depth > 1:
                 return (f"This line represents a nested loop contributing to a polynomial complexity of {local_t}. "
@@ -234,12 +234,25 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return False  
         
     def _is_sqrt_loop(self, node):
-        if not isinstance(node, ast.While): return False  
-        test = node.test  
-        if isinstance(test, ast.Compare) and isinstance(test.left, ast.BinOp):  
-            if isinstance(test.left.op, ast.Mult) and isinstance(test.left.left, ast.Name) and isinstance(test.left.right, ast.Name):
-                if test.left.left.id == test.left.right.id: return True
-            elif isinstance(test.left.op, ast.Pow) and isinstance(test.left.right, ast.Constant) and test.left.right.value == 2: return True
+        if not isinstance(node, (ast.While, ast.For)): return False  
+        
+        # 1. Structural check for standard prime testing (i * i < n)
+        if isinstance(node, ast.While):
+            test = node.test  
+            if isinstance(test, ast.Compare) and isinstance(test.left, ast.BinOp):  
+                if isinstance(test.left.op, ast.Mult) and isinstance(test.left.left, ast.Name) and isinstance(test.left.right, ast.Name):
+                    if test.left.left.id == test.left.right.id: return True
+                elif isinstance(test.left.op, ast.Pow) and isinstance(test.left.right, ast.Constant) and getattr(test.left.right, 'value', 0) == 2: return True
+                
+        # 2. Variable Dependency check for Block Jump patterns (Jump Search)
+        for child in ast.walk(node):
+            if isinstance(child, ast.Call):
+                func_id = getattr(child.func, 'id', '')
+                if func_id == 'sqrt': return True
+                if isinstance(child.func, ast.Attribute) and child.func.attr == 'sqrt': return True
+            if isinstance(child, ast.Name) and self.variable_complexities.get(child.id) == "sqrt":
+                return True
+                
         return False
     
     def _is_exponential_loop(self, node):
@@ -379,11 +392,9 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             relation = "T(n) = n * T(n-1) + O(1)" # O(n!)
         elif self.recursive_calls_count >= 2: 
             if self.has_division:
-                # Structural representation of Merge Sort (Halves data structurally)
                 if does_linear_work: relation = "T(n) = 2T(n/2) + O(n)"
                 else: relation = "T(n) = 2T(n/2) + O(1)"
             else:
-                # Structural representation of Quick Sort or Fibonacci 
                 if does_linear_work: relation = "T(n) = T(n-1) + O(n)"
                 else: relation = "T(n) = T(n-1) + T(n-2) + O(1)" # O(2^n)
         elif self.recursive_calls_count == 1:
@@ -518,8 +529,28 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 if (isinstance(child, ast.BinOp) and (isinstance(child.op, ast.LShift) or (isinstance(child.op, ast.Pow) and getattr(child.left, 'value', 0) == 2))) or (isinstance(child, ast.Call) and getattr(child.func, 'id', '') == 'pow' and getattr(child.args[0], 'value', 0) == 2):
                     for target in node.targets:
                         if isinstance(target, ast.Name): self.variable_complexities[target.id] = "exponential"
+                        
+            # Sqrt variable dependency tracking
+            if isinstance(child, ast.Call):
+                func_id = getattr(child.func, 'id', '')
+                if func_id == 'sqrt' or (isinstance(child.func, ast.Attribute) and child.func.attr == 'sqrt'):
+                    for target in node.targets:
+                        if isinstance(target, ast.Name): 
+                            self.variable_complexities[target.id] = "sqrt"
+
         if isinstance(node.value, ast.Subscript) and isinstance(node.value.slice, ast.Slice): self.has_slicing = True
         self.record_line(node, time_override=t_ov, space_override=s_ov); self.generic_visit(node)
+
+    def visit_AugAssign(self, node): 
+        # Sqrt tracking for aug updates (e.g. step += math.sqrt(n))
+        for child in ast.walk(node.value):
+            if isinstance(child, ast.Call):
+                func_id = getattr(child.func, 'id', '')
+                if func_id == 'sqrt' or (isinstance(child.func, ast.Attribute) and child.func.attr == 'sqrt'):
+                    if isinstance(node.target, ast.Name): 
+                        self.variable_complexities[node.target.id] = "sqrt"
+        
+        self.record_line(node); self.generic_visit(node)  
 
     def visit_Subscript(self, node):
         if isinstance(node.slice, ast.Slice): self.has_slicing = True  
@@ -535,7 +566,6 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.has_division = True
         self.generic_visit(node)  
 
-    def visit_AugAssign(self, node): self.record_line(node); self.generic_visit(node)  
     def visit_Return(self, node): self.record_line(node); self.generic_visit(node)  
     def visit_Expr(self, node): self.record_line(node); self.generic_visit(node)      
 
