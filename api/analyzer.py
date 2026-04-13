@@ -240,19 +240,16 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return False
 
     def _is_graph_while_loop(self, node):
-        """Detects iterative Graph Traversal patterns (Queue Pop + Nested Edge Iteration)."""
+        """Detects iterative Graph Traversal patterns (Queue Pop + Edge Iteration)."""
         if not getattr(self, 'in_graph_context', False): return False
         if not isinstance(node, ast.While): return False
-        has_pop = False
-        has_nested_for = False
-        for child in node.body:
-            for sub in ast.walk(child):
-                if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Attribute):
-                    if sub.func.attr in ['pop', 'popleft']:
-                        has_pop = True
-            if isinstance(child, ast.For) or any(isinstance(sub, ast.For) for sub in ast.walk(child)):
-                has_nested_for = True
-        return has_pop and has_nested_for
+        
+        # Checking for common queue/stack operations to identify main traversal loop
+        for child in ast.walk(node):
+            if isinstance(child, ast.Call) and isinstance(getattr(child.func, 'attr', ''), str):
+                if child.func.attr in ['pop', 'popleft', 'append', 'add', 'remove', 'extend']:
+                    return True
+        return False
 
     def _is_constant_loop(self, node):
         if isinstance(node, ast.While):
@@ -356,10 +353,14 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 t_w = total_poly * 10 + total_sqrt * 7 + total_log * 5 + total_graph * 12 + (100 if self.max_exp > 0 else 0)
             
             local_s = space_override if space_override else "O(1)"
-            if "V" in local_s or total_graph > 0:
+            
+            # Context-Aware Global Space Routing
+            if getattr(self, 'in_graph_context', False) or "V" in local_s or total_graph > 0:
                 global_s = "O(V)"
+            elif "n" in local_s or self.recursive_calls_count > 0 or getattr(self, 'max_space_weight', 0) > 0:
+                global_s = "O(n)"
             else:
-                global_s = "O(n)" if self.recursive_calls_count > 0 else local_s
+                global_s = local_s
 
         explanation = self._generate_explanation(node, local_t, global_t, is_dead)
 
@@ -398,7 +399,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
     def visit_FunctionDef(self, node):
         start_idx = len(self.details)
         
-        prev_data = (self.max_complexity, self.max_space_weight, self.max_poly, self.max_log, self.max_sqrt, self.max_exp, getattr(self, 'max_graph_ve', 0))
+        prev_data = (self.max_complexity, getattr(self, 'max_space_weight', 0), self.max_poly, self.max_log, self.max_sqrt, self.max_exp, getattr(self, 'max_graph_ve', 0))
         self.max_complexity = self.max_space_weight = self.max_poly = self.max_log = self.max_sqrt = self.max_exp = self.max_graph_ve = 0
         self.current_function_name, self.recursive_calls_count = node.name, 0
         self.has_recursion_in_loop = self.has_slicing = self.has_division = False
@@ -584,6 +585,14 @@ class ComplexityAnalyzer(ast.NodeVisitor):
 
     def visit_Assign(self, node):
         s_ov, t_ov = "O(1)", None
+        
+        # Detect initialization of graph auxiliary structures
+        if getattr(self, 'in_graph_context', False):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    if any(k in target.id.lower() for k in ['queue', 'stack', 'visited', 'adj', 'path']):
+                        s_ov = "O(V)"
+
         for child in ast.walk(node.value):
             if isinstance(child, (ast.BinOp, ast.Call)):
                 if (isinstance(child, ast.BinOp) and (isinstance(child.op, ast.LShift) or (isinstance(child.op, ast.Pow) and getattr(child.left, 'value', 0) == 2))) or (isinstance(child, ast.Call) and getattr(child.func, 'id', '') == 'pow' and getattr(child.args[0], 'value', 0) == 2):
@@ -705,6 +714,7 @@ class ComplexityAnalyzer(ast.NodeVisitor):
             "O(n^2)": 5, 
             "O(n log n)": 4, 
             "O(n)": 3, 
+            "O(V + E)": 2.8, # Fallback
             "O(V)": 2.5,
             "O(log n)": 2, 
             "O(1)": 1
