@@ -464,14 +464,21 @@ class ComplexityAnalyzer(ast.NodeVisitor):
                 self.details[i]["global_time"] = relation
 
         self.custom_space[node.name] = "O(V)" if self.max_graph_ve > 0 else ("O(log n)" if (self.recursive_calls_count == 1 and self.has_division) else ("O(n)" if (self.recursive_calls_count > 0 or self.max_space_weight > 0) else "O(1)"))
+        
         if not is_dead:
             self.max_exp = max(prev_data[5], self.max_exp)
             self.max_graph_ve = max(prev_data[6], self.max_graph_ve)
             self.max_complexity, self.max_space_weight = max(prev_data[0], self.max_complexity), max(prev_data[1], self.max_space_weight)
             self.max_poly, self.max_log, self.max_sqrt = max(prev_data[2], self.max_poly), max(prev_data[3], self.max_log), max(prev_data[4], self.max_sqrt)
         else: self.max_complexity, self.max_space_weight, self.max_poly, self.max_log, self.max_sqrt, self.max_exp, self.max_graph_ve = prev_data
+        
+        # --- FIX: Purge Context Trackers to Prevent Global Scope Leakage ---
         self.current_function_name = None
         self.in_graph_context = False
+        self.recursive_calls_count = 0 
+        self.has_recursion_in_loop = False
+        self.has_slicing = False
+        self.has_division = False
 
     def visit_If(self, node):
         self.record_line(node)
@@ -707,15 +714,15 @@ class ComplexityAnalyzer(ast.NodeVisitor):
         return best_comp
 
     def get_final_space_badge(self):
-        # Maximum ranking engine for space complexity
+        # FIX: Elevated O(V + E) and O(V) to outrank standard O(n) explicitly
         rankings = {
             "O(n!)": 7, 
             "O(2^n)": 6, 
             "O(n^2)": 5, 
             "O(n log n)": 4, 
+            "O(V + E)": 3.5, 
+            "O(V)": 3.2,
             "O(n)": 3, 
-            "O(V + E)": 2.8, # Fallback
-            "O(V)": 2.5,
             "O(log n)": 2, 
             "O(1)": 1
         }

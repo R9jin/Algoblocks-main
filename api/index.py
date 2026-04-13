@@ -146,7 +146,7 @@ def analyze_complexity(payload: CodePayload):
             "total": analyzer.get_final_asymptotic_badge(),
             "total_recurrence": analyzer.get_final_badge(),
             "lines": lines,
-            "space_total": "O(n)" if analyzer.max_space_weight > 0 else "O(1)",
+            "space_total": analyzer.get_final_space_badge(), # <-- FIX: Dynamic badge routing
             "is_recursive": any("T(n)" in str(l.get("global_time")) for l in analyzer.details)
         }
 
